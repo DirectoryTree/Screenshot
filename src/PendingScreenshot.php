@@ -15,7 +15,7 @@ class PendingScreenshot
         protected Driver $driver,
         protected string $source,
         protected string $type,
-        protected CaptureOptions $options,
+        protected ImageOptions $options,
         protected PdfOptions $pdfOptions = new PdfOptions,
     ) {
         $this->options = clone $options;

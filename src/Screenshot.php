@@ -24,7 +24,7 @@ class Screenshot
      */
     public function __construct(
         protected Driver $driver = new ChromeDriver,
-        protected CaptureOptions $options = new CaptureOptions,
+        protected ImageOptions $options = new ImageOptions,
         protected ?ViewFactory $views = null,
     ) {}
 

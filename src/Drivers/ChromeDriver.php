@@ -2,10 +2,10 @@
 
 namespace DirectoryTree\Screenshot\Drivers;
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -37,7 +37,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Capture an image using a dedicated or shared browser process.
      */
-    public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult
+    public function capture(string $source, string $type, ImageOptions $options): ScreenshotResult
     {
         $options->validate();
 
@@ -54,7 +54,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Print a PDF using the same browser lifecycle as image captures.
      */
-    public function capturePdf(string $source, string $type, CaptureOptions $options, PdfOptions $pdf): PdfResult
+    public function capturePdf(string $source, string $type, ImageOptions $options, PdfOptions $pdf): PdfResult
     {
         $options->validate();
         $pdf->validate();
@@ -73,7 +73,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Run a capture in a dedicated browser or under a shared socket lease.
      */
-    protected function withBrowser(CaptureOptions $options, callable $callback): mixed
+    protected function withBrowser(ImageOptions $options, callable $callback): mixed
     {
         if ($socket = $this->socket($options)) {
             return $socket->run(
@@ -89,7 +89,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Capture an image from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared = false): ScreenshotResult
+    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false): ScreenshotResult
     {
         return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options) {
             $clip = $options->getFullPage()
@@ -117,7 +117,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Load a page and release its resources after rendering either format.
      */
-    protected function withPage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared, callable $render): mixed
+    protected function withPage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared, callable $render): mixed
     {
         $page = null;
         $failed = true;
@@ -215,7 +215,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Start a dedicated browser or a persistent shared browser.
      */
-    protected function createBrowser(CaptureOptions $options): Browser
+    protected function createBrowser(ImageOptions $options): Browser
     {
         $socket = $this->socket($options);
         $browserOptions = $this->browserOptions;
@@ -234,7 +234,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     /**
      * Resolve the shared socket selected for this capture.
      */
-    protected function socket(CaptureOptions $options): ?BrowserSocket
+    protected function socket(ImageOptions $options): ?BrowserSocket
     {
         return $options->getSocket() !== null
             ? BrowserSocket::named($options->getSocket(), $this->socketDirectory, $this->lockTimeout)

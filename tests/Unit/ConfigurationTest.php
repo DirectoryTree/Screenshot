@@ -1,6 +1,6 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -79,7 +79,7 @@ test('failed configuration does not capture or contaminate subsequent screenshot
 });
 
 test('factories have independent configuration and fakes preserve their baseline options', function () {
-    $options = new CaptureOptions(width: 900);
+    $options = new ImageOptions(width: 900);
     $factory = new Screenshot(options: $options);
     $factory->configure(fn (PendingScreenshot $screenshot) => $screenshot->jpeg(85));
     $fake = ScreenshotFake::from($factory);

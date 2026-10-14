@@ -2,9 +2,9 @@
 
 namespace DirectoryTree\Screenshot\Testing;
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
@@ -17,14 +17,14 @@ class ScreenshotFake extends Screenshot implements Driver, PdfDriver
     /**
      * The recorded captures.
      *
-     * @var list<array{string, string, CaptureOptions}>
+     * @var list<array{string, string, ImageOptions}>
      */
     protected array $captures = [];
 
     /**
      * The recorded PDF captures.
      *
-     * @var list<array{string, string, CaptureOptions, PdfOptions}>
+     * @var list<array{string, string, ImageOptions, PdfOptions}>
      */
     protected array $pdfCaptures = [];
 
@@ -41,7 +41,7 @@ class ScreenshotFake extends Screenshot implements Driver, PdfDriver
     public function __construct(
         protected ?ScreenshotResult $result = null,
         ?ViewFactory $views = null,
-        CaptureOptions $options = new CaptureOptions,
+        ImageOptions $options = new ImageOptions,
         protected ?PdfResult $pdfResult = null,
     ) {
         parent::__construct($this, clone $options, $views);
@@ -71,7 +71,7 @@ class ScreenshotFake extends Screenshot implements Driver, PdfDriver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult
+    public function capture(string $source, string $type, ImageOptions $options): ScreenshotResult
     {
         $this->captures[] = [$source, $type, clone $options];
 
@@ -83,7 +83,7 @@ class ScreenshotFake extends Screenshot implements Driver, PdfDriver
     /**
      * Record a PDF capture and return a valid blank document by default.
      */
-    public function capturePdf(string $source, string $type, CaptureOptions $options, PdfOptions $pdf): PdfResult
+    public function capturePdf(string $source, string $type, ImageOptions $options, PdfOptions $pdf): PdfResult
     {
         $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
 

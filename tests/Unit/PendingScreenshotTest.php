@@ -1,7 +1,7 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -58,7 +58,7 @@ test('options cannot leak between captures', function () {
 
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
-    $options = new CaptureOptions(width: 900);
+    $options = new ImageOptions(width: 900);
     $first = new PendingScreenshot($fake, 'first', 'html', $options);
     $second = new PendingScreenshot($fake, 'second', 'html', $options);
 
@@ -81,7 +81,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ScreenshotResult(imageFixture());
     });
-    $pending = new PendingScreenshot($driver, 'hello', 'html', new CaptureOptions);
+    $pending = new PendingScreenshot($driver, 'hello', 'html', new ImageOptions);
     $pending->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);
@@ -96,7 +96,7 @@ test('invalid mutations leave all pending screenshot options unchanged', functio
     $pending = $fake->html('hello');
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options == new ImageOptions);
 })->with([
     'zero width' => ['size', [0, 768]],
     'invalid height' => ['size', [500, -1]],
@@ -131,7 +131,7 @@ test('standalone views require a view factory', function () {
 });
 
 test('unsafe capture options are rejected', function ($values) {
-    expect(fn () => new CaptureOptions(...$values))->toThrow(InvalidArgumentException::class);
+    expect(fn () => new ImageOptions(...$values))->toThrow(InvalidArgumentException::class);
 })->with([
     [['width' => 0]], [['height' => -1]], [['width' => 16385]],
     [['width' => 10000, 'height' => 10000]], [['maxWidth' => 0]],
@@ -140,7 +140,7 @@ test('unsafe capture options are rejected', function ($values) {
 ]);
 
 test('socket keys can be overridden and disabled without changing defaults', function () {
-    $fake = new ScreenshotFake(options: new CaptureOptions(socket: 'default'));
+    $fake = new ScreenshotFake(options: new ImageOptions(socket: 'default'));
     $fake->html('named')->socket('old')->socket('emails')->capture();
     $fake->html('dedicated')->withoutSocket()->capture();
     $fake->html('default')->capture();
@@ -150,5 +150,5 @@ test('socket keys can be overridden and disabled without changing defaults', fun
 });
 
 test('empty socket keys fail before a capture starts', function ($key) {
-    expect(fn () => new CaptureOptions(socket: $key))->toThrow(InvalidArgumentException::class);
+    expect(fn () => new ImageOptions(socket: $key))->toThrow(InvalidArgumentException::class);
 })->with(['', ' ']);

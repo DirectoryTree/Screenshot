@@ -1,7 +1,7 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
@@ -17,7 +17,7 @@ $driver = new class($directory, $id) extends ChromeDriver
         parent::__construct(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'], $directory);
     }
 
-    protected function withPage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared, callable $render): mixed
+    protected function withPage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared, callable $render): mixed
     {
         file_put_contents($this->directory.'/'.$this->id.'.ready', 'ready');
         $deadline = microtime(true) + 15;

@@ -1,7 +1,7 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use HeadlessChromium\Browser;
 use HeadlessChromium\Clip;
@@ -22,7 +22,7 @@ function chromeDriver(Browser $browser): ChromeDriver
     {
         public function __construct(protected Browser $browser) {}
 
-        protected function createBrowser(CaptureOptions $options): Browser
+        protected function createBrowser(ImageOptions $options): Browser
         {
             return $this->browser;
         }
@@ -56,7 +56,7 @@ test('the browser is closed even when page creation fails', function () {
     $browser->shouldReceive('createPage')->once()->andThrow(new RuntimeException('page failure'));
     $browser->shouldReceive('close')->once()->andThrow(new RuntimeException('cleanup failure'));
 
-    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new CaptureOptions))
+    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new ImageOptions))
         ->toThrow(RuntimeException::class, 'page failure');
 });
 
@@ -73,7 +73,7 @@ test('load timeouts stop loading and capture bounded content', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    expect(chromeDriver($browser)->capture('hello', 'html', new CaptureOptions)->width())->toBe(1);
+    expect(chromeDriver($browser)->capture('hello', 'html', new ImageOptions)->width())->toBe(1);
 });
 
 test('strict load timeouts propagate and close all resources', function () {
@@ -82,7 +82,7 @@ test('strict load timeouts propagate and close all resources', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new CaptureOptions(failOnTimeout: true)))
+    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new ImageOptions(failOnTimeout: true)))
         ->toThrow(OperationTimedOut::class, 'load failure');
 });
 
@@ -96,7 +96,7 @@ test('failed page cleanup falls back to closing its target', function () {
     $connection->shouldReceive('sendMessageSync')->once()->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget');
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new CaptureOptions))
+    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new ImageOptions))
         ->toThrow(RuntimeException::class, 'capture failure');
 });
 
@@ -108,7 +108,7 @@ test('capture failures still close the page and browser', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new CaptureOptions))
+    expect(fn () => chromeDriver($browser)->capture('hello', 'html', new ImageOptions))
         ->toThrow(RuntimeException::class, 'screenshot failure');
 });
 
@@ -124,7 +124,7 @@ test('a shared capture failure closes its page without closing other workers bro
     {
         public function shared(Browser $browser): void
         {
-            $this->capturePage($browser, 'hello', 'html', new CaptureOptions, shared: true);
+            $this->capturePage($browser, 'hello', 'html', new ImageOptions, shared: true);
         }
     };
 
@@ -157,7 +157,7 @@ test('shared page initialization failures close only the owned target and preser
     {
         public function shared(Browser $browser): void
         {
-            $this->capturePage($browser, 'hello', 'html', new CaptureOptions, shared: true);
+            $this->capturePage($browser, 'hello', 'html', new ImageOptions, shared: true);
         }
     };
 
@@ -174,7 +174,7 @@ test('PDF rendering receives print options and timeout and closes the dedicated 
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    $result = chromeDriver($browser)->capturePdf('invoice', 'html', new CaptureOptions(browserTimeout: 12345), new PdfOptions(landscape: true));
+    $result = chromeDriver($browser)->capturePdf('invoice', 'html', new ImageOptions(browserTimeout: 12345), new PdfOptions(landscape: true));
     expect($result->mimeType())->toBe('application/pdf');
 });
 
@@ -186,6 +186,6 @@ test('PDF printing failures preserve the error and close browser resources', fun
     $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capturePdf('invoice', 'html', new CaptureOptions, new PdfOptions))
+    expect(fn () => chromeDriver($browser)->capturePdf('invoice', 'html', new ImageOptions, new PdfOptions))
         ->toThrow(RuntimeException::class, 'print failure');
 });

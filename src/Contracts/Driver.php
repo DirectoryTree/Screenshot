@@ -2,7 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Contracts;
 
-use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ScreenshotResult;
 
 interface Driver
@@ -10,5 +10,5 @@ interface Driver
     /**
      * Capture the given HTML or URL.
      */
-    public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult;
+    public function capture(string $source, string $type, ImageOptions $options): ScreenshotResult;
 }

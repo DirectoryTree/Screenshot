@@ -1,7 +1,7 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingScreenshot;
@@ -26,7 +26,7 @@ test('PDF selection uses the same builder and preserves browser defaults', funct
 
     $result = $pending->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
     expect($result)->toBeInstanceOf(PdfResult::class);
-    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options, PdfOptions $pdf) => $source === 'invoice'
+    $fake->assertPdfCaptured(fn ($source, $type, ImageOptions $options, PdfOptions $pdf) => $source === 'invoice'
         && $type === 'html' && $options->getFormat() === 'pdf' && $options->getSocket() === 'invoices'
         && $options->getLoadTimeout() === 5000 && $options->getBrowserTimeout() === 10000
         && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape()
@@ -76,7 +76,7 @@ test('global configuration applies print defaults without sharing mutable option
 
 test('PDF print settings supplied to the constructor are cloned', function () {
     $fake = new ScreenshotFake;
-    $options = new CaptureOptions(format: 'pdf');
+    $options = new ImageOptions(format: 'pdf');
     $pdf = new PdfOptions;
     $pending = new PendingScreenshot($fake, 'invoice', 'html', $options, $pdf);
     $options->setFormat('jpeg');

@@ -302,7 +302,7 @@ PDF support is optional for custom drivers: implement [`PdfDriver`](src/Contract
 Use the facade fake to test your application without starting Chrome:
 
 ```php
-use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use Illuminate\Support\Facades\Storage;
 
@@ -314,7 +314,7 @@ Screenshot::html('<h1>Invoice</h1>')
     ->socket(key: 'invoices')
     ->store(path: 'invoice.png', disk: 'screenshots');
 
-Screenshot::assertCaptured(fn (string $source, string $type, CaptureOptions $options) =>
+Screenshot::assertCaptured(fn (string $source, string $type, ImageOptions $options) =>
     $type === 'html'
     && $options->getWidth() === 800
     && $options->getSocket() === 'invoices'

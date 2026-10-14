@@ -22,8 +22,13 @@ class PendingCapture
     public function capture(CaptureOptions $options): ImageResult|PdfResult
     {
         $options = clone $options;
+
         $options->validate();
 
-        return $this->driver->capture($this->source, $this->type, $options);
+        return $this->driver->capture(
+            $this->source,
+            $this->type,
+            $options
+        );
     }
 }

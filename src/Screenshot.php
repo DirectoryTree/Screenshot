@@ -73,20 +73,6 @@ class Screenshot
     }
 
     /**
-     * Apply defaults to a fresh screenshot before caller-specific options.
-     */
-    protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
-    {
-        $screenshot = new PendingScreenshot($this->driver, $source, $type, $this->options);
-
-        if ($this->configureUsing) {
-            ($this->configureUsing)($screenshot);
-        }
-
-        return $screenshot;
-    }
-
-    /**
      * Wait for active captures and stop a named shared browser.
      */
     public function close(string $key): void
@@ -104,5 +90,19 @@ class Screenshot
         }
 
         return $this->driver;
+    }
+
+    /**
+     * Apply defaults to a fresh screenshot before caller-specific options.
+     */
+    protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
+    {
+        $screenshot = new PendingScreenshot($this->driver, $source, $type, $this->options);
+
+        if ($this->configureUsing) {
+            ($this->configureUsing)($screenshot);
+        }
+
+        return $screenshot;
     }
 }

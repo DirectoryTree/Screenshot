@@ -7,9 +7,13 @@ return [
     | Chrome / Chromium
     |--------------------------------------------------------------------------
     |
-    | Leave the binary unset to use downloaded Chrome, then Chrome PHP's
-    | automatic discovery. Browser options are passed to Chrome PHP.
-    | Browser lifetime, viewport and timeouts are managed by Screenshot.
+    | You may specify a Chrome or Chromium executable here. When unset,
+    | Screenshot checks the install directory before falling back to
+    | Chrome PHP's automatic browser discovery.
+    |
+    | The directory stores Chrome downloaded by screenshot:install. Browser
+    | options are passed to Chrome PHP, while Screenshot manages the
+    | browser lifetime, viewport dimensions and operation timeouts.
     |
     */
 
@@ -24,9 +28,12 @@ return [
     | Shared Browser Sockets
     |--------------------------------------------------------------------------
     |
-    | Named sockets use this local directory. All workers sharing a browser
-    | must use the same directory and OS user on the same host. Lock and
-    | shutdown waits are bounded in milliseconds. Keep these files outside the web root.
+    | Named sockets store their connection files in this private directory.
+    | Workers sharing a browser must use the same directory and OS user
+    | on the same host. Keep these files outside the public web root.
+    |
+    | The lock timeout limits each lock or browser shutdown wait, measured
+    | in milliseconds. Increase it when captures need longer to finish.
     |
     */
 

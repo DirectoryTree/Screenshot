@@ -30,9 +30,9 @@ class Screenshot extends Facade
      */
     public static function fake(?ScreenshotResult $result = null): ScreenshotFake
     {
-        static::swap($fake = new ScreenshotFake(
-            $result,
+        static::swap($fake = ScreenshotFake::from(
             factory: static::getFacadeRoot(),
+            result: $result,
         ));
 
         return $fake;

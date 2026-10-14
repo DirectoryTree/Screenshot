@@ -28,11 +28,20 @@ class ScreenshotFake extends Screenshot implements Driver
         protected ?ScreenshotResult $result = null,
         ?ViewFactory $views = null,
         CaptureOptions $options = new CaptureOptions,
-        ?Screenshot $factory = null,
     ) {
-        parent::__construct($this, clone ($factory?->options ?? $options), $factory?->views ?? $views);
+        parent::__construct($this, clone $options, $views);
+    }
 
-        $this->configureUsing = $factory?->configureUsing;
+    /**
+     * Create a fresh fake using an existing factory's configuration.
+     */
+    public static function from(Screenshot $factory, ?ScreenshotResult $result = null): static
+    {
+        return (new static(
+            result: $result,
+            views: $factory->views,
+            options: $factory->options,
+        ))->configure($factory->configureUsing);
     }
 
     /**

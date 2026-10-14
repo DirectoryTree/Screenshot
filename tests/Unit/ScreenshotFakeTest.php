@@ -1,7 +1,22 @@
 <?php
 
+use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
+
+test('a fake created from another factory starts with fresh records and uses the supplied result', function () {
+    $original = new ScreenshotFake;
+    $original->html('previous')->capture();
+    $original->close('emails');
+    $result = new ScreenshotResult(imageFixture());
+
+    $fake = ScreenshotFake::from(factory: $original, result: $result);
+    $fake->assertNothingCaptured();
+    $fake->assertNothingClosed();
+    expect($fake->html('next')->capture())->toBe($result);
+    $fake->assertCapturedCount(1);
+    $original->assertCapturedCount(1);
+});
 
 test('shutdown requests match exact keys and are separate from captures', function () {
     $fake = new ScreenshotFake;

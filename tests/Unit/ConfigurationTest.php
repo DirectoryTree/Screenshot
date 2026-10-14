@@ -79,9 +79,11 @@ test('failed configuration does not capture or contaminate subsequent screenshot
 });
 
 test('factories have independent configuration and fakes preserve their baseline options', function () {
-    $factory = new Screenshot(options: new CaptureOptions(width: 900));
+    $options = new CaptureOptions(width: 900);
+    $factory = new Screenshot(options: $options);
     $factory->configure(fn (PendingScreenshot $screenshot) => $screenshot->jpeg(85));
-    $fake = new ScreenshotFake(factory: $factory);
+    $fake = ScreenshotFake::from($factory);
+    $options->width = 800;
     $factory->configure(null);
     $fake->html('configured')->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $options->width === 900 && $options->format === 'jpeg');

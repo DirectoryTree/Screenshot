@@ -11,9 +11,9 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('configured defaults are available before selecting an output format', function () {
     $fake = new ScreenshotFake(
-        browser: BrowserOptions::make()->setSize(900, 600)->setSocket('captures')->setTimeouts(2000, 90000),
-        image: ImageOptions::make()->setFormat(OutputFormat::Png, 85)->setFullPage(false),
-        pdf: PdfOptions::make()->setPaper(PaperSize::Letter)->setLandscape(true),
+        browser: (new BrowserOptions)->setSize(900, 600)->setSocket('captures')->setTimeouts(2000, 90000),
+        image: (new ImageOptions)->setFormat(OutputFormat::Png, 85)->setFullPage(false),
+        pdf: (new PdfOptions)->setPaper(PaperSize::Letter)->setLandscape(true),
     );
 
     $pending = $fake->html('source');
@@ -36,10 +36,10 @@ test('configured defaults are available before selecting an output format', func
 
 test('fluent settings replace defaults including false null and package default values', function () {
     $fake = new ScreenshotFake(
-        browser: BrowserOptions::make()->setSize(1280, 720)->setSocket('defaults')->setJavascript(true)
+        browser: (new BrowserOptions)->setSize(1280, 720)->setSocket('defaults')->setJavascript(true)
             ->setFailOnTimeout(true)->setTimeouts(2000, 90000),
-        image: ImageOptions::make()->setFormat(OutputFormat::Jpeg, 95)->setFullPage(false),
-        pdf: PdfOptions::make()->setPaper(PaperSize::Letter)->setLandscape(true)->setMargins(20, 20, 20, 20)
+        image: (new ImageOptions)->setFormat(OutputFormat::Jpeg, 95)->setFullPage(false),
+        pdf: (new PdfOptions)->setPaper(PaperSize::Letter)->setLandscape(true)->setMargins(20, 20, 20, 20)
             ->setPreferCssPageSize(true),
     );
 
@@ -68,8 +68,8 @@ test('fluent settings replace defaults including false null and package default 
 
 test('format changes preserve current browser settings image options and JPEG quality', function () {
     $fake = new ScreenshotFake(
-        browser: BrowserOptions::make()->setTimeouts(900, 3000),
-        image: ImageOptions::make()->setFormat(OutputFormat::Png, 95)->setMaxSize(2000, 2000),
+        browser: (new BrowserOptions)->setTimeouts(900, 3000),
+        image: (new ImageOptions)->setFormat(OutputFormat::Png, 95)->setMaxSize(2000, 2000),
     );
 
     $fake->html('latest')->jpeg(70)->png()->jpeg()
@@ -89,9 +89,9 @@ test('format changes preserve current browser settings image options and JPEG qu
 
 test('PDF conversion copies inherited and overridden browser settings with independent print defaults', function () {
     $fake = new ScreenshotFake(
-        browser: BrowserOptions::make()->setSize(900, 600)->setJavascript(true)->setSocket('shared')->setTimeouts(2000, 4000),
-        image: ImageOptions::make()->setFormat(OutputFormat::Jpeg, 95)->setMaxSize(100, 100)->setFullPage(false),
-        pdf: PdfOptions::make()->setPaper(PaperSize::Letter),
+        browser: (new BrowserOptions)->setSize(900, 600)->setJavascript(true)->setSocket('shared')->setTimeouts(2000, 4000),
+        image: (new ImageOptions)->setFormat(OutputFormat::Jpeg, 95)->setMaxSize(100, 100)->setFullPage(false),
+        pdf: (new PdfOptions)->setPaper(PaperSize::Letter),
     );
     $image = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)->failOnTimeout();
     $first = $image->pdf()->paper(PaperSize::A5);
@@ -113,15 +113,15 @@ test('PDF conversion copies inherited and overridden browser settings with indep
 });
 
 test('factories and fakes snapshot each set of configured defaults', function () {
-    $browser = BrowserOptions::make()->setSize(900, 600);
-    $image = ImageOptions::make()->setFormat(OutputFormat::Jpeg, 85);
-    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter);
+    $browser = (new BrowserOptions)->setSize(900, 600);
+    $image = (new ImageOptions)->setFormat(OutputFormat::Jpeg, 85);
+    $pdf = (new PdfOptions)->setPaper(PaperSize::Letter);
     $factory = new Screenshot(browser: $browser, image: $image, pdf: $pdf);
-    $fake = ScreenshotFake::from($factory);
-    $pending = $fake->html('image');
     $browser->setSize(800, 600);
     $image->setFormat(OutputFormat::Png, 50);
     $pdf->setPaper(PaperSize::A5);
+    $fake = ScreenshotFake::from($factory);
+    $pending = $fake->html('image');
     $pending->capture();
     $pending->pdf()->capture();
     $fake->html('next')->capture();
@@ -138,7 +138,7 @@ test('factories and fakes snapshot each set of configured defaults', function ()
 });
 
 test('repeated captures use current settings without applying configuration again', function () {
-    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSize(800, 600));
+    $fake = new ScreenshotFake(browser: (new BrowserOptions)->setSize(800, 600));
     $pending = $fake->html('image');
     $pending->capture();
     $pending->size(900, 600)->capture();
@@ -150,7 +150,7 @@ test('repeated captures use current settings without applying configuration agai
 });
 
 test('PDF layout overrides are validated against current defaults and can be corrected', function () {
-    $fake = new ScreenshotFake(pdf: PdfOptions::make()->setMargins(20, 20, 20, 20));
+    $fake = new ScreenshotFake(pdf: (new PdfOptions)->setMargins(20, 20, 20, 20));
     $pending = $fake->html('small')->pdf();
 
     expect(fn () => $pending->paperSize(30, 30))->toThrow(InvalidArgumentException::class);

@@ -37,9 +37,9 @@ class ScreenshotFake extends Screenshot implements Driver
     public function __construct(
         protected ImageResult|PdfResult|null $result = null,
         ?ViewFactory $views = null,
-        ?BrowserOptions $browser = null,
-        ?ImageOptions $image = null,
-        ?PdfOptions $pdf = null,
+        BrowserOptions $browser = new BrowserOptions,
+        ImageOptions $image = new ImageOptions,
+        PdfOptions $pdf = new PdfOptions,
     ) {
         parent::__construct($this, $browser, $image, $pdf, $views);
     }

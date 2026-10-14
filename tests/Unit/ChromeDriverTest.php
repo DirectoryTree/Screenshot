@@ -32,7 +32,7 @@ test('dedicated browsers close even when page creation fails', function () {
         }
     };
 
-    expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+    expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(new BrowserOptions, new ImageOptions)))
         ->toThrow(RuntimeException::class, 'page failure');
 });
 
@@ -70,10 +70,10 @@ test('dedicated browsers close after a successful page capture', function ($clea
     };
 
     if ($cleanupFails) {
-        expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+        expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(new BrowserOptions, new ImageOptions)))
             ->toThrow(RuntimeException::class, 'browser cleanup failure');
     } else {
-        expect($driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()))->width())->toBe(1);
+        expect($driver->capture('hello', SourceType::Html, new CaptureOptions(new BrowserOptions, new ImageOptions))->width())->toBe(1);
     }
 })->with([false, true]);
 
@@ -109,7 +109,7 @@ test('rendering errors survive failures in both page and browser cleanup', funct
         }
     };
 
-    expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+    expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(new BrowserOptions, new ImageOptions)))
         ->toThrow(RuntimeException::class, 'rendering failure');
 });
 
@@ -163,14 +163,14 @@ test('shared captures use a socket lease and connection settings without closing
         }
     };
     $options = new CaptureOptions(
-        BrowserOptions::make()->setSocket('shared')->setSize(800, 600)->setTimeouts(2000, 1234),
-        ImageOptions::make(),
+        (new BrowserOptions)->setSocket('shared')->setSize(800, 600)->setTimeouts(2000, 1234),
+        new ImageOptions,
     );
 
     expect($driver->capture('hello', SourceType::Html, $options)->width())->toBe(1);
 });
 
 test('source strings are rejected before starting a browser', function ($type) {
-    expect(fn () => (new ChromeDriver)->capture('invoice', $type, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+    expect(fn () => (new ChromeDriver)->capture('invoice', $type, new CaptureOptions(new BrowserOptions, new ImageOptions)))
         ->toThrow(TypeError::class);
 })->with(['html', 'url', 'invalid']);

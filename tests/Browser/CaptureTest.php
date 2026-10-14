@@ -34,8 +34,8 @@ test('real Chromium renders a full page PNG from local HTML', function () {
 test('real Chromium applies configured defaults and per-capture dimension limits', function () {
     $factory = new Screenshot(
         driver: new ChromeDriver(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1']),
-        browser: BrowserOptions::make()->setSize(640, 480),
-        image: ImageOptions::make()->setFullPage(false)->setFormat(OutputFormat::Jpeg, 85),
+        browser: (new BrowserOptions)->setSize(640, 480),
+        image: (new ImageOptions)->setFullPage(false)->setFormat(OutputFormat::Jpeg, 85),
     );
     $result = $factory->html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
         ->maxSize(500, 300)->jpeg()->capture();

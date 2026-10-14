@@ -36,12 +36,14 @@ class PageCapture
         $failed = true;
 
         try {
-            $page = $this->shared ? $this->createSharedPage() : $this->browser->createPage();
+            $page = $this->shared
+                ? $this->createSharedPage()
+                : $this->browser->createPage();
 
             $this->configurePage($page);
             $this->loadPage($page, $source, $type);
 
-            $result = $this->resolveCapture()->capture($page);
+            $result = $this->newCapture()->capture($page);
             $failed = false;
 
             return $result;
@@ -98,9 +100,9 @@ class PageCapture
     }
 
     /**
-     * Resolve the capture implementation for the selected output format.
+     * Create a capture for the selected output format.
      */
-    protected function resolveCapture(): CapturesPage
+    protected function newCapture(): CapturesPage
     {
         $options = $this->options;
 
@@ -116,7 +118,10 @@ class PageCapture
     protected function createSharedPage(): Page
     {
         $connection = $this->browser->getConnection();
-        $response = $connection->sendMessageSync(new Message('Target.createTarget', ['url' => 'about:blank']));
+
+        $response = $connection->sendMessageSync(
+            new Message('Target.createTarget', ['url' => 'about:blank'])
+        );
 
         if (! $response->isSuccessful() || ! is_string($target = $response['result']['targetId'] ?? null)) {
             throw new RuntimeException('Unable to create the screenshot page.');

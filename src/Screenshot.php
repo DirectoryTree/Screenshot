@@ -13,33 +13,18 @@ use LogicException;
 class Screenshot
 {
     /**
-     * The shared browser defaults.
-     */
-    protected BrowserOptions $browser;
-
-    /**
-     * The image output defaults.
-     */
-    protected ImageOptions $image;
-
-    /**
-     * The PDF output defaults.
-     */
-    protected PdfOptions $pdf;
-
-    /**
      * Create a screenshot factory with independent capture defaults.
      */
     public function __construct(
         protected Driver $driver = new ChromeDriver,
-        ?BrowserOptions $browser = null,
-        ?ImageOptions $image = null,
-        ?PdfOptions $pdf = null,
+        protected BrowserOptions $browser = new BrowserOptions,
+        protected ImageOptions $image = new ImageOptions,
+        protected PdfOptions $pdf = new PdfOptions,
         protected ?ViewFactory $views = null,
     ) {
-        $this->browser = $browser ? clone $browser : BrowserOptions::make();
-        $this->image = $image ? clone $image : ImageOptions::make();
-        $this->pdf = $pdf ? clone $pdf : PdfOptions::make();
+        $this->browser = clone $browser;
+        $this->image = clone $image;
+        $this->pdf = clone $pdf;
     }
 
     /**

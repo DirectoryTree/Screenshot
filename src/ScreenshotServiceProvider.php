@@ -40,17 +40,17 @@ class ScreenshotServiceProvider extends ServiceProvider
 
             return new Screenshot(
                 driver: $app->make(Driver::class),
-                browser: BrowserOptions::make()
+                browser: (new BrowserOptions)
                     ->setSize($capture['width'], $capture['height'])
                     ->setTimeouts($capture['load_timeout'], $capture['browser_timeout'])
                     ->setJavascript($capture['javascript'])
                     ->setFailOnTimeout($capture['fail_on_timeout'])
                     ->setSocket($capture['socket']),
-                image: ImageOptions::make()
+                image: (new ImageOptions)
                     ->setFormat(OutputFormat::from($image['format']), $image['quality'])
                     ->setMaxSize($image['max_width'], $image['max_height'])
                     ->setFullPage($image['full_page']),
-                pdf: PdfOptions::make()
+                pdf: (new PdfOptions)
                     ->setLayout(
                         width: $width,
                         height: $height,

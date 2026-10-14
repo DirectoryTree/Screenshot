@@ -5,7 +5,7 @@ use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 
 test('browser settings reject invalid changes', function ($method, $arguments) {
-    expect(fn () => BrowserOptions::make()->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
+    expect(fn () => (new BrowserOptions)->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
 })->with([
     'width' => ['setSize', [0, 768]],
     'height' => ['setSize', [1024, 20000]],
@@ -16,7 +16,7 @@ test('browser settings reject invalid changes', function ($method, $arguments) {
 ]);
 
 test('invalid browser changes leave both settings unchanged', function () {
-    $options = BrowserOptions::make()->setSize(400, 300)->setTimeouts(load: 500, browser: 1000);
+    $options = (new BrowserOptions)->setSize(400, 300)->setTimeouts(load: 500, browser: 1000);
 
     expect(fn () => $options->setSize(800, 0))->toThrow(InvalidArgumentException::class);
     expect(fn () => $options->setTimeouts(load: 100, browser: 0))->toThrow(InvalidArgumentException::class);
@@ -24,9 +24,9 @@ test('invalid browser changes leave both settings unchanged', function () {
         ->and($options->getLoadTimeout())->toBe(500)->and($options->getBrowserTimeout())->toBe(1000);
 });
 
-test('browser factories return independent instances with default settings', function () {
-    $first = BrowserOptions::make()->setSize(400, 300)->setSocket('first')->setJavascript(true);
-    $second = BrowserOptions::make();
+test('browser constructors create independent instances with default settings', function () {
+    $first = (new BrowserOptions)->setSize(400, 300)->setSocket('first')->setJavascript(true);
+    $second = new BrowserOptions;
 
     expect($first)->not->toBe($second)
         ->and($second->getWidth())->toBe(1024)->and($second->getHeight())->toBe(768)
@@ -35,17 +35,30 @@ test('browser factories return independent instances with default settings', fun
         ->and($second->getFailOnTimeout())->toBeFalse();
 });
 
-test('options require factory construction', function ($class) {
-    expect(fn () => new $class)->toThrow(Error::class, 'protected');
-})->with([BrowserOptions::class, ImageOptions::class, PdfOptions::class]);
+test('option constructors validate declared defaults', function (Closure $create) {
+    expect($create)->toThrow(InvalidArgumentException::class);
+})->with([
+    'browser' => fn () => new class extends BrowserOptions
+    {
+        protected int $width = 0;
+    },
+    'image' => fn () => new class extends ImageOptions
+    {
+        protected int $maxWidth = 0;
+    },
+    'PDF' => fn () => new class extends PdfOptions
+    {
+        protected float $paperWidth = 0;
+    },
+]);
 
 class CustomBrowserOptions extends BrowserOptions
 {
     protected int $width = 1200;
 }
 
-test('option factories respect subclass defaults', function () {
-    $options = CustomBrowserOptions::make();
+test('option constructors respect subclass defaults', function () {
+    $options = new CustomBrowserOptions;
 
     expect($options)->toBeInstanceOf(CustomBrowserOptions::class)
         ->and($options->getWidth())->toBe(1200)
@@ -54,7 +67,7 @@ test('option factories respect subclass defaults', function () {
 });
 
 test('individual timeout setters preserve the other configured value', function ($method, $load, $browser) {
-    $options = BrowserOptions::make()->setTimeouts(load: 20000, browser: 80000);
+    $options = (new BrowserOptions)->setTimeouts(load: 20000, browser: 80000);
 
     expect($options->{$method}(30000))->toBe($options)
         ->and($options->getLoadTimeout())->toBe($load)
@@ -65,7 +78,7 @@ test('individual timeout setters preserve the other configured value', function 
 ]);
 
 test('invalid individual timeout updates leave both configured values unchanged', function ($method, $value) {
-    $options = BrowserOptions::make()->setTimeouts(load: 20000, browser: 80000);
+    $options = (new BrowserOptions)->setTimeouts(load: 20000, browser: 80000);
 
     expect(fn () => $options->{$method}($value))->toThrow(InvalidArgumentException::class);
 

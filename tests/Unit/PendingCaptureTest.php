@@ -17,8 +17,8 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 test('one executor supports independent image and PDF builders for the same source', function () {
     $fake = new ScreenshotFake;
     $capture = new PendingCapture($fake, 'https://example.com/invoice', SourceType::Url);
-    $image = new PendingImage($capture, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
-    $pdf = new PendingPdf($capture, new CaptureOptions(BrowserOptions::make(), PdfOptions::make()));
+    $image = new PendingImage($capture, new CaptureOptions(new BrowserOptions, new ImageOptions));
+    $pdf = new PendingPdf($capture, new CaptureOptions(new BrowserOptions, new PdfOptions));
 
     $image->size(800, 600)->jpeg(95);
     $pdf->size(400, 300)->landscape();
@@ -40,7 +40,7 @@ test('one executor supports independent image and PDF builders for the same sour
 });
 
 test('the executor snapshots options before passing them to a driver', function () {
-    $options = new CaptureOptions(BrowserOptions::make()->setSize(800, 600), ImageOptions::make());
+    $options = new CaptureOptions((new BrowserOptions)->setSize(800, 600), new ImageOptions);
     $result = new ImageResult(imageFixture());
     $driver = Mockery::mock(Driver::class);
     $driver->shouldReceive('capture')->once()->withArgs(function ($source, $type, $snapshot) use ($options) {
@@ -63,7 +63,7 @@ test('the executor snapshots options before passing them to a driver', function 
 });
 
 test('the executor validates settings before invoking the driver', function () {
-    $options = new class(BrowserOptions::make(), ImageOptions::make()) extends CaptureOptions
+    $options = new class(new BrowserOptions, new ImageOptions) extends CaptureOptions
     {
         public function validate(): void
         {

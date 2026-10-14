@@ -35,17 +35,9 @@ class ImageOptions
     /**
      * Create options using the declared defaults.
      */
-    protected function __construct()
+    public function __construct()
     {
         $this->validate();
-    }
-
-    /**
-     * Create a fresh set of options.
-     */
-    public static function make(): static
-    {
-        return new static;
     }
 
     /**

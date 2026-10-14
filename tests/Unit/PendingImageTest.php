@@ -30,7 +30,7 @@ test('pending captures do not start the driver until requested', function () {
 });
 
 test('omitted timeouts preserve configured values without changing other captures', function ($arguments, $load, $browser) {
-    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setTimeouts(load: 20000, browser: 80000));
+    $fake = new ScreenshotFake(browser: (new BrowserOptions)->setTimeouts(load: 20000, browser: 80000));
 
     $fake->html('override')->timeouts(...$arguments)->capture();
     $fake->html('default')->capture();
@@ -64,7 +64,7 @@ test('options cannot leak between captures', function () {
 
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
-    $settings = new CaptureOptions(BrowserOptions::make()->setSize(900, 768), ImageOptions::make());
+    $settings = new CaptureOptions((new BrowserOptions)->setSize(900, 768), new ImageOptions);
     $first = new PendingImage(new PendingCapture($fake, 'first', SourceType::Html), $settings);
     $second = new PendingImage(new PendingCapture($fake, 'second', SourceType::Html), $settings);
 
@@ -89,7 +89,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ImageResult(imageFixture());
     });
-    $pending = new PendingImage(new PendingCapture($driver, 'hello', SourceType::Html), new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
+    $pending = new PendingImage(new PendingCapture($driver, 'hello', SourceType::Html), new CaptureOptions(new BrowserOptions, new ImageOptions));
     $pending->jpeg(95)->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->browser->getWidth())->toBe(1024)->and($snapshots[0]->browser->getHeight())->toBe(768);
@@ -106,7 +106,7 @@ test('invalid mutations leave all pending screenshot options unchanged', functio
     $pending = $fake->html('hello');
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
+    $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions(new BrowserOptions, new ImageOptions));
 })->with([
     'zero width' => ['size', [0, 768]],
     'invalid height' => ['size', [500, -1]],
@@ -141,7 +141,7 @@ test('standalone views require a view factory', function () {
 });
 
 test('unsafe image options are rejected', function ($method, $arguments) {
-    expect(fn () => ImageOptions::make()->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
+    expect(fn () => (new ImageOptions)->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
 })->with([
     ['setMaxSize', [0, 10000]],
     ['setMaxSize', [10000, 10000]],
@@ -149,7 +149,7 @@ test('unsafe image options are rejected', function ($method, $arguments) {
 ]);
 
 test('socket keys can be overridden and disabled without changing defaults', function () {
-    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSocket('default'));
+    $fake = new ScreenshotFake(browser: (new BrowserOptions)->setSocket('default'));
     $fake->html('named')->socket('old')->socket('emails')->capture();
     $fake->html('dedicated')->withoutSocket()->capture();
     $fake->html('default')->capture();
@@ -159,23 +159,23 @@ test('socket keys can be overridden and disabled without changing defaults', fun
 });
 
 test('empty socket keys fail before a capture starts', function ($key) {
-    expect(fn () => BrowserOptions::make()->setSocket($key))->toThrow(InvalidArgumentException::class);
+    expect(fn () => (new BrowserOptions)->setSocket($key))->toThrow(InvalidArgumentException::class);
 })->with(['', ' ']);
 
 test('image builders reject PDF defaults before calling the driver', function () {
     $driver = Mockery::mock(Driver::class);
     $driver->shouldNotReceive('capture');
 
-    expect(fn () => new PendingImage(new PendingCapture($driver, 'invoice', SourceType::Html), new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat(OutputFormat::Pdf))))
+    expect(fn () => new PendingImage(new PendingCapture($driver, 'invoice', SourceType::Html), new CaptureOptions(new BrowserOptions, (new ImageOptions)->setFormat(OutputFormat::Pdf))))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
 });
 
 test('directly constructed image builders snapshot their PDF defaults', function () {
     $fake = new ScreenshotFake;
-    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter);
+    $pdf = (new PdfOptions)->setPaper(PaperSize::Letter);
     $pending = new PendingImage(
         new PendingCapture($fake, 'invoice', SourceType::Html),
-        new CaptureOptions(BrowserOptions::make(), ImageOptions::make()),
+        new CaptureOptions(new BrowserOptions, new ImageOptions),
         $pdf,
     );
     $pdf->setPaper(PaperSize::Legal);

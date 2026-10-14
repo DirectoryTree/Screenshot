@@ -58,6 +58,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
             }
 
             $result = (new PageCapture($browser, $options, $shared))->capture($source, $type);
+
             $failed = false;
 
             return $result;

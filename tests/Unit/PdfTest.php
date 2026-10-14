@@ -21,7 +21,7 @@ function pdfFixture(): string
 }
 
 test('PDF conversion snapshots browser defaults without capturing or changing the source', function () {
-    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSocket('invoices')->setTimeouts(load: 5000, browser: 10000));
+    $fake = new ScreenshotFake(browser: (new BrowserOptions)->setSocket('invoices')->setTimeouts(load: 5000, browser: 10000));
     $image = $fake->html('invoice')->size(500, 300)->jpeg();
     $pdf = $image->pdf();
     $image->socket('images');
@@ -103,7 +103,7 @@ test('PDF fake assertions fail when no matching document was captured', function
 });
 
 test('paper dimensions and margins are converted from millimeters to inches', function () {
-    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
+    $pdf = (new PdfOptions)->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
     $parameters = $pdf->toArray();
 
     expect($parameters['paperWidth'])->toEqualWithDelta(8.5, 0.00001)
@@ -113,9 +113,9 @@ test('paper dimensions and margins are converted from millimeters to inches', fu
 });
 
 test('invalid print settings leave the entire PDF configuration unchanged', function ($method, $arguments) {
-    $pdf = PdfOptions::make();
+    $pdf = new PdfOptions;
     expect(fn () => $pdf->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
-    expect($pdf)->toEqual(PdfOptions::make());
+    expect($pdf)->toEqual(new PdfOptions);
 })->with([
     ['setPaperSize', [0, 297]],
     ['setPaperSize', [210, INF]],
@@ -127,7 +127,7 @@ test('invalid print settings leave the entire PDF configuration unchanged', func
 ]);
 
 test('orientation changes cannot invalidate the printable area', function () {
-    $pdf = PdfOptions::make()->setMargins(120, 10, 120, 10);
+    $pdf = (new PdfOptions)->setMargins(120, 10, 120, 10);
 
     expect(fn () => $pdf->setLandscape(true))->toThrow(InvalidArgumentException::class);
     expect($pdf->getLandscape())->toBeFalse();
@@ -159,7 +159,7 @@ test('image and PDF builders save their own result types without changing each o
 });
 
 test('combined layout changes validate the final paper and margins atomically', function () {
-    $pdf = PdfOptions::make()->setMargins(20, 20, 20, 20);
+    $pdf = (new PdfOptions)->setMargins(20, 20, 20, 20);
 
     expect($pdf->setLayout(width: 30, height: 30, top: 0, right: 0, bottom: 0, left: 0))->toBe($pdf)
         ->and($pdf->getPaperWidth())->toBe(30.0)

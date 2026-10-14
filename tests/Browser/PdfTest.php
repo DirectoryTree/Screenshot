@@ -89,7 +89,7 @@ test('image and PDF builders capture independently using the same terminal metho
 test('real PDFs use configured defaults and explicit paper overrides', function () {
     $factory = new Screenshot(
         driver: new ChromeDriver(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1']),
-        pdf: PdfOptions::make()->setPaperSize(100, 150)->setLandscape(true),
+        pdf: (new PdfOptions)->setPaperSize(100, 150)->setLandscape(true),
     );
     $default = $factory->html('<h1>Defaults</h1>')->pdf()->capture();
     [$width, $height] = pdfPageSize($default->contents());

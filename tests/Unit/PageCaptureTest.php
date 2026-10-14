@@ -41,7 +41,7 @@ test('load timeouts stop loading and capture bounded content', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect((new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))->capture('hello', SourceType::Html)->width())->toBe(1);
+    expect((new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html)->width())->toBe(1);
 });
 
 test('strict load timeouts propagate and close the page', function () {
@@ -56,7 +56,7 @@ test('strict load timeouts propagate and close the page', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make()->setFailOnTimeout(true), ImageOptions::make())))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions((new BrowserOptions)->setFailOnTimeout(true), new ImageOptions)))->capture('hello', SourceType::Html))
         ->toThrow(OperationTimedOut::class, 'load failure');
 });
 
@@ -76,7 +76,7 @@ test('failed page cleanup falls back to closing its target', function () {
     $connection->shouldReceive('sendMessageSync')->once()->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget');
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html))
         ->toThrow(RuntimeException::class, 'capture failure');
 });
 
@@ -94,7 +94,7 @@ test('capture failures still close the page', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html))
         ->toThrow(RuntimeException::class, 'screenshot failure');
 });
 
@@ -117,7 +117,7 @@ test('a shared capture failure closes its page without closing other workers bro
     $page->shouldReceive('setHtml')->once()->andThrow(new RuntimeException('capture failure'));
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
-    $capture = new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()), shared: true);
+    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(RuntimeException::class, 'capture failure');
 });
@@ -144,7 +144,7 @@ test('shared page initialization failures close only the owned target and preser
         $connection->shouldReceive('readData')->once();
     }
 
-    $capture = new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()), shared: true);
+    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(OperationTimedOut::class, 'initialization failure');
 })->with([false, true]);
@@ -165,7 +165,7 @@ test('PDF rendering receives print options and timeout and closes the page', fun
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    $result = (new PageCapture($browser, new CaptureOptions(BrowserOptions::make()->setTimeouts(load: 15000, browser: 12345), PdfOptions::make()->setLandscape(true))))->capture('invoice', SourceType::Html);
+    $result = (new PageCapture($browser, new CaptureOptions((new BrowserOptions)->setTimeouts(load: 15000, browser: 12345), (new PdfOptions)->setLandscape(true))))->capture('invoice', SourceType::Html);
     expect($result->mimeType())->toBe('application/pdf');
 });
 
@@ -183,7 +183,7 @@ test('PDF printing failures preserve the error during page cleanup', function ()
     $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), PdfOptions::make())))->capture('invoice', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new PdfOptions)))->capture('invoice', SourceType::Html))
         ->toThrow(RuntimeException::class, 'print failure');
 });
 
@@ -205,11 +205,11 @@ test('the output enum selects Chrome image format and JPEG quality', function (O
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect((new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat($format, 91))))->capture('image', SourceType::Html))
+    expect((new PageCapture($browser, new CaptureOptions(new BrowserOptions, (new ImageOptions)->setFormat($format, 91))))->capture('image', SourceType::Html))
         ->toBeInstanceOf(ImageResult::class);
 })->with([OutputFormat::Png, OutputFormat::Jpeg]);
 
-test('strategy resolution failures still close the page', function () {
+test('capture creation failures still close the page', function () {
     $browser = Mockery::mock(Browser::class);
     $page = Mockery::mock(Page::class);
     $session = Mockery::mock(Session::class);
@@ -221,9 +221,9 @@ test('strategy resolution failures still close the page', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    $capture = new class($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())) extends PageCapture
+    $capture = new class($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)) extends PageCapture
     {
-        protected function resolveCapture(): CapturesPage
+        protected function newCapture(): CapturesPage
         {
             throw new RuntimeException('strategy failure');
         }
@@ -247,7 +247,7 @@ test('page configuration failures release resources before loading or rendering'
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html))
         ->toThrow(RuntimeException::class, 'Unable to configure JavaScript execution: configuration rejected');
 });
 
@@ -267,7 +267,7 @@ test('failed stop-loading commands release resources without rendering partial c
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    expect(fn () => (new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html))
         ->toThrow(RuntimeException::class, 'Unable to stop page loading: stop rejected');
 });
 
@@ -306,7 +306,7 @@ test('shared page cleanup reports its failure without replacing a capture error'
     $connection->shouldReceive('sendMessageSync')->once()
         ->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget' && $message->getParams() === ['targetId' => 'owned-target'])
         ->andReturn(new Response(['error' => ['message' => 'target rejected']], new Message('test')));
-    $capture = new PageCapture($browser, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()), shared: true);
+    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(
         RuntimeException::class,

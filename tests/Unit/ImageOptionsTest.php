@@ -4,7 +4,7 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageOptions;
 
 test('format and quality updates reject invalid input without changing either value', function () {
-    $options = ImageOptions::make()->setFormat(OutputFormat::Png, 85);
+    $options = (new ImageOptions)->setFormat(OutputFormat::Png, 85);
 
     expect(fn () => $options->setFormat('gif', 50))->toThrow(TypeError::class);
     expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(85);
@@ -14,7 +14,7 @@ test('format and quality updates reject invalid input without changing either va
 });
 
 test('changing format preserves quality unless explicitly supplied', function () {
-    $options = ImageOptions::make();
+    $options = new ImageOptions;
     $options->setFormat(OutputFormat::Jpeg, 0)->setFormat(OutputFormat::Png);
 
     expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(0);
@@ -24,7 +24,7 @@ test('changing format preserves quality unless explicitly supplied', function ()
 });
 
 test('dimension pairs can change together at the maximum allowed area', function () {
-    $options = ImageOptions::make()->setMaxSize(4000, 10000);
+    $options = (new ImageOptions)->setMaxSize(4000, 10000);
     $options->setMaxSize(10000, 4000);
 
     expect($options->getMaxWidth())->toBe(10000)->and($options->getMaxHeight())->toBe(4000);

@@ -11,7 +11,7 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('directly constructed PDF builders own their browser and print settings', function () {
     $fake = new ScreenshotFake;
-    $options = new CaptureOptions(BrowserOptions::make()->setSocket('default'), PdfOptions::make());
+    $options = new CaptureOptions((new BrowserOptions)->setSocket('default'), new PdfOptions);
     $capture = new PendingCapture($fake, 'invoice', SourceType::Html);
     $first = new PendingPdf($capture, $options);
     $second = new PendingPdf($capture, $options);

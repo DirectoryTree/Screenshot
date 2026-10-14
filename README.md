@@ -315,9 +315,9 @@ $screenshot = new Screenshot(
         binary: '/usr/bin/chromium',
         socketDirectory: __DIR__.'/storage/screenshots',
     ),
-    browser: BrowserOptions::make()->setSize(1280, 720),
-    image: ImageOptions::make()->setFormat(OutputFormat::Png, 85),
-    pdf: PdfOptions::make()->setPaper(PaperSize::Letter),
+    browser: (new BrowserOptions)->setSize(1280, 720),
+    image: (new ImageOptions)->setFormat(OutputFormat::Png, 85),
+    pdf: (new PdfOptions)->setPaper(PaperSize::Letter),
 );
 
 $screenshot->html('<h1>Hello, world!</h1>')
@@ -336,7 +336,7 @@ Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output 
 - `$options->browser` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
 - `$options->output` is an `ImageOptions` or `PdfOptions` object containing output settings.
 
-Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects. Create standalone options with `BrowserOptions::make()`, `ImageOptions::make()`, or `PdfOptions::make()` and configure them through their setters.
+Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects. Create standalone options with `new BrowserOptions`, `new ImageOptions`, or `new PdfOptions` and configure them through their setters.
 
 ## Testing
 

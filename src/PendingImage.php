@@ -7,11 +7,6 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 class PendingImage
 {
     /**
-     * The print defaults for captures converted to PDF.
-     */
-    protected PdfOptions $pdf;
-
-    /**
      * Create an image builder with independent image and PDF settings.
      *
      * @param  CaptureOptions<ImageOptions>  $options
@@ -19,10 +14,10 @@ class PendingImage
     public function __construct(
         protected PendingCapture $capture,
         protected CaptureOptions $options,
-        ?PdfOptions $pdf = null,
+        protected PdfOptions $pdf = new PdfOptions,
     ) {
         $this->options = clone $options;
-        $this->pdf = $pdf ? clone $pdf : PdfOptions::make();
+        $this->pdf = clone $pdf;
     }
 
     /**

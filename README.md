@@ -3,6 +3,13 @@
 <p align="center">Create browser screenshots with PHP and Laravel.</p>
 
 <p align="center">
+    <a href="https://github.com/DirectoryTree/Screenshot/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/DirectoryTree/Screenshot/tests.yml?branch=master&amp;style=flat-square" alt="Tests"></a>
+    <a href="https://packagist.org/packages/directorytree/screenshot"><img src="https://img.shields.io/packagist/dt/directorytree/screenshot.svg?style=flat-square" alt="Total Downloads"></a>
+    <a href="https://packagist.org/packages/directorytree/screenshot"><img src="https://img.shields.io/packagist/v/directorytree/screenshot.svg?style=flat-square" alt="Latest Version"></a>
+    <a href="https://github.com/DirectoryTree/Screenshot/blob/master/LICENSE.md"><img src="https://img.shields.io/github/license/DirectoryTree/Screenshot?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
     <a href="#installation">Installation</a>
     <span> · </span>
     <a href="#usage">Usage</a>

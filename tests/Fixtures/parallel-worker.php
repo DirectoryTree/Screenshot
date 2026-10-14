@@ -2,8 +2,10 @@
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\SourceType;
+use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
 
@@ -13,13 +15,24 @@ require __DIR__.'/../../vendor/autoload.php';
 
 $driver = new class($directory, $id) extends ChromeDriver
 {
-    public function __construct(protected string $directory, protected string $id)
-    {
-        parent::__construct(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'], $directory);
+    public function __construct(
+        protected string $directory,
+        protected string $id,
+    ) {
+        parent::__construct(
+            getenv('CHROME_PATH') ?: null,
+            ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'],
+            $directory,
+        );
     }
 
-    protected function capturePage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared = false): ScreenshotResult
-    {
+    protected function capturePage(
+        Browser $browser,
+        string $source,
+        SourceType $type,
+        CaptureOptions $options,
+        bool $shared = false,
+    ): ImageResult|PdfResult {
         file_put_contents($this->directory.'/'.$this->id.'.ready', 'ready');
         $deadline = microtime(true) + 15;
 
@@ -35,15 +48,18 @@ $driver = new class($directory, $id) extends ChromeDriver
     }
 };
 
-$image = (new Screenshot($driver))
+$pending = (new Screenshot($driver))
     ->html('<style>html,body{margin:0}div{height:100px}</style><div id="content"></div><script>document.getElementById("content").style.height="600px"</script>')
     ->socket('parallel')
     ->size((int) $width, 240)
-    ->javascript($id === 'second')
-    ->capture();
+    ->javascript($id === 'second');
+
+$isPdf = ($argv[4] ?? 'png') === 'pdf';
+$image = ($isPdf ? $pending->pdf() : $pending)->capture();
 
 file_put_contents($directory.'/'.$id.'.json', json_encode([
-    'width' => $image->width(),
-    'height' => $image->height(),
+    'width' => $isPdf ? null : $image->width(),
+    'height' => $isPdf ? null : $image->height(),
+    'mime' => $image->mimeType(),
     'socket' => file_get_contents(BrowserSocket::named('parallel', $directory)->path()),
 ]));

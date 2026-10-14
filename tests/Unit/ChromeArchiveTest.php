@@ -13,6 +13,7 @@ afterEach(function () {
 
 test('archives preserve executable permissions and framework symbolic links', function () {
     $zip = new ZipArchive;
+
     $zip->open(temporaryDirectory().'/chrome.zip', ZipArchive::CREATE);
     $zip->addFromString('Framework/Versions/A/Chrome', 'binary');
     $zip->setExternalAttributesIndex(0, ZipArchive::OPSYS_UNIX, 0100755 << 16);
@@ -24,20 +25,22 @@ test('archives preserve executable permissions and framework symbolic links', fu
 
     (new ChromeArchive)->extract(temporaryDirectory().'/chrome.zip', temporaryDirectory().'/extracted');
 
-    expect(is_link(temporaryDirectory().'/extracted/Framework/Chrome'))->toBeTrue()
-        ->and(file_get_contents(temporaryDirectory().'/extracted/Framework/Chrome'))->toBe('binary')
-        ->and(is_executable(temporaryDirectory().'/extracted/Framework/Chrome'))->toBeTrue();
+    expect(is_link(temporaryDirectory().'/extracted/Framework/Chrome'))->toBeTrue();
+    expect(file_get_contents(temporaryDirectory().'/extracted/Framework/Chrome'))->toBe('binary');
+    expect(is_executable(temporaryDirectory().'/extracted/Framework/Chrome'))->toBeTrue();
 });
 
 test('unsafe archive entries cannot escape the extraction directory', function ($name, $contents, $mode) {
     $zip = new ZipArchive;
+
     $zip->open(temporaryDirectory().'/chrome.zip', ZipArchive::CREATE);
     $zip->addFromString($name, $contents);
     $zip->setExternalAttributesIndex(0, ZipArchive::OPSYS_UNIX, $mode << 16);
     $zip->close();
 
-    expect(fn () => (new ChromeArchive)->extract(temporaryDirectory().'/chrome.zip', temporaryDirectory().'/extracted'))
-        ->toThrow(RuntimeException::class, 'unsafe');
+    expect(
+        fn () => (new ChromeArchive)->extract(temporaryDirectory().'/chrome.zip', temporaryDirectory().'/extracted'),
+    )->toThrow(RuntimeException::class, 'unsafe');
     expect(file_exists(temporaryDirectory().'/escaped'))->toBeFalse();
 })->with([
     ['../escaped', 'file', 0100644],

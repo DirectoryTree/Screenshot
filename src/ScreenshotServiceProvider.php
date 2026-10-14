@@ -5,6 +5,8 @@ namespace DirectoryTree\Screenshot;
 use DirectoryTree\Screenshot\Commands\InstallCommand;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,8 +33,35 @@ class ScreenshotServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(Screenshot::class, function ($app) {
+            $capture = $app['config']->get('screenshot.capture');
+            $image = $app['config']->get('screenshot.image');
+            $pdf = $app['config']->get('screenshot.pdf');
+            [$width, $height] = PaperSize::from($pdf['paper'])->dimensions();
+
             return new Screenshot(
                 driver: $app->make(Driver::class),
+                browser: (new BrowserOptions)
+                    ->setSize($capture['width'], $capture['height'])
+                    ->setTimeouts($capture['load_timeout'], $capture['browser_timeout'])
+                    ->setJavascript($capture['javascript'])
+                    ->setFailOnTimeout($capture['fail_on_timeout'])
+                    ->setSocket($capture['socket']),
+                image: (new ImageOptions)
+                    ->setFormat(OutputFormat::from($image['format']), $image['quality'])
+                    ->setMaxSize($image['max_width'], $image['max_height'])
+                    ->setFullPage($image['full_page']),
+                pdf: (new PdfOptions)
+                    ->setLayout(
+                        width: $width,
+                        height: $height,
+                        landscape: $pdf['landscape'],
+                        top: $pdf['margins']['top'],
+                        right: $pdf['margins']['right'],
+                        bottom: $pdf['margins']['bottom'],
+                        left: $pdf['margins']['left'],
+                    )
+                    ->setBackground($pdf['background'])
+                    ->setPreferCssPageSize($pdf['prefer_css_page_size']),
                 views: $app['view'],
             );
         });

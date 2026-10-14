@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screenshot PDF fixture</title>
+<style>
+    body { font: 16px sans-serif; color: #18253a; }
+    h1 { color: #315dca; }
+    .banner { background: #e4ebff; padding: 24px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    td, th { padding: 12px; border-bottom: 1px solid #ccc; text-align: left; }
+    .second { break-before: page; }
+    .screen-only { display: block; }
+    @media print { .screen-only { display: none; } }
+</style>
+</head>
+<body>
+<div class="banner"><h1>Invoice #1042</h1><p>DirectoryTree Screenshot PDF</p></div>
+<table><tr><th>Description</th><th>Amount</th></tr><tr><td>Browser rendering</td><td>$120.00</td></tr></table>
+<p class="screen-only">Screen-only content</p>
+<section class="second"><h1>Payment details</h1><p>Thank you for your business.</p></section>
+</body>
+</html>

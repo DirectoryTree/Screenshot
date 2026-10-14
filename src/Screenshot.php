@@ -2,10 +2,10 @@
 
 namespace DirectoryTree\Screenshot;
 
-use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use InvalidArgumentException;
 use LogicException;
@@ -13,57 +13,44 @@ use LogicException;
 class Screenshot
 {
     /**
-     * The callback used to configure each new pending screenshot.
-     *
-     * @var (Closure(PendingScreenshot): mixed)|null
-     */
-    protected ?Closure $configureUsing = null;
-
-    /**
-     * Create a new screenshot factory.
+     * Create a screenshot factory with independent capture defaults.
      */
     public function __construct(
         protected Driver $driver = new ChromeDriver,
-        protected CaptureOptions $options = new CaptureOptions,
+        protected BrowserOptions $browser = new BrowserOptions,
+        protected ImageOptions $image = new ImageOptions,
+        protected PdfOptions $pdf = new PdfOptions,
         protected ?ViewFactory $views = null,
-    ) {}
-
-    /**
-     * Set or clear the default configuration callback for future screenshots.
-     *
-     * @param  (callable(PendingScreenshot): mixed)|null  $callback
-     */
-    public function configure(?callable $callback): static
-    {
-        $this->configureUsing = $callback === null ? null : Closure::fromCallable($callback);
-
-        return $this;
+    ) {
+        $this->browser = clone $browser;
+        $this->image = clone $image;
+        $this->pdf = clone $pdf;
     }
 
     /**
      * Prepare a screenshot of an HTML document.
      */
-    public function html(string $html): PendingScreenshot
+    public function html(string $html): PendingSource
     {
-        return $this->newPendingScreenshot($html, 'html');
+        return $this->newPendingSource($html, SourceType::Html);
     }
 
     /**
      * Prepare a screenshot of an HTTP or HTTPS URL.
      */
-    public function url(string $url): PendingScreenshot
+    public function url(string $url): PendingSource
     {
         if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true)) {
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 
-        return $this->newPendingScreenshot($url, 'url');
+        return $this->newPendingSource($url, SourceType::Url);
     }
 
     /**
      * Render a Laravel view and prepare its screenshot.
      */
-    public function view(string $view, array $data = []): PendingScreenshot
+    public function view(string $view, array $data = []): PendingSource
     {
         if (! $this->views) {
             throw new LogicException('A view factory is required to capture Laravel views.');
@@ -93,16 +80,15 @@ class Screenshot
     }
 
     /**
-     * Apply defaults to a fresh screenshot before caller-specific options.
+     * Prepare a source with an independent snapshot of its browser settings.
      */
-    protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
+    protected function newPendingSource(string $source, SourceType $type): PendingSource
     {
-        $screenshot = new PendingScreenshot($this->driver, $source, $type, $this->options);
-
-        if ($this->configureUsing) {
-            ($this->configureUsing)($screenshot);
-        }
-
-        return $screenshot;
+        return new PendingSource(
+            new PendingCapture($this->driver, $source, $type),
+            $this->browser,
+            $this->image,
+            $this->pdf,
+        );
     }
 }

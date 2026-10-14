@@ -2,19 +2,25 @@
 
 namespace DirectoryTree\Screenshot\Testing;
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\SourceType;
+use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 
 class ScreenshotFake extends Screenshot implements Driver
 {
     /**
-     * The recorded captures.
+     * The recorded image and PDF captures, in capture order.
      *
-     * @var list<array{string, string, CaptureOptions}>
+     * @var list<array{string, SourceType, CaptureOptions}>
      */
     protected array $captures = [];
 
@@ -26,26 +32,30 @@ class ScreenshotFake extends Screenshot implements Driver
     protected array $closed = [];
 
     /**
-     * Create a recording fake that returns a small PNG by default.
+     * Create a recording fake with an optional image or PDF result.
      */
     public function __construct(
-        protected ?ScreenshotResult $result = null,
+        protected ImageResult|PdfResult|null $result = null,
         ?ViewFactory $views = null,
-        CaptureOptions $options = new CaptureOptions,
+        BrowserOptions $browser = new BrowserOptions,
+        ImageOptions $image = new ImageOptions,
+        PdfOptions $pdf = new PdfOptions,
     ) {
-        parent::__construct($this, clone $options, $views);
+        parent::__construct($this, $browser, $image, $pdf, $views);
     }
 
     /**
      * Create a fresh fake using an existing factory's configuration.
      */
-    public static function from(Screenshot $factory, ?ScreenshotResult $result = null): static
+    public static function from(Screenshot $factory, ImageResult|PdfResult|null $result = null): static
     {
-        return (new static(
+        return new static(
             result: $result,
             views: $factory->views,
-            options: $factory->options,
-        ))->configure($factory->configureUsing);
+            browser: $factory->browser,
+            image: $factory->image,
+            pdf: $factory->pdf,
+        );
     }
 
     /**
@@ -59,13 +69,51 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult
+    public function capture(string $source, SourceType $type, CaptureOptions $options): ImageResult|PdfResult
     {
         $this->captures[] = [$source, $type, clone $options];
 
-        return $this->result ?? new ScreenshotResult(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
-        );
+        if ($options->getFormat() === OutputFormat::Pdf) {
+            return $this->result instanceof PdfResult
+                ? $this->result
+                : new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+        }
+
+        return $this->result instanceof ImageResult
+            ? $this->result
+            : new ImageResult('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=');
+    }
+
+    /**
+     * Assert that a PDF matching the callback was captured.
+     */
+    public function assertPdfCaptured(?callable $callback = null): void
+    {
+        foreach ($this->capturesOfType(PdfOptions::class) as [$source, $type, $options]) {
+            if (! $callback || $callback($source, $type, clone $options)) {
+                Assert::assertTrue(true);
+
+                return;
+            }
+        }
+
+        Assert::fail('The expected PDF was not captured.');
+    }
+
+    /**
+     * Assert the number of captured PDFs.
+     */
+    public function assertPdfCapturedCount(int $count): void
+    {
+        Assert::assertCount($count, $this->capturesOfType(PdfOptions::class));
+    }
+
+    /**
+     * Assert that no PDFs were captured.
+     */
+    public function assertNoPdfsCaptured(): void
+    {
+        $this->assertPdfCapturedCount(0);
     }
 
     /**
@@ -73,7 +121,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertCaptured(?callable $callback = null): void
     {
-        foreach ($this->captures as [$source, $type, $options]) {
+        foreach ($this->capturesOfType(ImageOptions::class) as [$source, $type, $options]) {
             if (! $callback || $callback($source, $type, clone $options)) {
                 Assert::assertTrue(true);
 
@@ -89,7 +137,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertCapturedCount(int $count): void
     {
-        Assert::assertCount($count, $this->captures);
+        Assert::assertCount($count, $this->capturesOfType(ImageOptions::class));
     }
 
     /**
@@ -128,5 +176,19 @@ class ScreenshotFake extends Screenshot implements Driver
     public function assertNothingClosed(): void
     {
         Assert::assertCount(0, $this->closed, 'Unexpected browser shutdowns were requested.');
+    }
+
+    /**
+     * Filter the shared capture history by its options type.
+     *
+     * @param  class-string<ImageOptions|PdfOptions>  $type
+     * @return list<array{string, SourceType, CaptureOptions}>
+     */
+    protected function capturesOfType(string $type): array
+    {
+        return array_values(array_filter(
+            $this->captures,
+            static fn (array $capture) => $capture[2]->output instanceof $type,
+        ));
     }
 }

@@ -229,11 +229,24 @@ class ChromeInstaller
             throw new RuntimeException('The Chrome archive does not contain the expected executable.');
         }
 
+        $profile = null;
+        $command = [$path, '--version'];
+
+        // Windows Chrome does not exit after --version. Render a blank page instead.
+        if (PHP_OS_FAMILY === 'Windows') {
+            $profile = sys_get_temp_dir().'/screenshot-verify-'.bin2hex(random_bytes(8));
+            $command = [$path, '--headless', '--dump-dom', '--no-first-run', '--no-default-browser-check', '--user-data-dir='.$profile, 'about:blank'];
+        }
+
         try {
-            $process = new Process([$path, '--version'], timeout: 15);
+            $process = new Process($command, timeout: 15);
             $process->mustRun();
         } catch (Throwable $e) {
             throw new RuntimeException('Chrome could not run. Install the system libraries required by Chrome, or configure a compatible system Chromium binary. '.$e->getMessage(), previous: $e);
+        } finally {
+            if ($profile !== null) {
+                (new Filesystem)->remove($profile);
+            }
         }
     }
 

@@ -86,7 +86,7 @@ php artisan screenshot:install --browser-version=155.0.8059.79
 
 Repeating a pinned installation reuses the downloaded version without contacting Google. Running the command without a version checks for the latest stable release and reuses it if already installed. Failed downloads leave the previously selected browser intact. Earlier versions are retained, allowing a previously downloaded version to be selected again with `--browser-version`.
 
-The installer supports Google's available Linux x64 / ARM64, macOS Intel / Apple Silicon, and Windows x86 / x64 archives. Availability depends on the selected version. It does not install operating-system libraries or fonts, and checking `--version` does not guarantee that the browser can launch with your sandbox configuration. Provision those dependencies in your deployment image. Alpine Linux and unsupported architectures may require distribution-provided Chromium.
+The installer supports Google's available Linux x64 / ARM64, macOS Intel / Apple Silicon, and Windows x86 / x64 archives. Availability depends on the selected version. Verification checks `--version` on Linux and macOS, and renders a blank page headlessly with an isolated temporary profile on Windows. It does not install operating-system libraries or fonts, and verification does not guarantee that the browser can launch under your application worker's sandbox configuration. Provision those dependencies in your deployment image. Alpine Linux and unsupported architectures may require distribution-provided Chromium.
 
 After changing the installed version, close any shared browsers and restart long-running queue workers. Old installation directories may be removed once no browsers or workers are using them.
 

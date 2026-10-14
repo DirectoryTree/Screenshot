@@ -1,6 +1,6 @@
 <h1 align="center">Screenshot</h1>
 
-<p align="center">Create browser screenshots with PHP and Laravel.</p>
+<p align="center">Capture images and PDFs with PHP and Laravel.</p>
 
 <p align="center">
     <a href="https://github.com/DirectoryTree/Screenshot/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/DirectoryTree/Screenshot/tests.yml?branch=master&amp;style=flat-square" alt="Tests"></a>
@@ -23,7 +23,7 @@
 
 ---
 
-Screenshot turns HTML, Blade views, and web pages into PNG or JPEG images using Chrome. Save screenshots locally or store them on any Laravel filesystem disk:
+Screenshot captures HTML, Blade views, and web pages as PNG, JPEG, or PDF files using Chrome. Save captures locally or store them on any Laravel filesystem disk:
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
@@ -98,7 +98,7 @@ Screenshot::url('https://example.com')
     ->save(storage_path('app/example.png'));
 ```
 
-`html()`, `view()`, and `url()` return a `PendingSource` containing the source and browser settings. Select `png()` or `jpeg()` to create a `PendingImage`, or `pdf()` to create a `PendingPdf`. Output options are copied only when that output is selected.
+Start with `html()`, `view()`, or `url()` to prepare a source. Select `png()`, `jpeg()`, or `pdf()`, apply the output settings, then call `capture()`, `save()`, or `store()`.
 
 Calling `capture()`, `save()`, or `store()` directly on the source uses the configured image format, which defaults to PNG.
 
@@ -140,9 +140,9 @@ $image = Screenshot::html($html)->png()->capture();
 
 File extensions do not select the format. Use `jpeg()` for JPEG output or `pdf()` for PDF output.
 
-### Saving and Reading Images
+### Saving and Reading Captures
 
-Call `save()` or `store()` directly on a pending screenshot, or capture once and reuse the result:
+Call `save()` or `store()` on a source or output builder, or capture once and reuse the result:
 
 ```php
 $image = Screenshot::html($html)->capture();
@@ -160,9 +160,11 @@ $image->height();
 
 `save()` requires an existing local directory. `store()` uses Laravel's default disk unless you specify one. Both overwrite an existing destination, return the result, and throw if writing fails.
 
-Both pending screenshots and captured results accept `options` on `store()`. These are passed directly to Laravel's filesystem, including visibility and any metadata supported by your disk.
+Image captures return an `ImageResult`; PDF captures return a `PdfResult`. Both provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. Image results also provide `width()` and `height()`.
 
-Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a new screenshot. Keep the result when you need to save or return the same image more than once.
+Sources, output builders, and captured results accept `options` on `store()`. These are passed directly to Laravel's filesystem, including visibility and any metadata supported by your disk.
+
+Each call to a source or output builder's `capture()`, `save()`, or `store()` performs a new capture. Keep the result when you need to save or return the same image or document more than once.
 
 ### PDFs
 
@@ -183,7 +185,7 @@ PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` a
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 
-The source request and both output builders support `size()`, `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Selecting an output snapshots the source's current browser settings and copies the configured defaults for that output. Each selection creates an independent builder, so later changes to the source or another builder do not affect it.
+Sources and output builders support `size()`, `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Each output builder starts with the source's current browser settings and the configured defaults for that output. Later changes to the source or another builder do not affect it.
 
 Keep the source request when producing several outputs:
 
@@ -196,9 +198,7 @@ $source->jpeg(90)->maxSize(1600, 6000)->save($imagePath);
 $source->pdf()->paper(PaperSize::A4)->save($pdfPath);
 ```
 
-Image builders hold image settings and PDF builders hold print settings. Select PDF output on the source request. Images and PDFs can share the same named browser.
-
-Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns an `ImageResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+Select each output on the source: `png()` and `jpeg()` return a `PendingImage`, while `pdf()` returns a `PendingPdf`. Both builders support `capture()`, `save()`, and `store()`, and can share the same named browser.
 
 ### Timeouts
 
@@ -287,7 +287,7 @@ Omitted entries use the package defaults. The available settings are:
 
 Capture dimensions are in pixels, timeouts are in milliseconds, and PDF margins are in millimeters. Use `socket => null` for dedicated browsers.
 
-Source requests receive independent browser defaults. Selecting an output copies only its image or PDF defaults. Fluent options update each builder's own settings:
+Fluent options override the defaults for the current source or output builder:
 
 ```php
 use DirectoryTree\Screenshot\Enums\PaperSize;
@@ -296,17 +296,9 @@ Screenshot::html($html)->size(800, 600)->jpeg()->capture();
 Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(PaperSize::A4)->capture();
 ```
 
-On a source request, `jpeg()` uses the configured quality and `jpeg(quality: 90)` overrides it. Calling `png()` or `jpeg()` again on an image builder changes its format while preserving its current settings. Calling `pdf()` on the source uses its current browser settings and the configured PDF defaults.
+`jpeg()` uses the configured quality; `jpeg(quality: 90)` overrides it. Calling `png()` or `jpeg()` again on an image builder changes its format while preserving its current settings.
 
-Defaults are loaded when the screenshot factory is resolved. Each source request receives the output defaults directly and copies only the selected output's settings when creating a builder. Output builders retain their own settings, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
-
-### Updating Existing Captures
-
-Replace `Screenshot::configure($format, $callback)` registrations with entries in `config/screenshot.php`, or constructor options when using plain PHP. Browser defaults now apply to every output; PNG and JPEG share image defaults. Use the fluent API for settings specific to an individual capture.
-
-Source methods now return `PendingSource`. Move image-specific settings after `png()` or `jpeg()`, and select PDF output on the source request. To produce an image and PDF from the same source, keep the source request and select each output separately.
-
-Custom drivers and fake assertion callbacks now receive `CaptureOptions`. Read browser settings through `$options->browser` and image or PDF settings through `$options->output`. `getFormat()` remains available on `CaptureOptions`.
+Defaults are loaded when the screenshot factory is resolved. Each source and output builder keeps its own settings, so overrides do not affect other captures. Restart long-running workers after changing configuration.
 
 ### Browser Settings
 
@@ -359,7 +351,7 @@ Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output 
 - `$options->browser` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
 - `$options->output` is an `ImageOptions` or `PdfOptions` object containing output settings.
 
-Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects. Create standalone options with `new BrowserOptions`, `new ImageOptions`, or `new PdfOptions` and configure them through their setters.
+`$options->getFormat()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects. Create standalone options with `new BrowserOptions`, `new ImageOptions`, or `new PdfOptions` and configure them through their setters.
 
 ## Testing
 

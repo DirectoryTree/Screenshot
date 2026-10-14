@@ -16,7 +16,7 @@ class CaptureOptions
         protected int $maxHeight = 10000,
         protected string $format = 'png',
         protected int $quality = 80,
-        protected int $timeout = 60000,
+        protected int $browserTimeout = 60000,
         protected int $loadTimeout = 15000,
         protected bool $fullPage = true,
         protected bool $javascript = false,
@@ -123,9 +123,17 @@ class CaptureOptions
     /**
      * Get the browser-operation timeout in milliseconds.
      */
-    public function getTimeout(): int
+    public function getBrowserTimeout(): int
     {
-        return $this->timeout;
+        return $this->browserTimeout;
+    }
+
+    /**
+     * Set the browser-operation timeout in milliseconds.
+     */
+    public function setBrowserTimeout(int $milliseconds): static
+    {
+        return $this->setTimeouts(browser: $milliseconds);
     }
 
     /**
@@ -137,18 +145,26 @@ class CaptureOptions
     }
 
     /**
+     * Set the page-load timeout in milliseconds.
+     */
+    public function setLoadTimeout(int $milliseconds): static
+    {
+        return $this->setTimeouts(load: $milliseconds);
+    }
+
+    /**
      * Set timeouts in milliseconds after validating both values.
      */
     public function setTimeouts(?int $load = null, ?int $browser = null): static
     {
         $load ??= $this->loadTimeout;
-        $browser ??= $this->timeout;
+        $browser ??= $this->browserTimeout;
 
         $this->validateTimeout($load);
         $this->validateTimeout($browser);
 
         $this->loadTimeout = $load;
-        $this->timeout = $browser;
+        $this->browserTimeout = $browser;
 
         return $this;
     }
@@ -237,7 +253,7 @@ class CaptureOptions
         $this->validateDimensions($this->maxWidth, $this->maxHeight);
         $this->validateFormat($this->format);
         $this->validateQuality($this->quality);
-        $this->validateTimeout($this->timeout);
+        $this->validateTimeout($this->browserTimeout);
         $this->validateTimeout($this->loadTimeout);
     }
 

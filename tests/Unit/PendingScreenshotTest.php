@@ -18,7 +18,7 @@ test('pending captures do not start the driver until requested', function () {
         && $type === 'html' && $options->getWidth() === 800 && $options->getHeight() === 600
         && $options->getFormat() === 'jpeg' && $options->getQuality() === 90 && ! $options->getFullPage()
         && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
-        && $options->getTimeout() === 2000 && $options->getLoadTimeout() === 1000
+        && $options->getBrowserTimeout() === 2000 && $options->getLoadTimeout() === 1000
         && $options->getJavascript() && $options->getFailOnTimeout());
 });
 
@@ -30,9 +30,9 @@ test('omitted timeouts preserve configured values without changing other capture
     $fake->html('default')->capture();
 
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
-        && $options->getLoadTimeout() === $load && $options->getTimeout() === $browser);
+        && $options->getLoadTimeout() === $load && $options->getBrowserTimeout() === $browser);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default'
-        && $options->getLoadTimeout() === 20000 && $options->getTimeout() === 80000);
+        && $options->getLoadTimeout() === 20000 && $options->getBrowserTimeout() === 80000);
 })->with([
     'load only' => [['load' => 30000], 30000, 80000],
     'browser only' => [['browser' => 90000], 20000, 90000],
@@ -44,7 +44,7 @@ test('successive timeout updates preserve the other current value', function () 
     $fake->html('hello')->timeouts(load: 30000)->timeouts(browser: 90000)->capture();
 
     $fake->assertCaptured(fn ($source, $type, $options) => $options->getLoadTimeout() === 30000
-        && $options->getTimeout() === 90000);
+        && $options->getBrowserTimeout() === 90000);
 });
 
 test('options cannot leak between captures', function () {
@@ -136,7 +136,7 @@ test('unsafe capture options are rejected', function ($values) {
     [['width' => 0]], [['height' => -1]], [['width' => 16385]],
     [['width' => 10000, 'height' => 10000]], [['maxWidth' => 0]],
     [['maxWidth' => 10000, 'maxHeight' => 10000]], [['format' => 'gif']],
-    [['quality' => -1]], [['quality' => 101]], [['timeout' => 0]], [['loadTimeout' => 0]],
+    [['quality' => -1]], [['quality' => 101]], [['browserTimeout' => 0]], [['loadTimeout' => 0]],
 ]);
 
 test('socket keys can be overridden and disabled without changing defaults', function () {

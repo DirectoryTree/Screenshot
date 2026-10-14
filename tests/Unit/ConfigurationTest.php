@@ -19,7 +19,7 @@ test('capture options override configured defaults without leaking into other ca
     $fake->assertCaptured(fn ($source, $type, $options) => $type === 'url'
         && $options->getWidth() === 1280 && $options->getHeight() === 720
         && $options->getFormat() === 'jpeg' && $options->getQuality() === 85 && $options->getSocket() === 'emails'
-        && $options->getFullPage() && ! $options->getJavascript() && $options->getTimeout() === 60000);
+        && $options->getFullPage() && ! $options->getJavascript() && $options->getBrowserTimeout() === 60000);
 });
 
 test('configuration runs once for each fresh pending screenshot without capturing', function () {

@@ -341,9 +341,9 @@ Screenshot::assertClosed(key: 'invoices');
 Screenshot::assertNotClosed(key: 'reports');
 ```
 
-The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass a `ImageResult` to `Screenshot::fake($result)` when specific output matters. Views still render and explicit file writes still happen, so pair it with `Storage::fake()` where appropriate.
+The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass an `ImageResult` to `Screenshot::fake($result)` when specific output matters. Views still render and explicit file writes still happen, so pair it with `Storage::fake()` where appropriate.
 
-PDF captures are recorded separately and return a valid blank one-page PDF:
+PDF captures return a valid blank one-page PDF and have dedicated assertions:
 
 ```php
 Screenshot::fake();
@@ -357,7 +357,7 @@ Screenshot::assertPdfCapturedCount(1);
 Screenshot::assertNothingCaptured(); // No image captures.
 ```
 
-Use `assertNoPdfsCaptured()` to assert that no PDFs were generated, or `Screenshot::fake(pdfResult: $result)` to supply a custom `PdfResult`.
+Use `assertNoPdfsCaptured()` to assert that no PDFs were generated, or `Screenshot::fake($result)` to supply a custom `PdfResult`. The supplied result is used for its matching output type; the other type keeps its default fixture.
 
 ## Handling Untrusted Content
 

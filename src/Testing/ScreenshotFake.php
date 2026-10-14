@@ -29,13 +29,12 @@ class ScreenshotFake extends Screenshot implements Driver
     protected array $closed = [];
 
     /**
-     * Create a recording fake that returns a small PNG by default.
+     * Create a recording fake with an optional image or PDF result.
      */
     public function __construct(
-        protected ?ImageResult $result = null,
+        protected ImageResult|PdfResult|null $result = null,
         ?ViewFactory $views = null,
         ImageOptions $options = new ImageOptions,
-        protected ?PdfResult $pdfResult = null,
     ) {
         parent::__construct($this, clone $options, $views);
     }
@@ -43,13 +42,12 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Create a fresh fake using an existing factory's configuration.
      */
-    public static function from(Screenshot $factory, ?ImageResult $result = null, ?PdfResult $pdfResult = null): static
+    public static function from(Screenshot $factory, ImageResult|PdfResult|null $result = null): static
     {
         $fake = new static(
             result: $result,
             views: $factory->views,
             options: $factory->options,
-            pdfResult: $pdfResult,
         );
 
         $fake->configureUsing = $factory->configureUsing;
@@ -73,12 +71,14 @@ class ScreenshotFake extends Screenshot implements Driver
         $this->captures[] = [$source, $type, clone $options];
 
         if ($options->getFormat() === OutputFormat::Pdf) {
-            return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+            return $this->result instanceof PdfResult
+                ? $this->result
+                : new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
         }
 
-        return $this->result ?? new ImageResult(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
-        );
+        return $this->result instanceof ImageResult
+            ? $this->result
+            : new ImageResult('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=');
     }
 
     /**

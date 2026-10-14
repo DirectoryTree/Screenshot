@@ -33,12 +33,11 @@ class Screenshot extends Facade
     /**
      * Replace the screenshot factory with a recording fake.
      */
-    public static function fake(?ImageResult $result = null, ?PdfResult $pdfResult = null): ScreenshotFake
+    public static function fake(ImageResult|PdfResult|null $result = null): ScreenshotFake
     {
         static::swap($fake = ScreenshotFake::from(
             factory: static::getFacadeRoot(),
             result: $result,
-            pdfResult: $pdfResult,
         ));
 
         return $fake;

@@ -177,7 +177,7 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     Storage::fake('pdfs');
     $result = new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
     Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->socket('invoices'));
-    Screenshot::fake(pdfResult: $result);
+    Screenshot::fake($result);
     $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper(PaperSize::Letter)
         ->store('invoice.pdf', 'pdfs', ['visibility' => 'private']);
 
@@ -191,3 +191,29 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     Screenshot::fake();
     Screenshot::assertNoPdfsCaptured();
 });
+
+test('a single fake result is reused only for matching output captures', function ($pdf, $named) {
+    $result = $pdf
+        ? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')))
+        : new ImageResult(imageFixture());
+
+    $fake = $named ? Screenshot::fake(result: $result) : Screenshot::fake($result);
+
+    for ($i = 0; $i < 2; $i++) {
+        $document = Screenshot::html('invoice')->pdf()->capture();
+        $image = Screenshot::html('preview')->capture();
+        $jpeg = Screenshot::html('preview')->jpeg()->capture();
+
+        expect($pdf ? $document : $image)->toBe($result)
+            ->and($pdf ? $image : $document)->not->toBe($result)
+            ->and($image)->toBeInstanceOf(ImageResult::class)
+            ->and($document)->toBeInstanceOf(PdfResult::class);
+
+        if (! $pdf) {
+            expect($jpeg)->toBe($result);
+        }
+    }
+
+    $fake->assertCapturedCount(4);
+    $fake->assertPdfCapturedCount(2);
+})->with(['image' => false, 'PDF' => true])->with(['positional' => false, 'named' => true]);

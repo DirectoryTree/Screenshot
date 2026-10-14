@@ -57,6 +57,7 @@ class PdfOptions extends BrowserOptions
     public static function fromBrowserOptions(BrowserOptions $options): static
     {
         $pdf = static::make();
+
         $pdf->width = $options->width;
         $pdf->height = $options->height;
         $pdf->loadTimeout = $options->loadTimeout;

@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot as Factory;
@@ -40,7 +41,7 @@ test('the facade fake replaces the container factory and renders escaped Blade v
     Screenshot::assertNothingCaptured();
     app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
     Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
-        && $type === 'html' && $options->getFormat() === 'jpeg' && $options->getQuality() === 85);
+        && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 85);
     Screenshot::assertCapturedCount(1);
     expect($calls)->toBe(1);
 });

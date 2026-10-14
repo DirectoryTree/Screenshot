@@ -2,7 +2,9 @@
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\ScreenshotResult;
 use HeadlessChromium\Browser;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Connection;
@@ -174,7 +176,7 @@ test('PDF rendering receives print options and timeout and closes the dedicated 
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    $result = chromeDriver($browser)->capturePdf('invoice', 'html', new ImageOptions(browserTimeout: 12345), new PdfOptions(landscape: true));
+    $result = chromeDriver($browser)->capture('invoice', 'html', new ImageOptions(format: OutputFormat::Pdf, browserTimeout: 12345), new PdfOptions(landscape: true));
     expect($result->mimeType())->toBe('application/pdf');
 });
 
@@ -186,6 +188,22 @@ test('PDF printing failures preserve the error and close browser resources', fun
     $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capturePdf('invoice', 'html', new ImageOptions, new PdfOptions))
+    expect(fn () => chromeDriver($browser)->capture('invoice', 'html', new ImageOptions(format: OutputFormat::Pdf), new PdfOptions))
         ->toThrow(RuntimeException::class, 'print failure');
 });
+
+test('the output enum selects Chrome image format and JPEG quality', function (OutputFormat $format) {
+    [$browser, $page] = chromePage();
+    $page->shouldReceive('setHtml')->once()->with('image', 15000);
+    $page->shouldReceive('getFullPageClip')->once()->with(60000)->andReturn(new Clip(0, 0, 800, 600));
+    $image = Mockery::mock(PageScreenshot::class);
+    $page->shouldReceive('screenshot')->once()->withArgs(fn ($parameters) => $parameters['format'] === $format->value
+        && ($format === OutputFormat::Jpeg ? $parameters['quality'] === 91 : ! isset($parameters['quality'])))->andReturn($image);
+    $page->shouldNotReceive('pdf');
+    $image->shouldReceive('getBase64')->once()->with(60000)->andReturn(imageFixture());
+    $page->shouldReceive('close')->once();
+    $browser->shouldReceive('close')->once();
+
+    expect(chromeDriver($browser)->capture('image', 'html', new ImageOptions(format: $format, quality: 91)))
+        ->toBeInstanceOf(ScreenshotResult::class);
+})->with([OutputFormat::Png, OutputFormat::Jpeg]);

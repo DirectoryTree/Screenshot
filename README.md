@@ -295,7 +295,7 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-PDF support is optional for custom drivers: implement [`PdfDriver`](src/Contracts/PdfDriver.php) to enable `pdf()`. Existing image-only drivers continue to work and throw a clear exception if PDF generation is requested.
+Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, and use the supplied `PdfOptions` for PDF print settings. Return a `ScreenshotResult` for images or a `PdfResult` for PDFs.
 
 ## Testing
 

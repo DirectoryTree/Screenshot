@@ -3,7 +3,7 @@
 namespace DirectoryTree\Screenshot;
 
 use DirectoryTree\Screenshot\Concerns\ConfiguresBrowser;
-use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use DirectoryTree\Screenshot\Contracts\Driver;
 
 class PendingPdf
 {
@@ -13,13 +13,13 @@ class PendingPdf
      * Create a pending PDF with independent browser and print options.
      */
     public function __construct(
-        protected PdfDriver $driver,
+        protected Driver $driver,
         protected string $source,
         protected string $type,
         protected ImageOptions $options,
         protected PdfOptions $pdfOptions = new PdfOptions,
     ) {
-        $this->options = clone $options;
+        $this->options = (clone $options)->setFormat(OutputFormat::Pdf);
         $this->pdfOptions = clone $pdfOptions;
     }
 
@@ -107,6 +107,6 @@ class PendingPdf
         $this->options->validate();
         $this->pdfOptions->validate();
 
-        return $this->driver->capturePdf($this->source, $this->type, clone $this->options, clone $this->pdfOptions);
+        return $this->driver->capture($this->source, $this->type, clone $this->options, clone $this->pdfOptions);
     }
 }

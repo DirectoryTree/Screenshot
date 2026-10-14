@@ -14,7 +14,7 @@ class ImageOptions
         protected int $height = 768,
         protected int $maxWidth = 2048,
         protected int $maxHeight = 10000,
-        protected string $format = 'png',
+        protected OutputFormat $format = OutputFormat::Png,
         protected int $quality = 80,
         protected int $browserTimeout = 60000,
         protected int $loadTimeout = 15000,
@@ -85,9 +85,9 @@ class ImageOptions
     }
 
     /**
-     * Get the image format.
+     * Get the output format.
      */
-    public function getFormat(): string
+    public function getFormat(): OutputFormat
     {
         return $this->format;
     }
@@ -101,12 +101,10 @@ class ImageOptions
     }
 
     /**
-     * Set the image format and optional JPEG quality atomically.
+     * Set the output format and optional JPEG quality atomically.
      */
-    public function setFormat(string $format, ?int $quality = null): static
+    public function setFormat(OutputFormat $format, ?int $quality = null): static
     {
-        $this->validateFormat($format);
-
         if ($quality !== null) {
             $this->validateQuality($quality);
         }
@@ -251,7 +249,6 @@ class ImageOptions
         $this->validateSocket($this->socket);
         $this->validateDimensions($this->width, $this->height);
         $this->validateDimensions($this->maxWidth, $this->maxHeight);
-        $this->validateFormat($this->format);
         $this->validateQuality($this->quality);
         $this->validateTimeout($this->browserTimeout);
         $this->validateTimeout($this->loadTimeout);
@@ -264,16 +261,6 @@ class ImageOptions
     {
         if ($width < 1 || $height < 1 || $width > 16384 || $height > 16384 || $width * $height > 40000000) {
             throw new InvalidArgumentException('Dimensions must be between 1 and 16384 pixels and no more than 40 million pixels in total.');
-        }
-    }
-
-    /**
-     * Validate the image format.
-     */
-    protected function validateFormat(string $format): void
-    {
-        if (! in_array($format, ['png', 'jpeg'], true)) {
-            throw new InvalidArgumentException('The screenshot format must be png or jpeg.');
         }
     }
 

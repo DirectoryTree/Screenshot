@@ -1,25 +1,26 @@
 <?php
 
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 
 test('format and quality updates reject invalid input without changing either value', function () {
     $options = new ImageOptions(quality: 85);
 
-    expect(fn () => $options->setFormat('gif', 50))->toThrow(InvalidArgumentException::class);
-    expect($options->getFormat())->toBe('png')->and($options->getQuality())->toBe(85);
+    expect(fn () => $options->setFormat('gif', 50))->toThrow(TypeError::class);
+    expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(85);
 
-    expect(fn () => $options->setFormat('jpeg', 101))->toThrow(InvalidArgumentException::class);
-    expect($options->getFormat())->toBe('png')->and($options->getQuality())->toBe(85);
+    expect(fn () => $options->setFormat(OutputFormat::Jpeg, 101))->toThrow(InvalidArgumentException::class);
+    expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(85);
 });
 
 test('changing format preserves quality unless explicitly supplied', function () {
     $options = new ImageOptions;
-    $options->setFormat('jpeg', 0)->setFormat('png');
+    $options->setFormat(OutputFormat::Jpeg, 0)->setFormat(OutputFormat::Png);
 
-    expect($options->getFormat())->toBe('png')->and($options->getQuality())->toBe(0);
+    expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(0);
 
-    $options->setFormat('jpeg', 100);
-    expect($options->getFormat())->toBe('jpeg')->and($options->getQuality())->toBe(100);
+    $options->setFormat(OutputFormat::Jpeg, 100);
+    expect($options->getFormat())->toBe(OutputFormat::Jpeg)->and($options->getQuality())->toBe(100);
 });
 
 test('dimension pairs can change together at the maximum allowed area', function () {

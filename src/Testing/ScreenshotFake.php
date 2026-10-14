@@ -3,8 +3,8 @@
 namespace DirectoryTree\Screenshot\Testing;
 
 use DirectoryTree\Screenshot\Contracts\Driver;
-use DirectoryTree\Screenshot\Contracts\PdfDriver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
@@ -12,7 +12,7 @@ use DirectoryTree\Screenshot\ScreenshotResult;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 
-class ScreenshotFake extends Screenshot implements Driver, PdfDriver
+class ScreenshotFake extends Screenshot implements Driver
 {
     /**
      * The recorded captures.
@@ -71,23 +71,19 @@ class ScreenshotFake extends Screenshot implements Driver, PdfDriver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, ImageOptions $options): ScreenshotResult
+    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
     {
+        if ($options->getFormat() === OutputFormat::Pdf) {
+            $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
+
+            return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+        }
+
         $this->captures[] = [$source, $type, clone $options];
 
         return $this->result ?? new ScreenshotResult(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
         );
-    }
-
-    /**
-     * Record a PDF capture and return a valid blank document by default.
-     */
-    public function capturePdf(string $source, string $type, ImageOptions $options, PdfOptions $pdf): PdfResult
-    {
-        $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
-
-        return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
     }
 
     /**

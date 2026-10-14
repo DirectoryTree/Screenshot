@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
@@ -27,7 +28,7 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
 
     $pdf->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
     $fake->assertPdfCaptured(fn ($source, $type, ImageOptions $options, PdfOptions $pdf) => $source === 'invoice'
-        && $type === 'html' && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
+        && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
         && $options->getBrowserTimeout() === 10000 && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape()
         && $pdf->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
         && ! $pdf->getBackground() && $pdf->getPreferCssPageSize());
@@ -35,7 +36,7 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
     $fake->assertNothingCaptured();
 
     $image->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getSocket() === 'images' && $options->getFormat() === 'jpeg');
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getSocket() === 'images' && $options->getFormat() === OutputFormat::Jpeg);
 });
 
 test('PDF requests and recorded assertion options are independent snapshots', function () {
@@ -60,12 +61,21 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
         && $options->getSocket() === 'shared' && ! $options->getJavascript());
 });
 
-test('image-only custom drivers still work and reject PDF conversion clearly', function () {
+test('one driver contract handles images and PDFs with the requested enum format', function () {
     $driver = Mockery::mock(Driver::class);
-    $factory = new Screenshot($driver);
+    $image = new ScreenshotResult(imageFixture());
+    $pdf = new PdfResult(pdfFixture());
+    $driver->shouldReceive('capture')->once()
+        ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg)
+        ->andReturn($image);
+    $driver->shouldReceive('capture')->once()
+        ->withArgs(fn ($source, $type, ImageOptions $options, PdfOptions $print) => $source === 'invoice'
+            && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $print->getLandscape())
+        ->andReturn($pdf);
+    $pending = (new Screenshot($driver))->html('invoice')->jpeg();
 
-    expect(fn () => $factory->html('invoice')->pdf())->toThrow(LogicException::class, 'does not support PDF generation');
-    $driver->shouldNotReceive('capture');
+    expect($pending->capture())->toBe($image)
+        ->and($pending->pdf()->landscape()->capture())->toBe($pdf);
 });
 
 test('PDF results expose document bytes without image dimensions', function () {

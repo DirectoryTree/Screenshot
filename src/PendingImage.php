@@ -4,7 +4,6 @@ namespace DirectoryTree\Screenshot;
 
 use DirectoryTree\Screenshot\Concerns\ConfiguresBrowser;
 use DirectoryTree\Screenshot\Contracts\Driver;
-use DirectoryTree\Screenshot\Contracts\PdfDriver;
 use LogicException;
 
 class PendingImage
@@ -20,6 +19,10 @@ class PendingImage
         protected string $type,
         protected ImageOptions $options,
     ) {
+        if ($options->getFormat() === OutputFormat::Pdf) {
+            throw new LogicException('Use pdf() to prepare a PDF capture.');
+        }
+
         $this->options = clone $options;
     }
 
@@ -66,7 +69,7 @@ class PendingImage
      */
     public function png(): static
     {
-        $this->options->setFormat('png');
+        $this->options->setFormat(OutputFormat::Png);
 
         return $this;
     }
@@ -76,7 +79,7 @@ class PendingImage
      */
     public function jpeg(int $quality = 80): static
     {
-        $this->options->setFormat('jpeg', $quality);
+        $this->options->setFormat(OutputFormat::Jpeg, $quality);
 
         return $this;
     }
@@ -86,10 +89,6 @@ class PendingImage
      */
     public function pdf(): PendingPdf
     {
-        if (! $this->driver instanceof PdfDriver) {
-            throw new LogicException('The screenshot driver does not support PDF generation.');
-        }
-
         return new PendingPdf($this->driver, $this->source, $this->type, $this->options);
     }
 

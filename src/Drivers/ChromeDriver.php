@@ -4,8 +4,8 @@ namespace DirectoryTree\Screenshot\Drivers;
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
-use DirectoryTree\Screenshot\Contracts\PdfDriver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -22,7 +22,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
-class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
+class ChromeDriver implements Driver, ManagesBrowsers
 {
     /**
      * Create a new Chrome driver.
@@ -35,11 +35,15 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     ) {}
 
     /**
-     * Capture an image using a dedicated or shared browser process.
+     * Capture an image or PDF using a dedicated or shared browser process.
      */
-    public function capture(string $source, string $type, ImageOptions $options): ScreenshotResult
+    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
     {
         $options->validate();
+
+        if ($options->getFormat() === OutputFormat::Pdf) {
+            $pdf->validate();
+        }
 
         if (! in_array($type, ['html', 'url'], true)) {
             throw new InvalidArgumentException('The source type must be html or url.');
@@ -47,27 +51,8 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
 
         return $this->withBrowser(
             $options,
-            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared),
+            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared, $pdf),
         );
-    }
-
-    /**
-     * Print a PDF using the same browser lifecycle as image captures.
-     */
-    public function capturePdf(string $source, string $type, ImageOptions $options, PdfOptions $pdf): PdfResult
-    {
-        $options->validate();
-        $pdf->validate();
-
-        if (! in_array($type, ['html', 'url'], true)) {
-            throw new InvalidArgumentException('The source type must be html or url.');
-        }
-
-        return $this->withBrowser($options, function (Browser $browser, bool $shared) use ($source, $type, $options, $pdf) {
-            return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options, $pdf) {
-                return new PdfResult($page->pdf($pdf->toArray())->getBase64($options->getBrowserTimeout()));
-            });
-        });
     }
 
     /**
@@ -87,17 +72,21 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
     }
 
     /**
-     * Capture an image from a prepared page.
+     * Capture the selected output format from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false): ScreenshotResult
+    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
     {
-        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options) {
+        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options, $pdf) {
+            if ($options->getFormat() === OutputFormat::Pdf) {
+                return new PdfResult($page->pdf($pdf->toArray())->getBase64($options->getBrowserTimeout()));
+            }
+
             $clip = $options->getFullPage()
                 ? $page->getFullPageClip($options->getBrowserTimeout())
                 : new Clip(0, 0, $options->getWidth(), $options->getHeight());
 
             $parameters = [
-                'format' => $options->getFormat(),
+                'format' => $options->getFormat()->value,
                 'captureBeyondViewport' => true,
                 'clip' => new Clip(
                     0, 0,
@@ -106,7 +95,7 @@ class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
                 ),
             ];
 
-            if ($options->getFormat() === 'jpeg') {
+            if ($options->getFormat() === OutputFormat::Jpeg) {
                 $parameters['quality'] = $options->getQuality();
             }
 

@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -15,10 +16,10 @@ test('capture options override configured defaults without leaking into other ca
 
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
         && $options->getWidth() === 640 && $options->getHeight() === 480
-        && $options->getFormat() === 'png' && $options->getSocket() === null);
+        && $options->getFormat() === OutputFormat::Png && $options->getSocket() === null);
     $fake->assertCaptured(fn ($source, $type, $options) => $type === 'url'
         && $options->getWidth() === 1280 && $options->getHeight() === 720
-        && $options->getFormat() === 'jpeg' && $options->getQuality() === 85 && $options->getSocket() === 'emails'
+        && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 85 && $options->getSocket() === 'emails'
         && $options->getFullPage() && ! $options->getJavascript() && $options->getBrowserTimeout() === 60000);
 });
 
@@ -57,8 +58,8 @@ test('configuration can be replaced or cleared without changing existing pending
     $second->capture();
     $fake->html('third')->capture();
 
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800 && $options->getFormat() === 'jpeg');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900 && $options->getFormat() === 'png');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800 && $options->getFormat() === OutputFormat::Jpeg);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900 && $options->getFormat() === OutputFormat::Png);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'third' && $options->getWidth() === 1024);
 });
 
@@ -75,7 +76,7 @@ test('failed configuration does not capture or contaminate subsequent screenshot
     $fake->assertNothingCaptured();
     $fail = false;
     $fake->html('valid')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === 'png');
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === OutputFormat::Png);
 });
 
 test('factories have independent configuration and fakes preserve their baseline options', function () {
@@ -86,9 +87,9 @@ test('factories have independent configuration and fakes preserve their baseline
     $options->setSize(800, $options->getHeight());
     $factory->configure(null);
     $fake->html('configured')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getFormat() === 'jpeg');
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getFormat() === OutputFormat::Jpeg);
 
     $other = new ScreenshotFake;
     $other->html('default')->capture();
-    $other->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === 'png');
+    $other->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === OutputFormat::Png);
 });

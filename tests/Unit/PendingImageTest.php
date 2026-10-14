@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -16,7 +17,7 @@ test('pending captures do not start the driver until requested', function () {
     $pending->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === '<h1>Hello</h1>'
         && $type === 'html' && $options->getWidth() === 800 && $options->getHeight() === 600
-        && $options->getFormat() === 'jpeg' && $options->getQuality() === 90 && ! $options->getFullPage()
+        && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 90 && ! $options->getFullPage()
         && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
         && $options->getBrowserTimeout() === 2000 && $options->getLoadTimeout() === 1000
         && $options->getJavascript() && $options->getFailOnTimeout());
@@ -135,7 +136,7 @@ test('unsafe capture options are rejected', function ($values) {
 })->with([
     [['width' => 0]], [['height' => -1]], [['width' => 16385]],
     [['width' => 10000, 'height' => 10000]], [['maxWidth' => 0]],
-    [['maxWidth' => 10000, 'maxHeight' => 10000]], [['format' => 'gif']],
+    [['maxWidth' => 10000, 'maxHeight' => 10000]],
     [['quality' => -1]], [['quality' => 101]], [['browserTimeout' => 0]], [['loadTimeout' => 0]],
 ]);
 
@@ -152,3 +153,11 @@ test('socket keys can be overridden and disabled without changing defaults', fun
 test('empty socket keys fail before a capture starts', function ($key) {
     expect(fn () => new ImageOptions(socket: $key))->toThrow(InvalidArgumentException::class);
 })->with(['', ' ']);
+
+test('image builders reject PDF defaults before calling the driver', function () {
+    $driver = Mockery::mock(Driver::class);
+    $driver->shouldNotReceive('capture');
+
+    expect(fn () => new PendingImage($driver, 'invoice', 'html', new ImageOptions(format: OutputFormat::Pdf)))
+        ->toThrow(LogicException::class, 'Use pdf()');
+});

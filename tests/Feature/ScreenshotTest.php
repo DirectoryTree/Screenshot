@@ -262,7 +262,7 @@ test('a single fake result is reused only for matching output captures', functio
     $fake->assertCapturedCount(6);
 })->with(['image' => false, 'PDF' => true])->with(['positional' => false, 'named' => true]);
 
-test('fake assertions receive the source enum for every source and output format', function ($source, $format) {
+test('fake assertions receive the source type and element selector for every source and output format', function ($source, $format) {
     Screenshot::fake();
 
     $pending = match ($source) {
@@ -270,6 +270,8 @@ test('fake assertions receive the source enum for every source and output format
         'url' => Screenshot::url('https://example.com/invoice'),
         'view' => Screenshot::view('card', ['name' => 'Steve']),
     };
+
+    $pending->element('#invoice');
 
     (match ($format) {
         OutputFormat::Png => $pending->png(),
@@ -281,7 +283,8 @@ test('fake assertions receive the source enum for every source and output format
 
     $expected = $source === 'url' ? SourceType::Url : SourceType::Html;
     $callback = fn (string $contents, SourceType $type, CaptureOptions $options) => $type === $expected
-        && $options->getFormat() === $format;
+        && $options->getFormat() === $format
+        && $options->element === '#invoice';
 
     Screenshot::assertCaptured($callback);
 })->with(['html', 'url', 'view'])->with(OutputFormat::cases());

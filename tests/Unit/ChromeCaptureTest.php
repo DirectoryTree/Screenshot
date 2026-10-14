@@ -10,6 +10,9 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Clip;
+use HeadlessChromium\Dom\Dom;
+use HeadlessChromium\Dom\Node;
+use HeadlessChromium\Dom\NodePosition;
 use HeadlessChromium\Page;
 use HeadlessChromium\PageUtils\PagePdf;
 use HeadlessChromium\PageUtils\PageScreenshot;
@@ -97,3 +100,32 @@ test('the PDF strategy prints its layout without screenshot clipping', function 
 
     expect((new PdfCapture($browser, $options))->capture($page))->toBeInstanceOf(PdfResult::class);
 });
+
+test('element image bounds retain their document coordinates when capped', function ($fullPage) {
+    $page = Mockery::mock(Page::class);
+    $dom = Mockery::mock(Dom::class);
+    $element = Mockery::mock(Node::class);
+    $image = Mockery::mock(PageScreenshot::class);
+    $browser = (new BrowserOptions)->setTimeouts(browser: 1234);
+    $options = (new ImageOptions)->setFullPage($fullPage)->setMaxSize(120, 80);
+
+    $page->shouldNotReceive('getFullPageClip');
+    $page->shouldNotReceive('evaluate');
+    $page->shouldReceive('dom')->once()->andReturn($dom);
+    $dom->shouldReceive('querySelector')->once()->with('#invoice')->andReturn($element);
+    $element->shouldReceive('getPosition')->once()->with('border')
+        ->andReturn(new NodePosition([90, 900, 320, 900, 320, 1030, 90, 1030]));
+
+    $page->shouldReceive('screenshot')->once()
+        ->withArgs(function ($parameters) {
+            expect($parameters['clip']->getX())->toBe(90.0);
+            expect($parameters['clip']->getY())->toBe(900.0);
+            expect($parameters['clip']->getWidth())->toBe(120);
+            expect($parameters['clip']->getHeight())->toBe(80);
+
+            return true;
+        })->andReturn($image);
+    $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
+
+    expect((new ImageCapture($browser, $options, '#invoice'))->capture($page))->toBeInstanceOf(ImageResult::class);
+})->with(['full page' => true, 'viewport' => false]);

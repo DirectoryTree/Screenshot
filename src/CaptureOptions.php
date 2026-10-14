@@ -10,13 +10,14 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 class CaptureOptions
 {
     /**
-     * Combine browser settings with the selected output settings.
+     * Combine browser and output settings with an optional element selector.
      *
      * @param  TOutput  $output
      */
     public function __construct(
         public BrowserOptions $browser,
         public ImageOptions|PdfOptions $output,
+        public ?string $element = null,
     ) {}
 
     /**

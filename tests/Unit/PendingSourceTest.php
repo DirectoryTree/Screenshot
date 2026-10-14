@@ -12,6 +12,39 @@ use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\PendingSource;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
+test('element selection is snapshotted for each output and direct image capture', function () {
+    $fake = new ScreenshotFake;
+    $source = $fake->html('invoice');
+    $wholePage = $source->png();
+
+    expect($source->element('#invoice'))->toBe($source);
+
+    $png = $source->png();
+    $jpeg = $source->jpeg();
+    $pdf = $source->pdf();
+
+    $source->element('#receipt');
+
+    $wholePage->capture();
+    $png->capture();
+    $jpeg->capture();
+    $pdf->capture();
+    $source->capture();
+    $fake->html('another document')->pdf()->capture();
+
+    foreach (OutputFormat::cases() as $format) {
+        $fake->assertCaptured(fn ($contents, $type, $options) => $options->element === '#invoice'
+            && $options->getFormat() === $format);
+    }
+
+    $fake->assertCaptured(fn ($contents, $type, $options) => $contents === 'invoice'
+        && $options->element === null);
+    $fake->assertCaptured(fn ($contents, $type, $options) => $options->element === '#receipt');
+    $fake->assertCaptured(fn ($contents, $type, $options) => $contents === 'another document'
+        && $options->element === null);
+    $fake->assertCapturedCount(6);
+});
+
 test('sources only copy output options when that output is selected', function () {
     $copies = (object) ['image' => 0, 'pdf' => 0];
     $image = new class($copies) extends ImageOptions

@@ -5,6 +5,11 @@ namespace DirectoryTree\Screenshot;
 class PendingSource
 {
     /**
+     * The CSS selector to capture from the source.
+     */
+    protected ?string $element = null;
+
+    /**
      * Prepare a source with independent browser settings and shared output defaults.
      */
     public function __construct(
@@ -22,6 +27,16 @@ class PendingSource
     public function size(int $width, int $height): static
     {
         $this->browser->setSize($width, $height);
+
+        return $this;
+    }
+
+    /**
+     * Capture the first element matching the given CSS selector.
+     */
+    public function element(string $selector): static
+    {
+        $this->element = $selector;
 
         return $this;
     }
@@ -81,7 +96,7 @@ class PendingSource
      */
     public function png(): PendingImage
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->png();
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->png();
     }
 
     /**
@@ -89,7 +104,7 @@ class PendingSource
      */
     public function jpeg(?int $quality = null): PendingImage
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->jpeg($quality);
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->jpeg($quality);
     }
 
     /**
@@ -97,7 +112,7 @@ class PendingSource
      */
     public function pdf(): PendingPdf
     {
-        return new PendingPdf($this->capture, new CaptureOptions($this->browser, $this->pdf));
+        return new PendingPdf($this->capture, new CaptureOptions($this->browser, $this->pdf, $this->element));
     }
 
     /**
@@ -121,6 +136,6 @@ class PendingSource
      */
     public function capture(): ImageResult
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->capture();
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->capture();
     }
 }

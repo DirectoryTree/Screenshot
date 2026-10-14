@@ -107,8 +107,8 @@ class PageCapture
         $options = $this->options;
 
         return match ($options->getFormat()) {
-            OutputFormat::Png, OutputFormat::Jpeg => new ImageCapture($options->browser, $options->output),
-            OutputFormat::Pdf => new PdfCapture($options->browser, $options->output),
+            OutputFormat::Png, OutputFormat::Jpeg => new ImageCapture($options->browser, $options->output, $options->element),
+            OutputFormat::Pdf => new PdfCapture($options->browser, $options->output, $options->element),
         };
     }
 

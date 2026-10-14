@@ -29,10 +29,8 @@ Screenshot::view('invoices.preview', data: ['invoice' => $invoice])
 
 ## Requirements
 
-- PHP 8.2 or higher with the `sockets` extension
-- Laravel 12 or 13 for Laravel integration (Laravel 13 requires PHP 8.3 or higher)
-- Chrome or Chromium, with its system libraries and any fonts your content needs
-- Permission for PHP to start processes and write browser temporary files
+- PHP 8.2+ and Laravel 12 or 13 for Laravel integration (PHP 8.3+ with Laravel 13)
+- Chrome or Chromium, installable with `php artisan screenshot:install`
 
 Screenshot uses [Chrome PHP](https://github.com/chrome-php/chrome). Node.js and Puppeteer are not required.
 
@@ -50,9 +48,9 @@ The service provider is registered automatically. Download Chrome with:
 php artisan screenshot:install
 ```
 
-The installer requires PHP's `zip` extension and downloads the latest stable Chrome for Testing for your platform. It supports available Linux, macOS, and Windows builds. System libraries and fonts must be installed separately; Alpine Linux and unsupported platforms may require system-provided Chromium.
+The installer requires PHP's `zip` extension and downloads the latest stable Chrome for Testing for your platform. It supports available Linux, macOS, and Windows builds.
 
-Chrome is stored in `storage/app/private/screenshot/browsers` and discovered automatically. Run the installer during deployment, with a directory your application workers can read and execute. To pin a browser version:
+Chrome is stored in `storage/app/private/screenshot/browsers` and discovered automatically. Run the installer during deployment. To pin a browser version:
 
 ```bash
 php artisan screenshot:install --browser-version=155.0.8059.79
@@ -65,6 +63,8 @@ SCREENSHOT_CHROME_PATH=/usr/bin/chromium
 ```
 
 An explicit path takes precedence over downloaded Chrome. If neither is configured, Screenshot uses Chrome PHP's system discovery. After changing browsers, close shared browsers and restart long-running queue workers.
+
+> When deploying to a server or Docker container, install Chrome's system libraries and any fonts your content needs. Alpine Linux and unsupported platforms may require system-provided Chromium.
 
 ## Usage
 

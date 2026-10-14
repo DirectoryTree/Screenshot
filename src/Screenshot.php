@@ -77,13 +77,13 @@ class Screenshot
      */
     public function close(string $key): void
     {
-        $this->socketManager()->close($key);
+        $this->sockets()->close($key);
     }
 
     /**
      * Get a driver that supports shared browser lifecycle management.
      */
-    protected function socketManager(): ManagesBrowserSockets
+    protected function sockets(): ManagesBrowserSockets
     {
         if (! $this->driver instanceof ManagesBrowserSockets) {
             throw new LogicException('The screenshot driver does not support browser sockets.');

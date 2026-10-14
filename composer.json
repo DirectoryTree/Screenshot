@@ -1,0 +1,63 @@
+{
+    "name": "directorytree/screenshot",
+    "description": "Create browser screenshots with PHP and Laravel.",
+    "type": "library",
+    "keywords": [
+        "directorytree",
+        "laravel",
+        "screenshot",
+        "chrome",
+        "chromium"
+    ],
+    "homepage": "https://github.com/DirectoryTree/Screenshot",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Steve Bauman",
+            "email": "steven_bauman@outlook.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "chrome-php/chrome": "^1.16",
+        "illuminate/contracts": "^12.0|^13.0",
+        "illuminate/filesystem": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DirectoryTree\\Screenshot\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DirectoryTree\\Screenshot\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DirectoryTree\\Screenshot\\ScreenshotServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest --exclude-group=browser",
+        "test-browser": "vendor/bin/pest --group=browser",
+        "format": "vendor/bin/pint",
+        "lint": "vendor/bin/pint --test"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

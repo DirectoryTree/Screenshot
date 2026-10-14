@@ -1,0 +1,70 @@
+name: Tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            laravel: '12.*'
+            testbench: '10.*'
+            pest: '3.*'
+          - php: '8.3'
+            laravel: '13.*'
+            testbench: '11.*'
+            pest: '4.*'
+          - php: '8.4'
+            laravel: '12.*'
+            testbench: '10.*'
+            pest: '4.*'
+          - php: '8.4'
+            laravel: '13.*'
+            testbench: '11.*'
+            pest: '4.*'
+
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, pdo_sqlite
+          coverage: none
+      - run: composer require --dev "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "pestphp/pest:${{ matrix.pest }}" --no-interaction --no-update
+      - run: composer update --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: composer test
+      - run: composer lint
+
+  browser:
+    name: Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - name: Execute browser tests
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          SCREENSHOT_NO_SANDBOX: '1'
+        run: composer test-browser

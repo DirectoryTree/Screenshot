@@ -95,6 +95,7 @@ class BrowserSocket
                         try {
                             $probe = $this->connect($uri, $connectionOptions);
                         } catch (BrowserConnectionFailed) {
+                            $this->waitForShutdown($uri);
                             $this->forget();
 
                             return;

@@ -307,19 +307,3 @@ The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass a `S
 ## Handling Untrusted Content
 
 Capture trusted content, or isolate Chrome with suitable network restrictions. Disabling JavaScript does not prevent HTML assets or redirects from accessing internal services. HTTP/HTTPS URL validation is not SSRF protection.
-
-## Contributing
-
-```bash
-composer install
-composer test
-composer lint
-
-CHROME_PATH=/usr/bin/chromium composer test-browser
-```
-
-Installer tests require PHP's `zip` extension. Set `SCREENSHOT_TEST_INSTALL=1` to include a real Chrome download. For disposable test containers that cannot use Chrome's sandbox, set `SCREENSHOT_NO_SANDBOX=1`.
-
-## License
-
-Screenshot is licensed under the [MIT license](LICENSE.md).

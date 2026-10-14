@@ -33,6 +33,7 @@ class InstallCommand extends Command
 
         try {
             $previous = $installer->path();
+
             $path = $installer->install($this->option('browser-version'), $this->option('update'));
         } catch (Throwable $e) {
             $this->components->error($e->getMessage());
@@ -41,6 +42,7 @@ class InstallCommand extends Command
         }
 
         $this->components->info($path === $previous ? 'Chrome is already installed.' : 'Chrome is ready.');
+
         $this->line($path);
 
         if (config('screenshot.browser.binary')) {

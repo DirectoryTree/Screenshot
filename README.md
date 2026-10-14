@@ -230,7 +230,7 @@ Screenshot::closeSocket('emails');
 Screenshot::closeSocketPath(storage_path('app/chromium.socket'));
 ```
 
-Closing waits for cooperating active captures to finish, requests graceful browser shutdown, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per lock acquisition); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
+Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
 
 Only use these lifecycle methods for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
 

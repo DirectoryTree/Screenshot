@@ -42,6 +42,8 @@ function socketWithConnector(string $path, callable $connect): BrowserSocket
         {
             return ($this->connector)($uri, $options);
         }
+
+        protected function waitForShutdown(string $uri): void {}
     };
 }
 
@@ -217,4 +219,41 @@ test('shutdown retains the socket when a disconnected browser is still reachable
 
     expect(fn () => $socket->close())->toThrow(SocketException::class);
     expect(file_exists($this->path))->toBeTrue();
+});
+
+test('shutdown waits for the listening endpoint to disappear', function () {
+    $socket = new class($this->path, 100) extends BrowserSocket
+    {
+        public int $checks = 0;
+
+        public function wait(): void
+        {
+            $this->waitForShutdown('ws://localhost/browser');
+        }
+
+        protected function isListening(string $uri): bool
+        {
+            return ++$this->checks < 3;
+        }
+    };
+
+    $socket->wait();
+    expect($socket->checks)->toBe(3);
+});
+
+test('shutdown waits are bounded when the endpoint remains open', function () {
+    $socket = new class($this->path, 20) extends BrowserSocket
+    {
+        public function wait(): void
+        {
+            $this->waitForShutdown('ws://localhost/browser');
+        }
+
+        protected function isListening(string $uri): bool
+        {
+            return true;
+        }
+    };
+
+    expect(fn () => $socket->wait())->toThrow(RuntimeException::class, 'Timed out waiting for the shared browser');
 });

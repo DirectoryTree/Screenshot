@@ -23,8 +23,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Named sockets use this local directory. All workers sharing a browser
-    | must use the same directory and OS user on the same host. Lock waits
-    | are bounded in milliseconds. Keep these files outside the web root.
+    | must use the same directory and OS user on the same host. Lock and
+    | shutdown waits are bounded in milliseconds. Keep these files outside the web root.
     |
     */
 

@@ -106,11 +106,53 @@ class BrowserSocket
                     } finally {
                         $this->disconnect($browser);
                     }
+
+                    $this->waitForShutdown($uri);
                 }
 
                 $this->forget();
             });
         });
+    }
+
+    /**
+     * Keep the lifecycle lock until Chrome stops accepting connections.
+     */
+    protected function waitForShutdown(string $uri): void
+    {
+        $deadline = hrtime(true) + $this->lockTimeout * 1000000;
+
+        while ($this->isListening($uri)) {
+            if (hrtime(true) >= $deadline) {
+                throw new RuntimeException('Timed out waiting for the shared browser to shut down.');
+            }
+
+            usleep(10000);
+        }
+    }
+
+    /**
+     * Check whether the browser endpoint is still accepting TCP connections.
+     */
+    protected function isListening(string $uri): bool
+    {
+        $parts = parse_url($uri);
+        $address = 'tcp://'.$parts['host'].':'.($parts['port'] ?? ($parts['scheme'] === 'wss' ? 443 : 80));
+        set_error_handler(static fn () => true);
+
+        try {
+            $connection = stream_socket_client($address, $errno, $error, 0.1);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($connection === false) {
+            return false;
+        }
+
+        fclose($connection);
+
+        return true;
     }
 
     /**

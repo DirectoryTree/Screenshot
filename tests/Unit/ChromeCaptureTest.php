@@ -1,9 +1,8 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
-use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
+use DirectoryTree\Screenshot\Drivers\Chrome\ImageCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
-use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\ImageOptions;
@@ -15,11 +14,11 @@ use HeadlessChromium\Page;
 use HeadlessChromium\PageUtils\PagePdf;
 use HeadlessChromium\PageUtils\PageScreenshot;
 
-test('image strategies capture bounded pages with the configured timeout and encoding', function ($class, $format, $fullPage) {
+test('image captures use the configured bounds timeout format and quality', function ($format, $fullPage, $quality) {
     $page = Mockery::mock(Page::class);
     $image = Mockery::mock(PageScreenshot::class);
     $browser = BrowserOptions::make()->setSize(640, 480)->setTimeouts(load: 15000, browser: 1234);
-    $options = ImageOptions::make()->setMaxSize(500, 600)->setFormat($format, 92)->setFullPage($fullPage);
+    $options = ImageOptions::make()->setMaxSize(500, 600)->setFormat($format, $quality)->setFullPage($fullPage);
 
     if ($fullPage) {
         $page->shouldReceive('getFullPageClip')->once()->with(1234)->andReturn(new Clip(0, 0, 800, 2000));
@@ -28,14 +27,14 @@ test('image strategies capture bounded pages with the configured timeout and enc
     }
 
     $page->shouldNotReceive('pdf');
-    $page->shouldReceive('screenshot')->once()->withArgs(function ($parameters) use ($format, $fullPage) {
+    $page->shouldReceive('screenshot')->once()->withArgs(function ($parameters) use ($format, $fullPage, $quality) {
         expect($parameters['format'])->toBe($format->value)
             ->and($parameters['captureBeyondViewport'])->toBeTrue()
             ->and($parameters['clip']->getWidth())->toEqual(500)
             ->and($parameters['clip']->getHeight())->toEqual($fullPage ? 600 : 480);
 
         if ($format === OutputFormat::Jpeg) {
-            expect($parameters['quality'])->toBe(92);
+            expect($parameters['quality'])->toBe($quality);
         } else {
             expect($parameters)->not->toHaveKey('quality');
         }
@@ -44,11 +43,11 @@ test('image strategies capture bounded pages with the configured timeout and enc
     })->andReturn($image);
     $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
 
-    expect((new $class($browser, $options))->capture($page))->toBeInstanceOf(ImageResult::class);
+    expect((new ImageCapture($browser, $options))->capture($page))->toBeInstanceOf(ImageResult::class);
 })->with([
-    'PNG' => [PngCapture::class, OutputFormat::Png],
-    'JPEG' => [JpegCapture::class, OutputFormat::Jpeg],
-])->with(['full page' => true, 'viewport' => false]);
+    'PNG' => OutputFormat::Png,
+    'JPEG' => OutputFormat::Jpeg,
+])->with(['full page' => true, 'viewport' => false])->with([0, 92, 100]);
 
 test('the PDF strategy prints its layout without screenshot clipping', function () {
     $page = Mockery::mock(Page::class);

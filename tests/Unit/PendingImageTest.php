@@ -4,9 +4,12 @@ use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\PendingCapture;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -62,8 +65,8 @@ test('options cannot leak between captures', function () {
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
     $settings = new CaptureOptions(BrowserOptions::make()->setSize(900, 768), ImageOptions::make());
-    $first = new PendingImage($fake, 'first', SourceType::Html, $settings);
-    $second = new PendingImage($fake, 'second', SourceType::Html, $settings);
+    $first = new PendingImage(new PendingCapture($fake, 'first', SourceType::Html), $settings);
+    $second = new PendingImage(new PendingCapture($fake, 'second', SourceType::Html), $settings);
 
     $settings->browser->setSize(1200, $settings->browser->getHeight());
     $settings->output->setFormat(OutputFormat::Jpeg, 50);
@@ -86,7 +89,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ImageResult(imageFixture());
     });
-    $pending = new PendingImage($driver, 'hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
+    $pending = new PendingImage(new PendingCapture($driver, 'hello', SourceType::Html), new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
     $pending->jpeg(95)->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->browser->getWidth())->toBe(1024)->and($snapshots[0]->browser->getHeight())->toBe(768);
@@ -163,6 +166,25 @@ test('image builders reject PDF defaults before calling the driver', function ()
     $driver = Mockery::mock(Driver::class);
     $driver->shouldNotReceive('capture');
 
-    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat(OutputFormat::Pdf))))
+    expect(fn () => new PendingImage(new PendingCapture($driver, 'invoice', SourceType::Html), new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat(OutputFormat::Pdf))))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
+});
+
+test('directly constructed image builders snapshot their PDF defaults', function () {
+    $fake = new ScreenshotFake;
+    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter);
+    $pending = new PendingImage(
+        new PendingCapture($fake, 'invoice', SourceType::Html),
+        new CaptureOptions(BrowserOptions::make(), ImageOptions::make()),
+        $pdf,
+    );
+    $pdf->setPaper(PaperSize::Legal);
+    $first = $pending->pdf()->paper(PaperSize::A5);
+    $second = $pending->pdf();
+    $first->capture();
+    $second->capture();
+
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 148.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 215.9);
+    $fake->assertPdfCapturedCount(2);
 });

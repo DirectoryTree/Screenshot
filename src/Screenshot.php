@@ -100,7 +100,7 @@ class Screenshot
     protected function newPendingImage(string $source, SourceType $type): PendingImage
     {
         return new PendingImage(
-            $this->driver, $source, $type,
+            new PendingCapture($this->driver, $source, $type),
             new CaptureOptions($this->browser, $this->image), $this->pdf,
         );
     }

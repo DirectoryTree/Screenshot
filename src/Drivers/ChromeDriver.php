@@ -6,23 +6,13 @@ use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
-use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
-use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
-use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
-use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
-use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Drivers\Chrome\PageCapture;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
-use Generator;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
-use HeadlessChromium\Communication\Message;
-use HeadlessChromium\Exception\OperationTimedOut;
-use HeadlessChromium\Page;
-use HeadlessChromium\Utils;
-use RuntimeException;
 use Throwable;
 
 class ChromeDriver implements Driver, ManagesBrowsers
@@ -44,57 +34,22 @@ class ChromeDriver implements Driver, ManagesBrowsers
     {
         $options->validate();
 
-        return $this->withBrowser(
-            $options->browser,
-            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared),
-        );
-    }
-
-    /**
-     * Run a capture in a dedicated browser or under a shared socket lease.
-     */
-    protected function withBrowser(BrowserOptions $options, callable $callback): mixed
-    {
-        if ($socket = $this->socket($options)) {
+        if ($socket = $this->socket($options->browser)) {
             return $socket->run(
-                fn () => $this->createBrowser($options),
-                fn (Browser $browser) => $callback($browser, true),
-                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->getBrowserTimeout()]),
+                fn () => $this->createBrowser($options->browser),
+                fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
+                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->browser->getBrowserTimeout()]),
             );
         }
 
-        return $callback($this->createBrowser($options), false);
+        return $this->capturePage($this->createBrowser($options->browser), $source, $type, $options);
     }
 
     /**
-     * Capture the selected output format from a prepared page.
+     * Capture a page and close its dedicated browser after use.
      */
     protected function capturePage(Browser $browser, string $source, SourceType $type, CaptureOptions $options, bool $shared = false): ImageResult|PdfResult
     {
-        return $this->withPage(
-            $browser, $source, $type, $options->browser, $shared,
-            fn (Page $page) => $this->resolveCapture($options)->capture($page),
-        );
-    }
-
-    /**
-     * Resolve the capture implementation for the selected output format.
-     */
-    protected function resolveCapture(CaptureOptions $options): CapturesPage
-    {
-        return match ($options->getFormat()) {
-            OutputFormat::Png => new PngCapture($options->browser, $options->output),
-            OutputFormat::Jpeg => new JpegCapture($options->browser, $options->output),
-            OutputFormat::Pdf => new PdfCapture($options->browser, $options->output),
-        };
-    }
-
-    /**
-     * Load a page and release its resources after rendering either format.
-     */
-    protected function withPage(Browser $browser, string $source, SourceType $type, BrowserOptions $options, bool $shared, callable $render): mixed
-    {
-        $page = null;
         $failed = true;
 
         try {
@@ -102,88 +57,20 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 $browser->getConnection()->setConnectionHttpHeaders($this->browserOptions['headers']);
             }
 
-            $page = $shared ? $this->createSharedPage($browser) : $browser->createPage();
-
-            if ($shared) {
-                $page->setViewport($options->getWidth(), $options->getHeight())->await($options->getBrowserTimeout());
-            }
-
-            $response = $page->getSession()->sendMessageSync(
-                new Message('Emulation.setScriptExecutionDisabled', ['value' => ! $options->getJavascript()]),
-                $options->getBrowserTimeout(),
-            );
-
-            if (! $response->isSuccessful()) {
-                throw new RuntimeException('Unable to configure JavaScript execution: '.$response->getErrorMessage());
-            }
-
-            try {
-                if ($type === SourceType::Html) {
-                    $page->setHtml($source, $options->getLoadTimeout());
-                } else {
-                    $page->navigate($source)->waitForNavigation(Page::LOAD, $options->getLoadTimeout());
-                }
-            } catch (OperationTimedOut $e) {
-                if ($options->getFailOnTimeout()) {
-                    throw $e;
-                }
-
-                $response = $page->getSession()->sendMessageSync(new Message('Page.stopLoading'), $options->getBrowserTimeout());
-
-                if (! $response->isSuccessful()) {
-                    throw new RuntimeException('Unable to stop page loading: '.$response->getErrorMessage(), previous: $e);
-                }
-            }
-
-            $result = $render($page);
+            $result = (new PageCapture($browser, $options, $shared))->capture($source, $type);
             $failed = false;
 
             return $result;
         } finally {
-            $this->cleanup($browser, $page, $failed, $shared);
-        }
-    }
-
-    /**
-     * Retain ownership of a shared target until its page is fully initialized.
-     */
-    protected function createSharedPage(Browser $browser): Page
-    {
-        $connection = $browser->getConnection();
-        $response = $connection->sendMessageSync(new Message('Target.createTarget', ['url' => 'about:blank']));
-
-        if (! $response->isSuccessful() || ! is_string($target = $response['result']['targetId'] ?? null)) {
-            throw new RuntimeException('Unable to create the screenshot page.');
-        }
-
-        try {
-            return $browser->getPage($target) ?? throw new RuntimeException('Unable to initialize the screenshot page.');
-        } catch (Throwable $e) {
-            try {
-                $connection->sendMessageSync(new Message('Target.closeTarget', ['targetId' => $target]));
-
-                // Chrome can acknowledge closure before the target is destroyed.
-                Utils::tryWithTimeout(
-                    $connection->getSendSyncDefaultTimeout() * 1000,
-                    $this->waitForTargetToClose($browser, $target),
-                );
-            } catch (Throwable) {
-                // Preserve the initialization failure without closing other workers' pages.
+            if (! $shared) {
+                try {
+                    $browser->close();
+                } catch (Throwable $e) {
+                    if (! $failed) {
+                        throw $e;
+                    }
+                }
             }
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Wait for Chrome to confirm that the target was destroyed.
-     */
-    protected function waitForTargetToClose(Browser $browser, string $target): Generator
-    {
-        while ($browser->getTarget($target)) {
-            yield 1000;
-
-            $browser->getConnection()->readData();
         }
     }
 
@@ -222,43 +109,5 @@ class ChromeDriver implements Driver, ManagesBrowsers
     public function close(string $key): void
     {
         BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout)->close($this->browserOptions);
-    }
-
-    /**
-     * Release the page and browser without replacing a capture exception.
-     */
-    protected function cleanup(Browser $browser, ?Page $page, bool $failed, bool $shared = false): void
-    {
-        if ($page) {
-            try {
-                $page->close();
-            } catch (Throwable) {
-                try {
-                    $response = $browser->getConnection()->sendMessageSync(new Message('Target.closeTarget', [
-                        'targetId' => $page->getSession()->getTargetId(),
-                    ]));
-
-                    if ($shared && ! $response->isSuccessful()) {
-                        throw new RuntimeException('Unable to close the screenshot page: '.$response->getErrorMessage());
-                    }
-                } catch (Throwable $e) {
-                    if ($shared && ! $failed) {
-                        throw $e;
-                    }
-                }
-            }
-        }
-
-        if ($shared) {
-            return;
-        }
-
-        try {
-            $browser->close();
-        } catch (Throwable $e) {
-            if (! $failed) {
-                throw $e;
-            }
-        }
     }
 }

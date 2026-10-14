@@ -1,8 +1,10 @@
 <?php
 
-use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\SourceType;
+use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
@@ -13,12 +15,14 @@ require __DIR__.'/../../vendor/autoload.php';
 
 $driver = new class($directory, $id) extends ChromeDriver
 {
-    public function __construct(protected string $directory, protected string $id)
-    {
+    public function __construct(
+        protected string $directory,
+        protected string $id,
+    ) {
         parent::__construct(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'], $directory);
     }
 
-    protected function withPage(Browser $browser, string $source, SourceType $type, BrowserOptions $options, bool $shared, callable $render): mixed
+    protected function capturePage(Browser $browser, string $source, SourceType $type, CaptureOptions $options, bool $shared = false): ImageResult|PdfResult
     {
         file_put_contents($this->directory.'/'.$this->id.'.ready', 'ready');
         $deadline = microtime(true) + 15;
@@ -31,7 +35,7 @@ $driver = new class($directory, $id) extends ChromeDriver
             usleep(10000);
         }
 
-        return parent::withPage($browser, $source, $type, $options, $shared, $render);
+        return parent::capturePage($browser, $source, $type, $options, $shared);
     }
 };
 

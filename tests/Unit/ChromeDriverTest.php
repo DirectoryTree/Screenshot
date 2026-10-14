@@ -2,29 +2,25 @@
 
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
-use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
-use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Connection;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Response;
 use HeadlessChromium\Communication\Session;
-use HeadlessChromium\Communication\Target;
-use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
-use HeadlessChromium\PageUtils\PagePdf;
 use HeadlessChromium\PageUtils\PageScreenshot;
 use HeadlessChromium\PageUtils\ResponseWaiter;
 
-function chromeDriver(Browser $browser): ChromeDriver
-{
-    return new class($browser) extends ChromeDriver
+test('dedicated browsers close even when page creation fails', function () {
+    $browser = Mockery::mock(Browser::class);
+    $browser->shouldReceive('createPage')->once()->andThrow(new RuntimeException('page failure'));
+    $browser->shouldReceive('close')->once()->andThrow(new RuntimeException('cleanup failure'));
+    $driver = new class($browser) extends ChromeDriver
     {
         public function __construct(
             protected Browser $browser
@@ -35,190 +31,31 @@ function chromeDriver(Browser $browser): ChromeDriver
             return $this->browser;
         }
     };
-}
 
-function chromePage(bool $shared = false): array
-{
-    $browser = Mockery::mock(Browser::class);
-    $page = Mockery::mock(Page::class);
-    $session = Mockery::mock(Session::class);
-    if ($shared) {
-        $connection = Mockery::mock(Connection::class);
-        $browser->shouldReceive('getConnection')->once()->andReturn($connection);
-        $connection->shouldReceive('sendMessageSync')->once()
-            ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')
-            ->andReturn(new Response(['result' => ['targetId' => 'owned-target']], new Message('test')));
-        $browser->shouldReceive('getPage')->once()->with('owned-target')->andReturn($page);
-    } else {
-        $browser->shouldReceive('createPage')->once()->andReturn($page);
-    }
-    $page->shouldReceive('getSession')->andReturn($session);
-    $session->shouldReceive('sendMessageSync')->withArgs(fn ($message) => $message->getMethod() === 'Emulation.setScriptExecutionDisabled')
-        ->once()->andReturn(new Response([], new Message('test')));
-
-    return [$browser, $page, $session];
-}
-
-test('the browser is closed even when page creation fails', function () {
-    $browser = Mockery::mock(Browser::class);
-    $browser->shouldReceive('createPage')->once()->andThrow(new RuntimeException('page failure'));
-    $browser->shouldReceive('close')->once()->andThrow(new RuntimeException('cleanup failure'));
-
-    expect(fn () => chromeDriver($browser)->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+    expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
         ->toThrow(RuntimeException::class, 'page failure');
 });
 
-test('load timeouts stop loading and capture bounded content', function () {
-    [$browser, $page, $session] = chromePage();
-    $page->shouldReceive('setHtml')->once()->with('hello', 15000)->andThrow(new OperationTimedOut);
-    $session->shouldReceive('sendMessageSync')->withArgs(fn ($message) => $message->getMethod() === 'Page.stopLoading')
-        ->once()->andReturn(new Response([], new Message('test')));
-    $page->shouldReceive('getFullPageClip')->once()->with(60000)->andReturn(new Clip(0, 0, 5000, 20000));
+test('dedicated browsers close after a successful page capture', function ($cleanupFails) {
+    $browser = Mockery::mock(Browser::class);
+    $page = Mockery::mock(Page::class);
+    $session = Mockery::mock(Session::class);
     $image = Mockery::mock(PageScreenshot::class);
-    $page->shouldReceive('screenshot')->once()->withArgs(fn ($options) => $options['clip']->getWidth() === 2048
-        && $options['clip']->getHeight() === 10000 && ! isset($options['quality']))->andReturn($image);
+    $browser->shouldReceive('createPage')->once()->andReturn($page);
+    $page->shouldReceive('getSession')->once()->andReturn($session);
+    $session->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Emulation.setScriptExecutionDisabled')
+        ->andReturn(new Response([], new Message('test')));
+    $page->shouldReceive('setHtml')->once()->with('hello', 15000);
+    $page->shouldReceive('getFullPageClip')->once()->with(60000)->andReturn(new Clip(0, 0, 800, 600));
+    $page->shouldReceive('screenshot')->once()->andReturn($image);
     $image->shouldReceive('getBase64')->once()->with(60000)->andReturn(imageFixture());
     $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
-
-    expect(chromeDriver($browser)->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()))->width())->toBe(1);
-});
-
-test('strict load timeouts propagate and close all resources', function () {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once()->andThrow(new OperationTimedOut('load failure'));
-    $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
-
-    expect(fn () => chromeDriver($browser)->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make()->setFailOnTimeout(true), ImageOptions::make())))
-        ->toThrow(OperationTimedOut::class, 'load failure');
-});
-
-test('failed page cleanup falls back to closing its target', function () {
-    [$browser, $page, $session] = chromePage();
-    $page->shouldReceive('setHtml')->once()->andThrow(new RuntimeException('capture failure'));
-    $page->shouldReceive('close')->once()->andThrow(new RuntimeException('page cleanup failure'));
-    $session->shouldReceive('getTargetId')->once()->andReturn('target-1');
-    $connection = Mockery::mock(Connection::class);
-    $browser->shouldReceive('getConnection')->once()->andReturn($connection);
-    $connection->shouldReceive('sendMessageSync')->once()->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget');
-    $browser->shouldReceive('close')->once();
-
-    expect(fn () => chromeDriver($browser)->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
-        ->toThrow(RuntimeException::class, 'capture failure');
-});
-
-test('capture failures still close the page and browser', function () {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once();
-    $page->shouldReceive('getFullPageClip')->once()->andReturn(new Clip(0, 0, 800, 600));
-    $page->shouldReceive('screenshot')->once()->andThrow(new RuntimeException('screenshot failure'));
-    $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
-
-    expect(fn () => chromeDriver($browser)->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
-        ->toThrow(RuntimeException::class, 'screenshot failure');
-});
-
-test('a shared capture failure closes its page without closing other workers browsers', function () {
-    [$browser, $page] = chromePage(shared: true);
-    $viewport = Mockery::mock(ResponseWaiter::class);
-    $page->shouldReceive('setViewport')->once()->with(1024, 768)->andReturn($viewport);
-    $viewport->shouldReceive('await')->once()->with(60000);
-    $page->shouldReceive('setHtml')->once()->andThrow(new RuntimeException('capture failure'));
-    $page->shouldReceive('close')->once();
-    $browser->shouldNotReceive('close');
-    $driver = new class extends ChromeDriver
-    {
-        public function shared(Browser $browser): void
-        {
-            $this->capturePage($browser, 'hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()), shared: true);
-        }
-    };
-
-    expect(fn () => $driver->shared($browser))->toThrow(RuntimeException::class, 'capture failure');
-});
-
-test('shared page initialization failures close only the owned target and preserve the original error', function ($cleanupFails) {
-    $browser = Mockery::mock(Browser::class);
-    $connection = Mockery::mock(Connection::class);
-    $browser->shouldReceive('getConnection')->andReturn($connection);
-    $browser->shouldNotReceive('close');
-    $connection->shouldReceive('sendMessageSync')->once()
-        ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')
-        ->andReturn(new Response(['result' => ['targetId' => 'owned-target']], new Message('test')));
-    $browser->shouldReceive('getPage')->once()->with('owned-target')->andThrow(new OperationTimedOut('initialization failure'));
-    $cleanup = $connection->shouldReceive('sendMessageSync')->once()
-        ->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget' && $message->getParams() === ['targetId' => 'owned-target']);
+    $close = $browser->shouldReceive('close')->once();
 
     if ($cleanupFails) {
-        $cleanup->andThrow(new RuntimeException('cleanup failure'));
-    } else {
-        $cleanup->andReturn(new Response([], new Message('test')));
-        $connection->shouldReceive('getSendSyncDefaultTimeout')->once()->andReturn(60000);
-        $target = Mockery::mock(Target::class);
-        $browser->shouldReceive('getTarget')->with('owned-target')->twice()->andReturn($target, null);
-        $connection->shouldReceive('readData')->once();
+        $close->andThrow(new RuntimeException('browser cleanup failure'));
     }
-
-    $driver = new class extends ChromeDriver
-    {
-        public function shared(Browser $browser): void
-        {
-            $this->capturePage($browser, 'hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()), shared: true);
-        }
-    };
-
-    expect(fn () => $driver->shared($browser))->toThrow(OperationTimedOut::class, 'initialization failure');
-})->with([false, true]);
-
-test('PDF rendering receives print options and timeout and closes the dedicated browser', function () {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once()->with('invoice', 15000);
-    $pdf = Mockery::mock(PagePdf::class);
-    $page->shouldReceive('pdf')->once()->withArgs(fn ($options) => $options['landscape'] && $options['printBackground'])
-        ->andReturn($pdf);
-    $pdf->shouldReceive('getBase64')->once()->with(12345)->andReturn(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
-    $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
-
-    $result = chromeDriver($browser)->capture('invoice', SourceType::Html, new CaptureOptions(BrowserOptions::make()->setTimeouts(load: 15000, browser: 12345), PdfOptions::make()->setLandscape(true)));
-    expect($result->mimeType())->toBe('application/pdf');
-});
-
-test('PDF printing failures preserve the error and close browser resources', function () {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once();
-    $page->shouldReceive('pdf')->once()->andThrow(new RuntimeException('print failure'));
-    $page->shouldReceive('close')->once()->andThrow(new RuntimeException('cleanup failure'));
-    $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
-    $browser->shouldReceive('close')->once();
-
-    expect(fn () => chromeDriver($browser)->capture('invoice', SourceType::Html, new CaptureOptions(BrowserOptions::make(), PdfOptions::make())))
-        ->toThrow(RuntimeException::class, 'print failure');
-});
-
-test('the output enum selects Chrome image format and JPEG quality', function (OutputFormat $format) {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once()->with('image', 15000);
-    $page->shouldReceive('getFullPageClip')->once()->with(60000)->andReturn(new Clip(0, 0, 800, 600));
-    $image = Mockery::mock(PageScreenshot::class);
-    $page->shouldReceive('screenshot')->once()->withArgs(fn ($parameters) => $parameters['format'] === $format->value
-        && ($format === OutputFormat::Jpeg ? $parameters['quality'] === 91 : ! isset($parameters['quality'])))->andReturn($image);
-    $page->shouldNotReceive('pdf');
-    $image->shouldReceive('getBase64')->once()->with(60000)->andReturn(imageFixture());
-    $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
-
-    expect(chromeDriver($browser)->capture('image', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat($format, 91))))
-        ->toBeInstanceOf(ImageResult::class);
-})->with([OutputFormat::Png, OutputFormat::Jpeg]);
-
-test('strategy resolution failures still close the page and browser', function () {
-    [$browser, $page] = chromePage();
-    $page->shouldReceive('setHtml')->once()->with('hello', 15000);
-    $page->shouldReceive('close')->once();
-    $browser->shouldReceive('close')->once();
 
     $driver = new class($browser) extends ChromeDriver
     {
@@ -230,21 +67,110 @@ test('strategy resolution failures still close the page and browser', function (
         {
             return $this->browser;
         }
+    };
 
-        protected function resolveCapture(CaptureOptions $options): CapturesPage
+    if ($cleanupFails) {
+        expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+            ->toThrow(RuntimeException::class, 'browser cleanup failure');
+    } else {
+        expect($driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()))->width())->toBe(1);
+    }
+})->with([false, true]);
+
+test('rendering errors survive failures in both page and browser cleanup', function () {
+    $browser = Mockery::mock(Browser::class);
+    $page = Mockery::mock(Page::class);
+    $session = Mockery::mock(Session::class);
+    $connection = Mockery::mock(Connection::class);
+    $browser->shouldReceive('createPage')->once()->andReturn($page);
+    $page->shouldReceive('getSession')->andReturn($session);
+    $session->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Emulation.setScriptExecutionDisabled')
+        ->andReturn(new Response([], new Message('test')));
+    $page->shouldReceive('setHtml')->once();
+    $page->shouldReceive('getFullPageClip')->once()->andReturn(new Clip(0, 0, 800, 600));
+    $page->shouldReceive('screenshot')->once()->andThrow(new RuntimeException('rendering failure'));
+    $page->shouldReceive('close')->once()->andThrow(new RuntimeException('page cleanup failure'));
+    $session->shouldReceive('getTargetId')->once()->andReturn('owned-target');
+    $browser->shouldReceive('getConnection')->once()->andReturn($connection);
+    $connection->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget')
+        ->andThrow(new RuntimeException('target cleanup failure'));
+    $browser->shouldReceive('close')->once()->andThrow(new RuntimeException('browser cleanup failure'));
+    $driver = new class($browser) extends ChromeDriver
+    {
+        public function __construct(
+            protected Browser $browser
+        ) {}
+
+        protected function createBrowser(BrowserOptions $options): Browser
         {
-            throw new RuntimeException('strategy failure');
+            return $this->browser;
         }
     };
 
     expect(fn () => $driver->capture('hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
-        ->toThrow(RuntimeException::class, 'strategy failure');
+        ->toThrow(RuntimeException::class, 'rendering failure');
+});
+
+test('shared captures use a socket lease and connection settings without closing the browser', function () {
+    $browser = Mockery::mock(Browser::class);
+    $connection = Mockery::mock(Connection::class);
+    $page = Mockery::mock(Page::class);
+    $session = Mockery::mock(Session::class);
+    $viewport = Mockery::mock(ResponseWaiter::class);
+    $image = Mockery::mock(PageScreenshot::class);
+    $socket = Mockery::mock(BrowserSocket::class);
+    $socket->shouldReceive('run')->once()->with(
+        Mockery::type('callable'), Mockery::type('callable'),
+        ['headers' => ['X-Test' => 'capture'], 'sendSyncDefaultTimeout' => 1234],
+    )->andReturnUsing(fn ($create, $capture) => $capture($create()));
+    $browser->shouldNotReceive('close');
+    $browser->shouldNotReceive('createPage');
+    $browser->shouldReceive('getConnection')->twice()->andReturn($connection);
+    $connection->shouldReceive('setConnectionHttpHeaders')->once()->with(['X-Test' => 'capture']);
+    $connection->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')
+        ->andReturn(new Response(['result' => ['targetId' => 'owned-target']], new Message('test')));
+    $browser->shouldReceive('getPage')->once()->with('owned-target')->andReturn($page);
+    $page->shouldReceive('setViewport')->once()->with(800, 600)->andReturn($viewport);
+    $viewport->shouldReceive('await')->once()->with(1234);
+    $page->shouldReceive('getSession')->once()->andReturn($session);
+    $session->shouldReceive('sendMessageSync')->once()->withArgs(fn ($message, $timeout) => $message->getMethod() === 'Emulation.setScriptExecutionDisabled' && $timeout === 1234
+    )->andReturn(new Response([], new Message('test')));
+    $page->shouldReceive('setHtml')->once()->with('hello', 2000);
+    $page->shouldReceive('getFullPageClip')->once()->with(1234)->andReturn(new Clip(0, 0, 800, 600));
+    $page->shouldReceive('screenshot')->once()->andReturn($image);
+    $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
+    $page->shouldReceive('close')->once();
+    $driver = new class($browser, $socket) extends ChromeDriver
+    {
+        public function __construct(
+            protected Browser $browser,
+            protected BrowserSocket $browserSocket,
+        ) {
+            parent::__construct(browserOptions: ['headers' => ['X-Test' => 'capture'], 'sendSyncDefaultTimeout' => 999]);
+        }
+
+        protected function createBrowser(BrowserOptions $options): Browser
+        {
+            return $this->browser;
+        }
+
+        protected function socket(BrowserOptions $options): ?BrowserSocket
+        {
+            return $this->browserSocket;
+        }
+    };
+    $options = new CaptureOptions(
+        BrowserOptions::make()->setSocket('shared')->setSize(800, 600)->setTimeouts(2000, 1234),
+        ImageOptions::make(),
+    );
+
+    expect($driver->capture('hello', SourceType::Html, $options)->width())->toBe(1);
 });
 
 test('source strings are rejected before starting a browser', function ($type) {
-    $browser = Mockery::mock(Browser::class);
-    $browser->shouldNotReceive('createPage');
-
-    expect(fn () => chromeDriver($browser)->capture('invoice', $type, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
+    expect(fn () => (new ChromeDriver)->capture('invoice', $type, new CaptureOptions(BrowserOptions::make(), ImageOptions::make())))
         ->toThrow(TypeError::class);
 })->with(['html', 'url', 'invalid']);

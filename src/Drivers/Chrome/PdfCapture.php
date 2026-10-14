@@ -25,7 +25,7 @@ class PdfCapture implements CapturesPage
     public function capture(Page $page): PdfResult
     {
         if ($this->element !== null) {
-            $this->prepareElement($page);
+            $this->isolateElement($page);
         }
 
         return new PdfResult(
@@ -40,7 +40,7 @@ class PdfCapture implements CapturesPage
     /**
      * Move the selected content into the body, preserving document stylesheets.
      */
-    protected function prepareElement(Page $page): void
+    protected function isolateElement(Page $page): void
     {
         $selector = json_encode($this->element, JSON_THROW_ON_ERROR);
 

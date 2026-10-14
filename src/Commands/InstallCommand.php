@@ -13,7 +13,9 @@ class InstallCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'screenshot:install {--browser-version= : Install a complete Chrome version instead of the latest stable release}';
+    protected $signature = 'screenshot:install
+                            {--browser-version= : Install a complete Chrome version instead of the latest stable release}
+                            {--update : Check for and install the latest stable Chrome release}';
 
     /**
      * The console command description.
@@ -27,24 +29,27 @@ class InstallCommand extends Command
      */
     public function handle(ChromeInstaller $installer): int
     {
-        $this->components->info('Installing Chrome for Testing...');
+        $this->components->info('Checking Chrome for Testing...');
 
         try {
-            $path = $installer->install($this->option('browser-version'));
+            $previous = $installer->path();
+            $path = $installer->install($this->option('browser-version'), $this->option('update'));
         } catch (Throwable $e) {
             $this->components->error($e->getMessage());
 
             return self::FAILURE;
         }
 
-        $this->components->info('Chrome is ready.');
+        $this->components->info($path === $previous ? 'Chrome is already installed.' : 'Chrome is ready.');
         $this->line($path);
 
         if (config('screenshot.browser.binary')) {
             $this->components->warn('Your configured screenshot.browser.binary still takes precedence over this installation.');
         }
 
-        $this->components->info('Restart long-running queue workers to use this installation. Close shared browsers before switching versions.');
+        if ($path !== $previous) {
+            $this->components->info('Restart long-running queue workers to use this installation. Close shared browsers before switching versions.');
+        }
 
         return self::SUCCESS;
     }

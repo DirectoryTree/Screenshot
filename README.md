@@ -55,13 +55,21 @@ The service provider is registered automatically. Download Chrome with:
 php artisan screenshot:install
 ```
 
-The installer requires PHP's `zip` extension and downloads the latest stable Chrome for Testing for your platform. It supports available Linux, macOS, and Windows builds.
+The installer reuses an existing package-managed installation without checking for updates. If none exists, it downloads the latest stable Chrome for Testing for your platform. Downloads require PHP's `zip` extension and support available Linux, macOS, and Windows builds.
+
+To explicitly check for and install the latest stable version:
+
+```bash
+php artisan screenshot:install --update
+```
 
 Chrome is stored in `storage/app/private/screenshot/browsers` and discovered automatically. Run the installer during deployment. To pin a browser version:
 
 ```bash
 php artisan screenshot:install --browser-version=155.0.8059.79
 ```
+
+A pinned version is reused when already downloaded. Use either `--update` or `--browser-version`, not both.
 
 Alternatively, use an existing Chrome or Chromium executable:
 

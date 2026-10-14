@@ -62,10 +62,14 @@ class ChromeInstaller
     }
 
     /**
-     * Download, verify, and select a browser while retaining earlier versions.
+     * Reuse an installed browser, or download and select the requested release.
      */
-    public function install(?string $version = null): string
+    public function install(?string $version = null, bool $update = false): string
     {
+        if ($update && $version !== null) {
+            throw new InvalidArgumentException('Use either --update or --browser-version, not both.');
+        }
+
         if ($version !== null && ! preg_match('/^\d+\.\d+\.\d+\.\d+$/D', $version)) {
             throw new InvalidArgumentException('Specify a complete Chrome version, such as 155.0.8059.79.');
         }
@@ -84,6 +88,12 @@ class ChromeInstaller
         try {
             if (! flock($lock, LOCK_EX | LOCK_NB)) {
                 throw new RuntimeException('Another Chrome installation is in progress. Try again when it finishes.');
+            }
+
+            if ($version === null && ! $update && ($path = $this->path()) !== null) {
+                $this->verify($path);
+
+                return $path;
             }
 
             // A pinned installation can be reused without contacting Google.

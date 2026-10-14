@@ -69,19 +69,20 @@ test('the stable browser is installed and selected and pinned installs work offl
     $path = $installer->install();
     expect($path)->toBe($installer->path())
         ->and(is_executable($path))->toBeTrue()
+        ->and($installer->install())->toBe($path)
         ->and($installer->install($release['version']))->toBe($path)
         ->and($history)->toHaveCount(2)
         ->and((string) $history[0]['request']->getUri())->toEndWith('last-known-good-versions-with-downloads.json')
         ->and(glob(temporaryDirectory().'/.install-*'))->toBe([]);
 });
 
-test('stable installs check for updates but reuse the already downloaded version', function () {
+test('explicit updates check for stable releases but reuse the already downloaded version', function () {
     $release = chromeReleaseFixture();
     $manifest = new Response(200, [], json_encode(['channels' => ['Stable' => $release]]));
     $mock = new MockHandler([$manifest, new Response(200, [], chromeArchiveFixture(temporaryDirectory())), $manifest]);
     $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
 
-    expect($installer->install())->toBe($installer->install())
+    expect($installer->install())->toBe($installer->install(update: true))
         ->and($mock->count())->toBe(0);
 });
 
@@ -117,6 +118,52 @@ test('a browser that cannot run is not activated', function () {
     expect(fn () => $installer->install($release['version']))->toThrow(RuntimeException::class, 'system libraries');
     expect($installer->path())->toBeNull()
         ->and(glob(temporaryDirectory().'/.install-*'))->toBe([]);
+});
+
+test('explicit updates select the latest stable release and retain previous versions', function () {
+    $first = chromeReleaseFixture();
+    $next = chromeReleaseFixture('156.0.8078.12');
+    $archive = chromeArchiveFixture(temporaryDirectory());
+    $mock = new MockHandler([
+        new Response(200, [], json_encode($first)),
+        new Response(200, [], $archive),
+        new Response(200, [], json_encode(['channels' => ['Stable' => $next]])),
+        new Response(200, [], $archive),
+    ]);
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
+    $previous = $installer->install($first['version']);
+
+    expect($installer->install())->toBe($previous)->and($mock->count())->toBe(2);
+
+    $updated = $installer->install(update: true);
+
+    expect($updated)->not->toBe($previous)
+        ->and($installer->path())->toBe($updated)
+        ->and(is_file($previous))->toBeTrue()
+        ->and($mock->count())->toBe(0)
+        ->and($installer->install($first['version']))->toBe($previous)
+        ->and($installer->path())->toBe($previous);
+});
+
+test('an existing installation is verified before being reused', function () {
+    $release = chromeReleaseFixture();
+    $mock = new MockHandler([
+        new Response(200, [], json_encode($release)),
+        new Response(200, [], chromeArchiveFixture(temporaryDirectory())),
+    ]);
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
+    $path = $installer->install($release['version']);
+    file_put_contents($path, "#!/bin/sh\nexit 127\n");
+
+    expect(fn () => $installer->install())->toThrow(RuntimeException::class, 'Chrome could not run');
+    expect($installer->path())->toBe($path)->and($mock->count())->toBe(0);
+});
+
+test('updates and pinned versions cannot be requested together', function () {
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create(new MockHandler)]));
+
+    expect(fn () => $installer->install('155.0.8059.79', update: true))
+        ->toThrow(InvalidArgumentException::class, 'Use either --update or --browser-version, not both.');
 });
 
 test('unsafe or mismatched manifests cannot choose an arbitrary download', function ($release) {

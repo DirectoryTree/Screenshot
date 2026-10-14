@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Support\ErrorHandler;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -46,13 +47,7 @@ abstract class CaptureResult
      */
     public function save(string $path): static
     {
-        set_error_handler(static fn () => true);
-
-        try {
-            $written = file_put_contents($path, $this->contents);
-        } finally {
-            restore_error_handler();
-        }
+        $written = ErrorHandler::suppress(fn () => file_put_contents($path, $this->contents));
 
         if ($written !== strlen($this->contents)) {
             throw new RuntimeException("Unable to save the capture to [{$path}].");

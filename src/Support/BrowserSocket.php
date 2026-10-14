@@ -139,13 +139,8 @@ class BrowserSocket
     {
         $parts = parse_url($uri);
         $address = 'tcp://'.$parts['host'].':'.($parts['port'] ?? ($parts['scheme'] === 'wss' ? 443 : 80));
-        set_error_handler(static fn () => true);
 
-        try {
-            $connection = stream_socket_client($address, $errno, $error, 0.1);
-        } finally {
-            restore_error_handler();
-        }
+        $connection = ErrorHandler::suppress(fn () => stream_socket_client($address, $errno, $error, 0.1));
 
         if ($connection === false) {
             return false;

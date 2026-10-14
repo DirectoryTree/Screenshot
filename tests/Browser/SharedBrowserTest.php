@@ -3,6 +3,7 @@
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
+use DirectoryTree\Screenshot\Support\ErrorHandler;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Exception\CommunicationException;
@@ -22,18 +23,14 @@ afterEach(function () {
 
     // Chrome finishes flushing its profile asynchronously after Browser.close.
     // Tolerate files disappearing during cleanup, then verify removal completed.
-    set_error_handler(static fn () => true);
-
-    try {
+    ErrorHandler::suppress(function () {
         $deadline = microtime(true) + 5;
         while (is_dir(temporaryDirectory()) && microtime(true) < $deadline) {
             (new Filesystem)->deleteDirectory(temporaryDirectory());
             clearstatcache();
             usleep(10000);
         }
-    } finally {
-        restore_error_handler();
-    }
+    });
 
     expect(is_dir(temporaryDirectory()))->toBeFalse();
 });

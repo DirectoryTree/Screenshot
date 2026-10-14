@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Support\ErrorHandler;
 use InvalidArgumentException;
 
 class ImageResult extends CaptureResult
@@ -19,13 +20,10 @@ class ImageResult extends CaptureResult
     public function __construct(string $base64)
     {
         $contents = base64_decode($base64, true);
-        set_error_handler(static fn () => true);
 
-        try {
-            $dimensions = $contents === false || $contents === '' ? false : getimagesizefromstring($contents);
-        } finally {
-            restore_error_handler();
-        }
+        $dimensions = ErrorHandler::suppress(
+            fn () => $contents === false || $contents === '' ? false : getimagesizefromstring($contents),
+        );
 
         if (! $dimensions || ! in_array($dimensions[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true)) {
             throw new InvalidArgumentException('The screenshot must contain a base64-encoded PNG or JPEG image.');

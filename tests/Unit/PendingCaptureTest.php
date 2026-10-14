@@ -22,19 +22,28 @@ test('one executor supports independent image and PDF builders for the same sour
 
     $image->size(800, 600)->jpeg(95);
     $pdf->size(400, 300)->landscape();
+
     $fake->assertNothingCaptured();
     $fake->assertNoPdfsCaptured();
 
-    expect($image->capture())->toBeInstanceOf(ImageResult::class)
-        ->and($pdf->capture())->toBeInstanceOf(PdfResult::class);
+    expect($image->capture())->toBeInstanceOf(ImageResult::class);
+    expect($pdf->capture())->toBeInstanceOf(PdfResult::class);
+
     $image->capture();
 
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'https://example.com/invoice'
-        && $type === SourceType::Url && $options->browser->getWidth() === 800
-        && $options->getFormat() === OutputFormat::Jpeg && $options->output->getQuality() === 95);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'https://example.com/invoice'
-        && $type === SourceType::Url && $options->browser->getWidth() === 400
-        && $options->output->getLandscape());
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $source === 'https://example.com/invoice'
+            && $type === SourceType::Url
+            && $options->browser->getWidth() === 800
+            && $options->getFormat() === OutputFormat::Jpeg
+            && $options->output->getQuality() === 95,
+    );
+    $fake->assertPdfCaptured(
+        fn ($source, $type, $options) => $source === 'https://example.com/invoice'
+            && $type === SourceType::Url
+            && $options->browser->getWidth() === 400
+            && $options->output->getLandscape(),
+    );
     $fake->assertCapturedCount(2);
     $fake->assertPdfCapturedCount(1);
 });
@@ -43,23 +52,29 @@ test('the executor snapshots options before passing them to a driver', function 
     $options = new CaptureOptions((new BrowserOptions)->setSize(800, 600), new ImageOptions);
     $result = new ImageResult(imageFixture());
     $driver = Mockery::mock(Driver::class);
-    $driver->shouldReceive('capture')->once()->withArgs(function ($source, $type, $snapshot) use ($options) {
-        expect($source)->toBe('invoice')->and($type)->toBe(SourceType::Html)
-            ->and($snapshot)->not->toBe($options)
-            ->and($snapshot->browser)->not->toBe($options->browser)
-            ->and($snapshot->output)->not->toBe($options->output);
 
-        $snapshot->browser->setSize(400, 300);
-        $snapshot->output->setFormat(OutputFormat::Jpeg, 50);
+    $driver->shouldReceive('capture')
+        ->once()
+        ->withArgs(function ($source, $type, $snapshot) use ($options) {
+            expect($source)->toBe('invoice');
+            expect($type)->toBe(SourceType::Html);
+            expect($snapshot)->not->toBe($options);
+            expect($snapshot->browser)->not->toBe($options->browser);
+            expect($snapshot->output)->not->toBe($options->output);
 
-        return true;
-    })->andReturn($result);
+            $snapshot->browser->setSize(400, 300);
+            $snapshot->output->setFormat(OutputFormat::Jpeg, 50);
+
+            return true;
+        })
+        ->andReturn($result);
+
     $capture = new PendingCapture($driver, 'invoice', SourceType::Html);
 
-    expect($capture->capture($options))->toBe($result)
-        ->and($options->browser->getWidth())->toBe(800)
-        ->and($options->getFormat())->toBe(OutputFormat::Png)
-        ->and($options->output->getQuality())->toBe(80);
+    expect($capture->capture($options))->toBe($result);
+    expect($options->browser->getWidth())->toBe(800);
+    expect($options->getFormat())->toBe(OutputFormat::Png);
+    expect($options->output->getQuality())->toBe(80);
 });
 
 test('the executor validates settings before invoking the driver', function () {
@@ -71,7 +86,9 @@ test('the executor validates settings before invoking the driver', function () {
         }
     };
     $driver = Mockery::mock(Driver::class);
+
     $driver->shouldNotReceive('capture');
+
     $capture = new PendingCapture($driver, 'invoice', SourceType::Html);
 
     expect(fn () => $capture->capture($options))

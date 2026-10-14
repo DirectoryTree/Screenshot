@@ -5,12 +5,13 @@ namespace DirectoryTree\Screenshot;
 class PendingSource
 {
     /**
-     * Prepare a source with an independent snapshot of its browser settings.
+     * Prepare a source with independent browser settings and shared output defaults.
      */
     public function __construct(
-        protected Screenshot $factory,
         protected PendingCapture $capture,
         protected BrowserOptions $browser,
+        protected ImageOptions $image,
+        protected PdfOptions $pdf,
     ) {
         $this->browser = clone $browser;
     }
@@ -80,7 +81,7 @@ class PendingSource
      */
     public function png(): PendingImage
     {
-        return $this->factory->newPendingImage($this->capture, $this->browser)->png();
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->png();
     }
 
     /**
@@ -88,7 +89,7 @@ class PendingSource
      */
     public function jpeg(?int $quality = null): PendingImage
     {
-        return $this->factory->newPendingImage($this->capture, $this->browser)->jpeg($quality);
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->jpeg($quality);
     }
 
     /**
@@ -96,7 +97,7 @@ class PendingSource
      */
     public function pdf(): PendingPdf
     {
-        return $this->factory->newPendingPdf($this->capture, $this->browser);
+        return new PendingPdf($this->capture, new CaptureOptions($this->browser, $this->pdf));
     }
 
     /**
@@ -120,6 +121,6 @@ class PendingSource
      */
     public function capture(): ImageResult
     {
-        return $this->factory->newPendingImage($this->capture, $this->browser)->capture();
+        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image)))->capture();
     }
 }

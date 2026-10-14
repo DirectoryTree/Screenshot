@@ -5,6 +5,7 @@ use DirectoryTree\Screenshot\Support\ErrorHandler;
 test('suppression returns the callback result and restores the previous handler', function () {
     $warnings = [];
     $result = new stdClass;
+
     set_error_handler(function ($severity, $message) use (&$warnings) {
         $warnings[] = $message;
 
@@ -17,9 +18,11 @@ test('suppression returns the callback result and restores the previous handler'
 
             return $result;
         });
+
         trigger_error('restored', E_USER_WARNING);
 
-        expect($returned)->toBe($result)->and($warnings)->toBe(['restored']);
+        expect($returned)->toBe($result);
+        expect($warnings)->toBe(['restored']);
     } finally {
         restore_error_handler();
     }
@@ -28,6 +31,7 @@ test('suppression returns the callback result and restores the previous handler'
 test('suppression propagates exceptions and restores the previous handler', function () {
     $warnings = [];
     $exception = new RuntimeException('callback failed');
+
     set_error_handler(function ($severity, $message) use (&$warnings) {
         $warnings[] = $message;
 
@@ -42,8 +46,9 @@ test('suppression propagates exceptions and restores the previous handler', func
         }
 
         trigger_error('restored after failure', E_USER_WARNING);
-        expect($caught ?? null)->toBe($exception)
-            ->and($warnings)->toBe(['restored after failure']);
+
+        expect($caught ?? null)->toBe($exception);
+        expect($warnings)->toBe(['restored after failure']);
     } finally {
         restore_error_handler();
     }
@@ -51,6 +56,7 @@ test('suppression propagates exceptions and restores the previous handler', func
 
 test('nested suppression restores each enclosing handler', function () {
     $warnings = [];
+
     set_error_handler(function ($severity, $message) use (&$warnings) {
         $warnings[] = $message;
 

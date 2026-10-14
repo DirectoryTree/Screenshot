@@ -19,11 +19,20 @@ $driver = new class($directory, $id) extends ChromeDriver
         protected string $directory,
         protected string $id,
     ) {
-        parent::__construct(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'], $directory);
+        parent::__construct(
+            getenv('CHROME_PATH') ?: null,
+            ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'],
+            $directory,
+        );
     }
 
-    protected function capturePage(Browser $browser, string $source, SourceType $type, CaptureOptions $options, bool $shared = false): ImageResult|PdfResult
-    {
+    protected function capturePage(
+        Browser $browser,
+        string $source,
+        SourceType $type,
+        CaptureOptions $options,
+        bool $shared = false,
+    ): ImageResult|PdfResult {
         file_put_contents($this->directory.'/'.$this->id.'.ready', 'ready');
         $deadline = microtime(true) + 15;
 

@@ -80,26 +80,15 @@ class Screenshot
     }
 
     /**
-     * Prepare an image with independent browser and image settings.
-     */
-    public function newPendingImage(PendingCapture $capture, BrowserOptions $browser): PendingImage
-    {
-        return new PendingImage($capture, new CaptureOptions($browser, $this->image));
-    }
-
-    /**
-     * Prepare a PDF with independent browser and print settings.
-     */
-    public function newPendingPdf(PendingCapture $capture, BrowserOptions $browser): PendingPdf
-    {
-        return new PendingPdf($capture, new CaptureOptions($browser, $this->pdf));
-    }
-
-    /**
      * Prepare a source with an independent snapshot of its browser settings.
      */
     protected function newPendingSource(string $source, SourceType $type): PendingSource
     {
-        return new PendingSource($this, new PendingCapture($this->driver, $source, $type), $this->browser);
+        return new PendingSource(
+            new PendingCapture($this->driver, $source, $type),
+            $this->browser,
+            $this->image,
+            $this->pdf,
+        );
     }
 }

@@ -5,12 +5,12 @@ use DirectoryTree\Screenshot\ImageResult;
 test('results expose image bytes and metadata', function () {
     $result = new ImageResult(imageFixture());
 
-    expect($result->base64())->toBe(imageFixture())
-        ->and($result->contents())->toBe(base64_decode(imageFixture()))
-        ->and($result->mimeType())->toBe('image/png')
-        ->and($result->dataUri())->toBe('data:image/png;base64,'.imageFixture())
-        ->and($result->width())->toBe(1)
-        ->and($result->height())->toBe(1);
+    expect($result->base64())->toBe(imageFixture());
+    expect($result->contents())->toBe(base64_decode(imageFixture()));
+    expect($result->mimeType())->toBe('image/png');
+    expect($result->dataUri())->toBe('data:image/png;base64,'.imageFixture());
+    expect($result->width())->toBe(1);
+    expect($result->height())->toBe(1);
 });
 
 test('invalid image data is rejected', function ($data) {
@@ -22,8 +22,9 @@ test('results can be saved to a local file', function () {
 
     try {
         $result = new ImageResult(imageFixture());
-        expect($result->save($path))->toBe($result)
-            ->and(file_get_contents($path))->toBe($result->contents());
+
+        expect($result->save($path))->toBe($result);
+        expect(file_get_contents($path))->toBe($result->contents());
     } finally {
         unlink($path);
     }

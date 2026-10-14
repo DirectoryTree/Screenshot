@@ -21,6 +21,7 @@ function socketBrowser(): ProcessAwareBrowser
 {
     $browser = Mockery::mock(ProcessAwareBrowser::class);
     $connection = Mockery::mock(Connection::class);
+
     $browser->shouldReceive('getConnection')->andReturn($connection);
     $connection->shouldReceive('disconnect')->once();
 
@@ -31,8 +32,10 @@ function socketWithConnector(string $path, callable $connect): BrowserSocket
 {
     return new class($path, $connect) extends BrowserSocket
     {
-        public function __construct(string $path, protected mixed $connector)
-        {
+        public function __construct(
+            string $path,
+            protected mixed $connector,
+        ) {
             parent::__construct($path);
         }
 
@@ -48,39 +51,56 @@ function socketWithConnector(string $path, callable $connect): BrowserSocket
 test('named keys cannot escape their configured directory', function () {
     $socket = BrowserSocket::named('../../secret', temporaryDirectory());
 
-    expect(dirname($socket->path()))->toBe(temporaryDirectory())
-        ->and($socket->path())->toBe(BrowserSocket::named('../../secret', temporaryDirectory())->path())
-        ->and($socket->path())->not->toBe(BrowserSocket::named('different', temporaryDirectory())->path());
+    expect(dirname($socket->path()))->toBe(temporaryDirectory());
+    expect($socket->path())->toBe(BrowserSocket::named('../../secret', temporaryDirectory())->path());
+    expect($socket->path())->not->toBe(BrowserSocket::named('different', temporaryDirectory())->path());
 });
 
 test('a created socket is published and its browser is disconnected rather than closed', function () {
     $browser = socketBrowser();
-    $browser->shouldReceive('getSocketUri')->once()->andReturn('ws://127.0.0.1:9222/devtools/browser/test');
+
+    $browser->shouldReceive('getSocketUri')
+        ->once()
+        ->andReturn('ws://127.0.0.1:9222/devtools/browser/test');
+
     $browser->shouldNotReceive('close');
 
-    $result = (new BrowserSocket(temporaryDirectory('browser.socket')))->run(fn () => $browser, fn ($connected) => $connected === $browser);
+    $result = (new BrowserSocket(temporaryDirectory('browser.socket')))->run(
+        fn () => $browser,
+        fn ($connected) => $connected === $browser,
+    );
 
-    expect($result)->toBeTrue()
-        ->and(file_get_contents(temporaryDirectory('browser.socket')))->toBe('ws://127.0.0.1:9222/devtools/browser/test');
+    expect($result)->toBeTrue();
+    expect(file_get_contents(temporaryDirectory('browser.socket')))->toBe('ws://127.0.0.1:9222/devtools/browser/test');
 });
 
 test('existing sockets are reused with each callers connection options', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://127.0.0.1:9222/devtools/browser/existing');
+
     $browser = socketBrowser();
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), function ($uri, $options) use ($browser) {
-        expect($uri)->toBe('ws://127.0.0.1:9222/devtools/browser/existing')
-            ->and($options['sendSyncDefaultTimeout'])->toBe(1234);
+        expect($uri)->toBe('ws://127.0.0.1:9222/devtools/browser/existing');
+        expect($options['sendSyncDefaultTimeout'])->toBe(1234);
 
         return $browser;
     });
 
-    $socket->run(fn () => throw new RuntimeException('must not create'), fn () => null, ['sendSyncDefaultTimeout' => 1234]);
+    $socket->run(
+        fn () => throw new RuntimeException('must not create'),
+        fn () => null,
+        ['sendSyncDefaultTimeout' => 1234],
+    );
 });
 
 test('stale sockets are replaced while holding the startup lock', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://127.0.0.1:9222/devtools/browser/stale');
+
     $browser = socketBrowser();
-    $browser->shouldReceive('getSocketUri')->once()->andReturn('ws://127.0.0.1:9222/devtools/browser/new');
+
+    $browser->shouldReceive('getSocketUri')
+        ->once()
+        ->andReturn('ws://127.0.0.1:9222/devtools/browser/new');
+
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), fn () => throw new BrowserConnectionFailed);
 
     $socket->run(fn () => $browser, fn () => null);
@@ -90,8 +110,13 @@ test('stale sockets are replaced while holding the startup lock', function () {
 
 test('publication failure closes the newly started browser', function () {
     $browser = Mockery::mock(ProcessAwareBrowser::class);
-    $browser->shouldReceive('getSocketUri')->once()->andReturn('ws://localhost/test');
+
+    $browser->shouldReceive('getSocketUri')
+        ->once()
+        ->andReturn('ws://localhost/test');
+
     $browser->shouldReceive('close')->once();
+
     $socket = new class(temporaryDirectory('browser.socket')) extends BrowserSocket
     {
         protected function write(string $uri): void
@@ -105,26 +130,36 @@ test('publication failure closes the newly started browser', function () {
 
 test('capture failures release connections and usage locks without closing the shared browser', function () {
     $browser = socketBrowser();
-    $browser->shouldReceive('getSocketUri')->once()->andReturn('ws://localhost/test');
+
+    $browser->shouldReceive('getSocketUri')
+        ->once()
+        ->andReturn('ws://localhost/test');
+
     $browser->shouldNotReceive('close');
+
     $socket = new BrowserSocket(temporaryDirectory('browser.socket'));
 
     expect(fn () => $socket->run(fn () => $browser, fn () => throw new RuntimeException('capture failed')))
         ->toThrow(RuntimeException::class, 'capture failed');
 
     $handle = fopen(temporaryDirectory('browser.socket').'.usage', 'c');
+
     expect(flock($handle, LOCK_EX | LOCK_NB))->toBeTrue();
+
     fclose($handle);
 });
 
 test('startup lock contention times out without creating a second browser', function () {
     $handle = fopen(temporaryDirectory('browser.socket').'.lock', 'c');
+
     flock($handle, LOCK_EX);
 
     try {
-        expect(fn () => (new BrowserSocket(temporaryDirectory('browser.socket'), 20))->run(
-            fn () => throw new LogicException('must not create'), fn () => null,
-        ))->toThrow(RuntimeException::class, 'Timed out waiting');
+        expect(
+            fn () => (new BrowserSocket(temporaryDirectory('browser.socket'), 20))->run(
+                fn () => throw new LogicException('must not create'), fn () => null,
+            ),
+        )->toThrow(RuntimeException::class, 'Timed out waiting');
     } finally {
         fclose($handle);
     }
@@ -132,11 +167,14 @@ test('startup lock contention times out without creating a second browser', func
 
 test('shutdown cannot close a browser with an active capture lease', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/test');
+
     $handle = fopen(temporaryDirectory('browser.socket').'.usage', 'c');
+
     flock($handle, LOCK_SH);
 
     try {
-        expect(fn () => (new BrowserSocket(temporaryDirectory('browser.socket'), 20))->close())->toThrow(RuntimeException::class, 'Timed out waiting');
+        expect(fn () => (new BrowserSocket(temporaryDirectory('browser.socket'), 20))->close())
+            ->toThrow(RuntimeException::class, 'Timed out waiting');
         expect(file_exists(temporaryDirectory('browser.socket')))->toBeTrue();
     } finally {
         fclose($handle);
@@ -145,13 +183,16 @@ test('shutdown cannot close a browser with an active capture lease', function ()
 
 test('shutdown closes an idle browser and preserves stable lock files', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/test');
+
     $browser = socketBrowser();
+
     $browser->shouldReceive('close')->once();
+
     socketWithConnector(temporaryDirectory('browser.socket'), fn () => $browser)->close();
 
-    expect(file_exists(temporaryDirectory('browser.socket')))->toBeFalse()
-        ->and(file_exists(temporaryDirectory('browser.socket').'.lock'))->toBeTrue()
-        ->and(file_exists(temporaryDirectory('browser.socket').'.usage'))->toBeTrue();
+    expect(file_exists(temporaryDirectory('browser.socket')))->toBeFalse();
+    expect(file_exists(temporaryDirectory('browser.socket').'.lock'))->toBeTrue();
+    expect(file_exists(temporaryDirectory('browser.socket').'.usage'))->toBeTrue();
 });
 
 test('shutdown can remove an already dead socket', function () {
@@ -163,6 +204,7 @@ test('shutdown can remove an already dead socket', function () {
 
 test('a failed replacement retains the previous socket for a later retry', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/previous');
+
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), fn () => throw new BrowserConnectionFailed);
 
     expect(fn () => $socket->run(fn () => throw new RuntimeException('startup failed'), fn () => null))
@@ -172,9 +214,18 @@ test('a failed replacement retains the previous socket for a later retry', funct
 
 test('corrupt socket files are replaced without attempting an invalid connection', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'not a websocket address');
+
     $browser = socketBrowser();
-    $browser->shouldReceive('getSocketUri')->once()->andReturn('ws://localhost/replacement');
-    $socket = socketWithConnector(temporaryDirectory('browser.socket'), fn () => throw new LogicException('must not connect'));
+
+    $browser->shouldReceive('getSocketUri')
+        ->once()
+        ->andReturn('ws://localhost/replacement');
+
+    $socket = socketWithConnector(
+        temporaryDirectory('browser.socket'),
+        fn () => throw new LogicException('must not connect'),
+    );
+
     $socket->run(fn () => $browser, fn () => null);
 
     expect(file_get_contents(temporaryDirectory('browser.socket')))->toBe('ws://localhost/replacement');
@@ -182,6 +233,7 @@ test('corrupt socket files are replaced without attempting an invalid connection
 
 test('shutdown does not forget a browser when its response times out', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/unresponsive');
+
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), fn () => throw new OperationTimedOut);
 
     expect(fn () => $socket->close())->toThrow(OperationTimedOut::class);
@@ -190,8 +242,13 @@ test('shutdown does not forget a browser when its response times out', function 
 
 test('shutdown accepts a disconnect after Chrome has stopped', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/closing');
+
     $browser = socketBrowser();
-    $browser->shouldReceive('close')->once()->andThrow(new SocketException('disconnected'));
+
+    $browser->shouldReceive('close')
+        ->once()
+        ->andThrow(new SocketException('disconnected'));
+
     $attempt = 0;
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), function () use ($browser, &$attempt) {
         if ($attempt++ === 0) {
@@ -202,13 +259,19 @@ test('shutdown accepts a disconnect after Chrome has stopped', function () {
     });
 
     $socket->close();
+
     expect(file_exists(temporaryDirectory('browser.socket')))->toBeFalse();
 });
 
 test('shutdown retains the socket when a disconnected browser is still reachable', function () {
     file_put_contents(temporaryDirectory('browser.socket'), 'ws://localhost/running');
+
     $browser = socketBrowser();
-    $browser->shouldReceive('close')->once()->andThrow(new SocketException('disconnected'));
+
+    $browser->shouldReceive('close')
+        ->once()
+        ->andThrow(new SocketException('disconnected'));
+
     $probe = socketBrowser();
     $attempt = 0;
     $socket = socketWithConnector(temporaryDirectory('browser.socket'), function () use ($browser, $probe, &$attempt) {
@@ -241,6 +304,7 @@ test('shutdown waits for the listening endpoint to disappear', function () {
     };
 
     $socket->wait();
+
     expect($socket->checks)->toBe(3);
 });
 

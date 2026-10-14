@@ -7,9 +7,16 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('standard paper sizes reach the driver with their dimensions in millimeters', function ($size, $width, $height) {
     $fake = new ScreenshotFake;
-    $fake->html('invoice')->pdf()->paperSize(100, 150)->paper($size)->capture();
 
-    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $options->output->getPaperWidth() === $width && $options->output->getPaperHeight() === $height
+    $fake->html('invoice')
+        ->pdf()
+        ->paperSize(100, 150)
+        ->paper($size)
+        ->capture();
+
+    $fake->assertPdfCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->output->getPaperWidth() === $width
+            && $options->output->getPaperHeight() === $height,
     );
 })->with([
     'A3' => [PaperSize::A3, 297.0, 420.0],
@@ -30,6 +37,11 @@ test('selecting a smaller paper cannot invalidate the printable area', function 
 test('paper requires an enum before invoking the driver', function () {
     $fake = new ScreenshotFake;
 
-    expect(fn () => $fake->html('invoice')->pdf()->paper('a4')->capture())->toThrow(TypeError::class);
+    expect(
+        fn () => $fake->html('invoice')
+            ->pdf()
+            ->paper('a4')
+            ->capture(),
+    )->toThrow(TypeError::class);
     $fake->assertNoPdfsCaptured();
 });

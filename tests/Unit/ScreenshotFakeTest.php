@@ -8,11 +8,14 @@ use PHPUnit\Framework\AssertionFailedError;
 
 test('a fake created from another factory starts with fresh records and uses the supplied result', function () {
     $original = new ScreenshotFake;
+
     $original->html('previous')->capture();
     $original->close('emails');
+
     $result = new ImageResult(imageFixture());
 
     $fake = ScreenshotFake::from(factory: $original, result: $result);
+
     $fake->assertNothingCaptured();
     $fake->assertNothingClosed();
     expect($fake->html('next')->capture())->toBe($result);
@@ -22,7 +25,9 @@ test('a fake created from another factory starts with fresh records and uses the
 
 test('shutdown requests match exact keys and are separate from captures', function () {
     $fake = new ScreenshotFake;
+
     $fake->assertNotClosed('emails');
+
     $fake->close('emails');
     $fake->close('01');
     $fake->close('emails');
@@ -36,6 +41,7 @@ test('shutdown requests match exact keys and are separate from captures', functi
 
 test('assertClosed fails when the requested key was not closed', function () {
     $fake = new ScreenshotFake;
+
     $fake->close('invoices');
 
     expect(fn () => $fake->assertClosed('emails'))
@@ -44,6 +50,7 @@ test('assertClosed fails when the requested key was not closed', function () {
 
 test('assertNotClosed fails when the requested key was closed', function () {
     $fake = new ScreenshotFake;
+
     $fake->close('emails');
 
     expect(fn () => $fake->assertNotClosed('emails'))
@@ -52,6 +59,7 @@ test('assertNotClosed fails when the requested key was closed', function () {
 
 test('assertNothingClosed fails when any shutdown was requested', function () {
     $fake = new ScreenshotFake;
+
     $fake->close('emails');
 
     expect(fn () => $fake->assertNothingClosed())
@@ -68,22 +76,35 @@ test('one capture history preserves mixed output order and filters assertion cal
     };
 
     $fake->html('png')->capture();
-    $fake->html('first pdf')->pdf()->capture();
-    $fake->html('jpeg')->jpeg()->capture();
-    $fake->html('second pdf')->pdf()->capture();
+    $fake->html('first pdf')
+        ->pdf()
+        ->capture();
+    $fake->html('jpeg')
+        ->jpeg()
+        ->capture();
+    $fake->html('second pdf')
+        ->pdf()
+        ->capture();
 
     expect($fake->recordedSources())->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
     $fake->assertCapturedCount(2);
     $fake->assertPdfCapturedCount(2);
-    $fake->assertCaptured(fn ($source, $type, CaptureOptions $options) => $source === 'jpeg'
-        && $options->getFormat() === OutputFormat::Jpeg);
-    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $source === 'second pdf'
-        && $options->getFormat() === OutputFormat::Pdf);
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $source === 'jpeg'
+            && $options->getFormat() === OutputFormat::Jpeg,
+    );
+    $fake->assertPdfCaptured(
+        fn ($source, $type, CaptureOptions $options) => $source === 'second pdf'
+            && $options->getFormat() === OutputFormat::Pdf,
+    );
 });
 
 test('PDF records cannot satisfy image assertions', function () {
     $fake = new ScreenshotFake;
-    $fake->html('pdf')->pdf()->capture();
+
+    $fake->html('pdf')
+        ->pdf()
+        ->capture();
 
     $fake->assertNothingCaptured();
     $fake->assertPdfCapturedCount(1);
@@ -93,6 +114,7 @@ test('PDF records cannot satisfy image assertions', function () {
 
 test('image records cannot satisfy PDF assertions', function () {
     $fake = new ScreenshotFake;
+
     $fake->html('image')->capture();
 
     $fake->assertNoPdfsCaptured();
@@ -103,10 +125,14 @@ test('image records cannot satisfy PDF assertions', function () {
 
 test('a fresh fake clears both kinds of records without changing the original history', function () {
     $original = new ScreenshotFake;
+
     $original->html('image')->capture();
-    $original->html('pdf')->pdf()->capture();
+    $original->html('pdf')
+        ->pdf()
+        ->capture();
 
     $fake = ScreenshotFake::from($original);
+
     $fake->assertNothingCaptured();
     $fake->assertNoPdfsCaptured();
     $original->assertCapturedCount(1);

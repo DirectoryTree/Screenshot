@@ -20,19 +20,26 @@ test('invalid browser changes leave both settings unchanged', function () {
 
     expect(fn () => $options->setSize(800, 0))->toThrow(InvalidArgumentException::class);
     expect(fn () => $options->setTimeouts(load: 100, browser: 0))->toThrow(InvalidArgumentException::class);
-    expect($options->getWidth())->toBe(400)->and($options->getHeight())->toBe(300)
-        ->and($options->getLoadTimeout())->toBe(500)->and($options->getBrowserTimeout())->toBe(1000);
+    expect($options->getWidth())->toBe(400);
+    expect($options->getHeight())->toBe(300);
+    expect($options->getLoadTimeout())->toBe(500);
+    expect($options->getBrowserTimeout())->toBe(1000);
 });
 
 test('browser constructors create independent instances with default settings', function () {
-    $first = (new BrowserOptions)->setSize(400, 300)->setSocket('first')->setJavascript(true);
+    $first = (new BrowserOptions)->setSize(400, 300)
+        ->setSocket('first')
+        ->setJavascript(true);
     $second = new BrowserOptions;
 
-    expect($first)->not->toBe($second)
-        ->and($second->getWidth())->toBe(1024)->and($second->getHeight())->toBe(768)
-        ->and($second->getBrowserTimeout())->toBe(60000)->and($second->getLoadTimeout())->toBe(15000)
-        ->and($second->getSocket())->toBeNull()->and($second->getJavascript())->toBeFalse()
-        ->and($second->getFailOnTimeout())->toBeFalse();
+    expect($first)->not->toBe($second);
+    expect($second->getWidth())->toBe(1024);
+    expect($second->getHeight())->toBe(768);
+    expect($second->getBrowserTimeout())->toBe(60000);
+    expect($second->getLoadTimeout())->toBe(15000);
+    expect($second->getSocket())->toBeNull();
+    expect($second->getJavascript())->toBeFalse();
+    expect($second->getFailOnTimeout())->toBeFalse();
 });
 
 test('option constructors validate declared defaults', function (Closure $create) {
@@ -60,18 +67,18 @@ class CustomBrowserOptions extends BrowserOptions
 test('option constructors respect subclass defaults', function () {
     $options = new CustomBrowserOptions;
 
-    expect($options)->toBeInstanceOf(CustomBrowserOptions::class)
-        ->and($options->getWidth())->toBe(1200)
-        ->and($options->setSize(800, 600))->toBe($options);
+    expect($options)->toBeInstanceOf(CustomBrowserOptions::class);
+    expect($options->getWidth())->toBe(1200);
+    expect($options->setSize(800, 600))->toBe($options);
     expect(fn () => $options->setSize(0, 600))->toThrow(InvalidArgumentException::class);
 });
 
 test('individual timeout setters preserve the other configured value', function ($method, $load, $browser) {
     $options = (new BrowserOptions)->setTimeouts(load: 20000, browser: 80000);
 
-    expect($options->{$method}(30000))->toBe($options)
-        ->and($options->getLoadTimeout())->toBe($load)
-        ->and($options->getBrowserTimeout())->toBe($browser);
+    expect($options->{$method}(30000))->toBe($options);
+    expect($options->getLoadTimeout())->toBe($load);
+    expect($options->getBrowserTimeout())->toBe($browser);
 })->with([
     'load' => ['setLoadTimeout', 30000, 80000],
     'browser' => ['setBrowserTimeout', 20000, 30000],
@@ -82,8 +89,8 @@ test('invalid individual timeout updates leave both configured values unchanged'
 
     expect(fn () => $options->{$method}($value))->toThrow(InvalidArgumentException::class);
 
-    expect($options->getLoadTimeout())->toBe(20000)
-        ->and($options->getBrowserTimeout())->toBe(80000);
+    expect($options->getLoadTimeout())->toBe(20000);
+    expect($options->getBrowserTimeout())->toBe(80000);
 })->with([
     'zero load' => ['setLoadTimeout', 0],
     'negative load' => ['setLoadTimeout', -1],

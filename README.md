@@ -298,7 +298,7 @@ Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(Paper
 
 On a source request, `jpeg()` uses the configured quality and `jpeg(quality: 90)` overrides it. Calling `png()` or `jpeg()` again on an image builder changes its format while preserving its current settings. Calling `pdf()` on the source uses its current browser settings and the configured PDF defaults.
 
-Defaults are loaded when the screenshot factory is resolved. Existing source requests use their originating factory's defaults. Output builders retain their own settings, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
+Defaults are loaded when the screenshot factory is resolved. Each source request receives the output defaults directly and copies only the selected output's settings when creating a builder. Output builders retain their own settings, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
 
 ### Updating Existing Captures
 

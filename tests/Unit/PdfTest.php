@@ -10,6 +10,7 @@ use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
+use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
 
@@ -29,7 +30,7 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
 
     $pdf->paper(PaperSize::Letter)->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
     $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
-        && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
+        && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
         && $options->getBrowserTimeout() === 10000 && $options->getPaperWidth() === 215.9 && $options->getLandscape()
         && $options->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
         && ! $options->getBackground() && $options->getPreferCssPageSize());
@@ -67,11 +68,11 @@ test('one driver contract handles images and PDFs with the requested enum format
     $image = new ImageResult(imageFixture());
     $pdf = new PdfResult(pdfFixture());
     $driver->shouldReceive('capture')->once()
-        ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg)
+        ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === SourceType::Html && $options->getFormat() === OutputFormat::Jpeg)
         ->andReturn($image);
     $driver->shouldReceive('capture')->once()
         ->withArgs(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
-            && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getLandscape())
+            && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->getLandscape())
         ->andReturn($pdf);
     $pending = (new Screenshot($driver))->html('invoice')->jpeg();
 

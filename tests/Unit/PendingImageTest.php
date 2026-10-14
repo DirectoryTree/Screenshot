@@ -6,6 +6,7 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
+use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('pending captures do not start the driver until requested', function () {
@@ -16,7 +17,7 @@ test('pending captures do not start the driver until requested', function () {
     $fake->assertNothingCaptured();
     $pending->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === '<h1>Hello</h1>'
-        && $type === 'html' && $options->getWidth() === 800 && $options->getHeight() === 600
+        && $type === SourceType::Html && $options->getWidth() === 800 && $options->getHeight() === 600
         && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 90 && ! $options->getFullPage()
         && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
         && $options->getBrowserTimeout() === 2000 && $options->getLoadTimeout() === 1000
@@ -60,8 +61,8 @@ test('options cannot leak between captures', function () {
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
     $options = new ImageOptions(width: 900);
-    $first = new PendingImage($fake, 'first', 'html', $options);
-    $second = new PendingImage($fake, 'second', 'html', $options);
+    $first = new PendingImage($fake, 'first', SourceType::Html, $options);
+    $second = new PendingImage($fake, 'second', SourceType::Html, $options);
 
     $options->setSize(1200, $options->getHeight());
     $first->size(500, 400)->capture();
@@ -82,7 +83,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ImageResult(imageFixture());
     });
-    $pending = new PendingImage($driver, 'hello', 'html', new ImageOptions);
+    $pending = new PendingImage($driver, 'hello', SourceType::Html, new ImageOptions);
     $pending->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);
@@ -124,7 +125,7 @@ test('unsupported URLs are rejected', function ($url) {
 test('HTTP and HTTPS URLs are accepted', function ($url) {
     $fake = new ScreenshotFake;
     $fake->url($url)->capture();
-    $fake->assertCaptured(fn ($source, $type) => $source === $url && $type === 'url');
+    $fake->assertCaptured(fn ($source, $type) => $source === $url && $type === SourceType::Url);
 })->with(['https://example.com', 'http://127.0.0.1:8000']);
 
 test('standalone views require a view factory', function () {
@@ -158,6 +159,6 @@ test('image builders reject PDF defaults before calling the driver', function ()
     $driver = Mockery::mock(Driver::class);
     $driver->shouldNotReceive('capture');
 
-    expect(fn () => new PendingImage($driver, 'invoice', 'html', new ImageOptions(format: OutputFormat::Pdf)))
+    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, new ImageOptions(format: OutputFormat::Pdf)))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
 });

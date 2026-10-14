@@ -49,7 +49,7 @@ class Screenshot
      */
     public function html(string $html): PendingImage
     {
-        return $this->newPendingImage($html, 'html');
+        return $this->newPendingImage($html, SourceType::Html);
     }
 
     /**
@@ -61,7 +61,7 @@ class Screenshot
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 
-        return $this->newPendingImage($url, 'url');
+        return $this->newPendingImage($url, SourceType::Url);
     }
 
     /**
@@ -99,7 +99,7 @@ class Screenshot
     /**
      * Prepare a capture with an independent snapshot of its format callbacks.
      */
-    protected function newPendingImage(string $source, string $type): PendingImage
+    protected function newPendingImage(string $source, SourceType $type): PendingImage
     {
         return new PendingImage($this->driver, $source, $type, $this->options, $this->configureUsing);
     }

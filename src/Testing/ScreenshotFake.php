@@ -9,6 +9,7 @@ use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
+use DirectoryTree\Screenshot\SourceType;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 
@@ -17,7 +18,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * The recorded image and PDF captures, in capture order.
      *
-     * @var list<array{string, string, ImageOptions|PdfOptions}>
+     * @var list<array{string, SourceType, ImageOptions|PdfOptions}>
      */
     protected array $captures = [];
 
@@ -66,7 +67,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
+    public function capture(string $source, SourceType $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
     {
         $this->captures[] = [$source, $type, clone $options];
 
@@ -179,7 +180,7 @@ class ScreenshotFake extends Screenshot implements Driver
      * Filter the shared capture history by its options type.
      *
      * @param  class-string<ImageOptions|PdfOptions>  $type
-     * @return list<array{string, string, ImageOptions|PdfOptions}>
+     * @return list<array{string, SourceType, ImageOptions|PdfOptions}>
      */
     protected function capturesOfType(string $type): array
     {

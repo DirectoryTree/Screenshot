@@ -45,7 +45,7 @@ class PendingPdf
     public function __construct(
         protected Driver $driver,
         protected string $source,
-        protected string $type,
+        protected SourceType $type,
         protected PdfOptions $options = new PdfOptions,
         protected array $configureUsing = [],
         array $overrides = [],

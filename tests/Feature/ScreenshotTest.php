@@ -2,14 +2,17 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
+use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -43,7 +46,7 @@ test('the facade fake replaces the container factory and renders escaped Blade v
     Screenshot::assertNothingCaptured();
     app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->jpeg()->capture();
     Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
-        && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 85);
+        && $type === SourceType::Html && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 85);
     Screenshot::assertCapturedCount(1);
     expect($calls)->toBe(1);
 });
@@ -119,7 +122,7 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::assertNothingClosed();
     Screenshot::assertNothingCaptured();
     Screenshot::url('https://example.com')->capture();
-    Screenshot::assertCaptured(fn ($source, $type, $options) => $type === 'url' && $options->getSocket() === 'emails');
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $type === SourceType::Url && $options->getSocket() === 'emails');
 });
 
 test('the configured socket directory is used for lifecycle operations', function () {
@@ -217,3 +220,28 @@ test('a single fake result is reused only for matching output captures', functio
     $fake->assertCapturedCount(4);
     $fake->assertPdfCapturedCount(2);
 })->with(['image' => false, 'PDF' => true])->with(['positional' => false, 'named' => true]);
+
+test('fake assertions receive the source enum for every source and output format', function ($source, $format) {
+    Screenshot::fake();
+
+    $pending = match ($source) {
+        'html' => Screenshot::html('<h1>Invoice</h1>'),
+        'url' => Screenshot::url('https://example.com/invoice'),
+        'view' => Screenshot::view('card', ['name' => 'Steve']),
+    };
+
+    (match ($format) {
+        OutputFormat::Png => $pending->png(),
+        OutputFormat::Jpeg => $pending->jpeg(),
+        OutputFormat::Pdf => $pending->pdf(),
+    })->capture();
+
+    $expected = $source === 'url' ? SourceType::Url : SourceType::Html;
+    $callback = fn (string $contents, SourceType $type, ImageOptions|PdfOptions $options) => $type === $expected && $options->getFormat() === $format;
+
+    if ($format === OutputFormat::Pdf) {
+        Screenshot::assertPdfCaptured($callback);
+    } else {
+        Screenshot::assertCaptured($callback);
+    }
+})->with(['html', 'url', 'view'])->with(OutputFormat::cases());

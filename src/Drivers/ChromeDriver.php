@@ -14,6 +14,7 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
+use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Generator;
 use HeadlessChromium\Browser;
@@ -22,7 +23,6 @@ use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
 use HeadlessChromium\Utils;
-use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
@@ -41,13 +41,9 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture an image or PDF using a dedicated or shared browser process.
      */
-    public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
+    public function capture(string $source, SourceType $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
     {
         $options->validate();
-
-        if (! in_array($type, ['html', 'url'], true)) {
-            throw new InvalidArgumentException('The source type must be html or url.');
-        }
 
         return $this->withBrowser(
             $options,
@@ -74,7 +70,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture the selected output format from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions|PdfOptions $options, bool $shared = false): ImageResult|PdfResult
+    protected function capturePage(Browser $browser, string $source, SourceType $type, ImageOptions|PdfOptions $options, bool $shared = false): ImageResult|PdfResult
     {
         return $this->withPage(
             $browser, $source, $type, $options, $shared,
@@ -97,7 +93,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Load a page and release its resources after rendering either format.
      */
-    protected function withPage(Browser $browser, string $source, string $type, BrowserOptions $options, bool $shared, callable $render): mixed
+    protected function withPage(Browser $browser, string $source, SourceType $type, BrowserOptions $options, bool $shared, callable $render): mixed
     {
         $page = null;
         $failed = true;
@@ -123,7 +119,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
             }
 
             try {
-                if ($type === 'html') {
+                if ($type === SourceType::Html) {
                     $page->setHtml($source, $options->getLoadTimeout());
                 } else {
                     $page->navigate($source)->waitForNavigation(Page::LOAD, $options->getLoadTimeout());

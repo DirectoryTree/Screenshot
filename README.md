@@ -303,15 +303,16 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs.
+Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture()`. Blade views are rendered to HTML first. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs.
 
 ## Testing
 
 Use the facade fake to test your application without starting Chrome:
 
 ```php
-use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\SourceType;
 use Illuminate\Support\Facades\Storage;
 
 Storage::fake('screenshots');
@@ -322,8 +323,8 @@ Screenshot::html('<h1>Invoice</h1>')
     ->socket(key: 'invoices')
     ->store(path: 'invoice.png', disk: 'screenshots');
 
-Screenshot::assertCaptured(fn (string $source, string $type, ImageOptions $options) =>
-    $type === 'html'
+Screenshot::assertCaptured(fn (string $source, SourceType $type, ImageOptions $options) =>
+    $type === SourceType::Html
     && $options->getWidth() === 800
     && $options->getSocket() === 'invoices'
 );

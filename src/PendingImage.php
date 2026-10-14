@@ -24,7 +24,7 @@ class PendingImage
     public function __construct(
         protected Driver $driver,
         protected string $source,
-        protected string $type,
+        protected SourceType $type,
         protected ImageOptions $options,
         protected array $configureUsing = [],
     ) {

@@ -6,6 +6,7 @@ use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
+use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('only the selected format callback runs with its matching builder', function () {
@@ -58,7 +59,7 @@ test('explicit image options override format defaults before or after format sel
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
         && $options->getWidth() === 1024 && $options->getHeight() === 768 && $options->getSocket() === null
         && $options->getLoadTimeout() === 15000 && $options->getBrowserTimeout() === 90000 && $options->getQuality() === 85);
-    $fake->assertCaptured(fn ($source, $type, $options) => $type === 'url'
+    $fake->assertCaptured(fn ($source, $type, $options) => $type === SourceType::Url
         && $options->getWidth() === 1280 && $options->getSocket() === 'defaults');
 })->with([true, false]);
 

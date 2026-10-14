@@ -5,6 +5,10 @@ namespace DirectoryTree\Screenshot\Drivers;
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
+use DirectoryTree\Screenshot\Drivers\Chrome\CaptureStrategy;
+use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
+use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
+use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
@@ -14,7 +18,6 @@ use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Generator;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
-use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
@@ -73,31 +76,22 @@ class ChromeDriver implements Driver, ManagesBrowsers
      */
     protected function capturePage(Browser $browser, string $source, string $type, ImageOptions|PdfOptions $options, bool $shared = false): ImageResult|PdfResult
     {
-        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options) {
-            if ($options->getFormat() === OutputFormat::Pdf) {
-                return new PdfResult($page->pdf($options->toArray())->getBase64($options->getBrowserTimeout()));
-            }
+        return $this->withPage(
+            $browser, $source, $type, $options, $shared,
+            fn (Page $page) => $this->resolveCaptureStrategy($options)->capture($page),
+        );
+    }
 
-            $clip = $options->getFullPage()
-                ? $page->getFullPageClip($options->getBrowserTimeout())
-                : new Clip(0, 0, $options->getWidth(), $options->getHeight());
-
-            $parameters = [
-                'format' => $options->getFormat()->value,
-                'captureBeyondViewport' => true,
-                'clip' => new Clip(
-                    0, 0,
-                    max(1, min($clip->getWidth(), $options->getMaxWidth())),
-                    max(1, min($clip->getHeight(), $options->getMaxHeight())),
-                ),
-            ];
-
-            if ($options->getFormat() === OutputFormat::Jpeg) {
-                $parameters['quality'] = $options->getQuality();
-            }
-
-            return new ImageResult($page->screenshot($parameters)->getBase64($options->getBrowserTimeout()));
-        });
+    /**
+     * Resolve the capture implementation for the selected output format.
+     */
+    protected function resolveCaptureStrategy(ImageOptions|PdfOptions $options): CaptureStrategy
+    {
+        return match ($options->getFormat()) {
+            OutputFormat::Png => new PngCapture($options),
+            OutputFormat::Jpeg => new JpegCapture($options),
+            OutputFormat::Pdf => new PdfCapture($options),
+        };
     }
 
     /**

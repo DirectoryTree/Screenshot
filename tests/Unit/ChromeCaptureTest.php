@@ -1,0 +1,76 @@
+<?php
+
+use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
+use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
+use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
+use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\PdfResult;
+use HeadlessChromium\Clip;
+use HeadlessChromium\Page;
+use HeadlessChromium\PageUtils\PagePdf;
+use HeadlessChromium\PageUtils\PageScreenshot;
+
+test('image strategies capture bounded pages with the configured timeout and encoding', function ($class, $format, $fullPage) {
+    $page = Mockery::mock(Page::class);
+    $image = Mockery::mock(PageScreenshot::class);
+    $options = new ImageOptions(width: 640, height: 480, maxWidth: 500, maxHeight: 600,
+        format: $format, quality: 92, browserTimeout: 1234, fullPage: $fullPage);
+
+    if ($fullPage) {
+        $page->shouldReceive('getFullPageClip')->once()->with(1234)->andReturn(new Clip(0, 0, 800, 2000));
+    } else {
+        $page->shouldNotReceive('getFullPageClip');
+    }
+
+    $page->shouldNotReceive('pdf');
+    $page->shouldReceive('screenshot')->once()->withArgs(function ($parameters) use ($format, $fullPage) {
+        expect($parameters['format'])->toBe($format->value)
+            ->and($parameters['captureBeyondViewport'])->toBeTrue()
+            ->and($parameters['clip']->getWidth())->toEqual(500)
+            ->and($parameters['clip']->getHeight())->toEqual($fullPage ? 600 : 480);
+
+        if ($format === OutputFormat::Jpeg) {
+            expect($parameters['quality'])->toBe(92);
+        } else {
+            expect($parameters)->not->toHaveKey('quality');
+        }
+
+        return true;
+    })->andReturn($image);
+    $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
+
+    expect((new $class($options))->capture($page))->toBeInstanceOf(ImageResult::class);
+})->with([
+    'PNG' => [PngCapture::class, OutputFormat::Png],
+    'JPEG' => [JpegCapture::class, OutputFormat::Jpeg],
+])->with(['full page' => true, 'viewport' => false]);
+
+test('the PDF strategy prints its layout without screenshot clipping', function () {
+    $page = Mockery::mock(Page::class);
+    $document = Mockery::mock(PagePdf::class);
+    $options = (new PdfOptions(browserTimeout: 4321))->setPaper(PaperSize::Letter)
+        ->setLandscape(true)->setMargins(25.4, 12.7, 25.4, 12.7)
+        ->setBackground(false)->setPreferCssPageSize(true);
+
+    $page->shouldNotReceive('getFullPageClip');
+    $page->shouldNotReceive('screenshot');
+    $page->shouldReceive('pdf')->once()->with([
+        'paperWidth' => 215.9 / 25.4,
+        'paperHeight' => 279.4 / 25.4,
+        'marginTop' => 1.0,
+        'marginRight' => 0.5,
+        'marginBottom' => 1.0,
+        'marginLeft' => 0.5,
+        'landscape' => true,
+        'printBackground' => false,
+        'preferCSSPageSize' => true,
+    ])->andReturn($document);
+    $document->shouldReceive('getBase64')->once()->with(4321)
+        ->andReturn(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+
+    expect((new PdfCapture($options))->capture($page))->toBeInstanceOf(PdfResult::class);
+});

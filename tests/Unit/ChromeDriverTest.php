@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\Drivers\Chrome\CaptureStrategy;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
@@ -208,3 +209,28 @@ test('the output enum selects Chrome image format and JPEG quality', function (O
     expect(chromeDriver($browser)->capture('image', 'html', new ImageOptions(format: $format, quality: 91)))
         ->toBeInstanceOf(ImageResult::class);
 })->with([OutputFormat::Png, OutputFormat::Jpeg]);
+
+test('strategy resolution failures still close the page and browser', function () {
+    [$browser, $page] = chromePage();
+    $page->shouldReceive('setHtml')->once()->with('hello', 15000);
+    $page->shouldReceive('close')->once();
+    $browser->shouldReceive('close')->once();
+
+    $driver = new class($browser) extends ChromeDriver
+    {
+        public function __construct(protected Browser $browser) {}
+
+        protected function createBrowser(BrowserOptions $options): Browser
+        {
+            return $this->browser;
+        }
+
+        protected function resolveCaptureStrategy(ImageOptions|PdfOptions $options): CaptureStrategy
+        {
+            throw new RuntimeException('strategy failure');
+        }
+    };
+
+    expect(fn () => $driver->capture('hello', 'html', new ImageOptions))
+        ->toThrow(RuntimeException::class, 'strategy failure');
+});

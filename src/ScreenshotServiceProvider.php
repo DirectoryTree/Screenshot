@@ -8,6 +8,7 @@ use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
 class ScreenshotServiceProvider extends ServiceProvider
@@ -19,11 +20,11 @@ class ScreenshotServiceProvider extends ServiceProvider
     {
         $this->replaceConfigRecursivelyFrom(__DIR__.'/../config/screenshot.php', 'screenshot');
 
-        $this->app->singleton(ChromeInstaller::class, fn ($app) => new ChromeInstaller(
+        $this->app->singleton(ChromeInstaller::class, fn (Application $app): ChromeInstaller => new ChromeInstaller(
             $app['config']->get('screenshot.browser.directory'),
         ));
 
-        $this->app->singleton(Driver::class, function ($app) {
+        $this->app->singleton(Driver::class, function (Application $app): Driver {
             return new ChromeDriver(
                 $app['config']->get('screenshot.browser.binary') ?? $app->make(ChromeInstaller::class)->path(),
                 $app['config']->get('screenshot.browser.options', []),
@@ -32,10 +33,11 @@ class ScreenshotServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(Screenshot::class, function ($app) {
+        $this->app->singleton(Screenshot::class, function (Application $app): Screenshot {
             $capture = $app['config']->get('screenshot.capture');
             $image = $app['config']->get('screenshot.image');
             $pdf = $app['config']->get('screenshot.pdf');
+
             [$width, $height] = PaperSize::from($pdf['paper'])->dimensions();
 
             return new Screenshot(

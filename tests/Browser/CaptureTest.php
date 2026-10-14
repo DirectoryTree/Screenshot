@@ -75,10 +75,10 @@ test('real Chromium captures local URLs and handles slow resources', function ()
         expect($result->width())->toBe(640)->and($result->height())->toBe(960);
 
         $html = '<h1>Partial content</h1><img src="'.$url.'/slow">';
-        $partial = realScreenshot()->html($html)->size(400, 300)->loadTimeout(100)->capture();
+        $partial = realScreenshot()->html($html)->size(400, 300)->timeouts(load: 100)->capture();
         expect($partial->width())->toBe(400)->and($partial->mimeType())->toBe('image/png');
 
-        expect(fn () => realScreenshot()->html($html)->loadTimeout(100)->failOnTimeout()->capture())
+        expect(fn () => realScreenshot()->html($html)->timeouts(load: 100)->failOnTimeout()->capture())
             ->toThrow(OperationTimedOut::class);
     } finally {
         $server->stop();

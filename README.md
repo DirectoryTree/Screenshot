@@ -143,13 +143,12 @@ Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a 
 
 ```php
 Screenshot::url('https://example.com')
-    ->loadTimeout(milliseconds: 15000)
-    ->timeout(milliseconds: 60000)
+    ->timeouts(load: 15000, browser: 60000)
     ->failOnTimeout()
     ->capture();
 ```
 
-Page loading defaults to 15 seconds and individual browser operations to 60 seconds. These are separate limits, not an overall deadline. Allow enough time in your queue job for browser startup and capture.
+Both values are in milliseconds. Page loading defaults to 15 seconds and each browser command to 60 seconds. Omitted values keep their current settings, so `timeouts(load: 30000)` changes only the load timeout. These are separate limits, not an overall deadline. Allow enough time in your queue job for browser startup and capture.
 
 By default, a page-load timeout captures what has rendered so far. Use `failOnTimeout()` to throw instead. Other browser failures always propagate.
 

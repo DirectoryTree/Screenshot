@@ -77,21 +77,12 @@ class PendingScreenshot
     }
 
     /**
-     * Set the timeout for individual browser operations in milliseconds.
+     * Set page-load and individual browser-command timeouts in milliseconds.
+     * Omitted values retain their current settings.
      */
-    public function timeout(int $milliseconds): static
+    public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->options->setTimeout($milliseconds);
-
-        return $this;
-    }
-
-    /**
-     * Set the page load timeout in milliseconds.
-     */
-    public function loadTimeout(int $milliseconds): static
-    {
-        $this->options->setLoadTimeout($milliseconds);
+        $this->options->setTimeouts($load, $browser);
 
         return $this;
     }

@@ -110,7 +110,7 @@ test('named sockets are reusable and dead browsers are replaced', function () {
     $factory->close('reusable');
     file_put_contents($path, $first); // Simulate a saved endpoint left behind by a dead browser.
 
-    $factory->html('replacement')->socket('reusable')->timeout(10000)->capture();
+    $factory->html('replacement')->socket('reusable')->timeouts(browser: 10000)->capture();
     expect(file_get_contents($path))->not->toBe($first);
 
     $factory->close('reusable');

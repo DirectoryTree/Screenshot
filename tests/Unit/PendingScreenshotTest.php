@@ -10,7 +10,7 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 test('pending captures do not start the driver until requested', function () {
     $fake = new ScreenshotFake;
     $pending = $fake->html('<h1>Hello</h1>')->size(800, 600)->jpeg(90)->viewport()
-        ->maxSize(1000, 2000)->timeout(2000)->loadTimeout(1000)->javascript()->failOnTimeout();
+        ->maxSize(1000, 2000)->timeouts(load: 1000, browser: 2000)->javascript()->failOnTimeout();
 
     $fake->assertNothingCaptured();
     $pending->capture();
@@ -20,6 +20,31 @@ test('pending captures do not start the driver until requested', function () {
         && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
         && $options->getTimeout() === 2000 && $options->getLoadTimeout() === 1000
         && $options->getJavascript() && $options->getFailOnTimeout());
+});
+
+test('omitted timeouts preserve configured values without changing other captures', function ($arguments, $load, $browser) {
+    $fake = new ScreenshotFake;
+    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
+
+    $fake->html('override')->timeouts(...$arguments)->capture();
+    $fake->html('default')->capture();
+
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
+        && $options->getLoadTimeout() === $load && $options->getTimeout() === $browser);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default'
+        && $options->getLoadTimeout() === 20000 && $options->getTimeout() === 80000);
+})->with([
+    'load only' => [['load' => 30000], 30000, 80000],
+    'browser only' => [['browser' => 90000], 20000, 90000],
+    'neither' => [[], 20000, 80000],
+]);
+
+test('successive timeout updates preserve the other current value', function () {
+    $fake = new ScreenshotFake;
+    $fake->html('hello')->timeouts(load: 30000)->timeouts(browser: 90000)->capture();
+
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getLoadTimeout() === 30000
+        && $options->getTimeout() === 90000);
 });
 
 test('options cannot leak between captures', function () {
@@ -82,8 +107,12 @@ test('invalid mutations leave all pending screenshot options unchanged', functio
     'oversized maximum area' => ['maxSize', [10000, 10000]],
     'negative quality' => ['jpeg', [-1]],
     'excessive quality' => ['jpeg', [101]],
-    'zero timeout' => ['timeout', [0]],
-    'negative load timeout' => ['loadTimeout', [-1]],
+    'zero browser timeout' => ['timeouts', ['browser' => 0]],
+    'negative browser timeout' => ['timeouts', ['browser' => -1]],
+    'zero load timeout' => ['timeouts', ['load' => 0]],
+    'negative load timeout' => ['timeouts', ['load' => -1]],
+    'invalid browser timeout with valid load timeout' => ['timeouts', ['load' => 30000, 'browser' => 0]],
+    'invalid load timeout with valid browser timeout' => ['timeouts', ['load' => 0, 'browser' => 90000]],
     'empty socket key' => ['socket', [' ']],
 ]);
 

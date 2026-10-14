@@ -129,18 +129,6 @@ class CaptureOptions
     }
 
     /**
-     * Set the browser-operation timeout in milliseconds.
-     */
-    public function setTimeout(int $milliseconds): static
-    {
-        $this->validateTimeout($milliseconds);
-
-        $this->timeout = $milliseconds;
-
-        return $this;
-    }
-
-    /**
      * Get the page-load timeout in milliseconds.
      */
     public function getLoadTimeout(): int
@@ -149,13 +137,18 @@ class CaptureOptions
     }
 
     /**
-     * Set the page-load timeout in milliseconds.
+     * Set timeouts in milliseconds after validating both values.
      */
-    public function setLoadTimeout(int $milliseconds): static
+    public function setTimeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->validateTimeout($milliseconds);
+        $load ??= $this->loadTimeout;
+        $browser ??= $this->timeout;
 
-        $this->loadTimeout = $milliseconds;
+        $this->validateTimeout($load);
+        $this->validateTimeout($browser);
+
+        $this->loadTimeout = $load;
+        $this->timeout = $browser;
 
         return $this;
     }

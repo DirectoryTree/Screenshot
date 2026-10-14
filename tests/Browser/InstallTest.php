@@ -3,6 +3,7 @@
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
 use DirectoryTree\Screenshot\Tests\TestCase;
+use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Filesystem\Filesystem;
 
 use function Pest\Laravel\artisan;
@@ -18,7 +19,8 @@ test('the install command downloads a browser that the application can capture w
     ]);
 
     try {
-        artisan('screenshot:install')->assertSuccessful();
+        $this->withoutMockingConsoleOutput();
+        expect(artisan('screenshot:install'))->toBe(0, Artisan::output());
         $installer = app()->make(ChromeInstaller::class);
         $path = $installer->path();
         expect($path)->not->toBeNull();

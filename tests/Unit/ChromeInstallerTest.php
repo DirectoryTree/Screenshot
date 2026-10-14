@@ -9,12 +9,11 @@ use GuzzleHttp\Psr7\Response;
 use Symfony\Component\Filesystem\Filesystem;
 
 beforeEach(function () {
-    $this->directory = sys_get_temp_dir().'/screenshot-installer-'.bin2hex(random_bytes(8));
-    (new Filesystem)->mkdir($this->directory);
+    test()->screenshotDirectory = null;
 });
 
 afterEach(function () {
-    (new Filesystem)->remove($this->directory);
+    (new Filesystem)->remove(temporaryDirectory());
 });
 
 function chromeReleaseFixture(string $version = '155.0.8059.79', ?string $platform = null): array
@@ -60,11 +59,11 @@ test('the stable browser is installed and selected and pinned installs work offl
     $history = [];
     $mock = new MockHandler([
         new Response(200, [], json_encode(['channels' => ['Stable' => $release]])),
-        new Response(200, [], chromeArchiveFixture($this->directory)),
+        new Response(200, [], chromeArchiveFixture(temporaryDirectory())),
     ]);
     $stack = HandlerStack::create($mock);
     $stack->push(Middleware::history($history));
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => $stack]));
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => $stack]));
 
     expect($installer->path())->toBeNull();
     $path = $installer->install();
@@ -73,14 +72,14 @@ test('the stable browser is installed and selected and pinned installs work offl
         ->and($installer->install($release['version']))->toBe($path)
         ->and($history)->toHaveCount(2)
         ->and((string) $history[0]['request']->getUri())->toEndWith('last-known-good-versions-with-downloads.json')
-        ->and(glob($this->directory.'/.install-*'))->toBe([]);
+        ->and(glob(temporaryDirectory().'/.install-*'))->toBe([]);
 });
 
 test('stable installs check for updates but reuse the already downloaded version', function () {
     $release = chromeReleaseFixture();
     $manifest = new Response(200, [], json_encode(['channels' => ['Stable' => $release]]));
-    $mock = new MockHandler([$manifest, new Response(200, [], chromeArchiveFixture($this->directory)), $manifest]);
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create($mock)]));
+    $mock = new MockHandler([$manifest, new Response(200, [], chromeArchiveFixture(temporaryDirectory())), $manifest]);
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
 
     expect($installer->install())->toBe($installer->install())
         ->and($mock->count())->toBe(0);
@@ -91,17 +90,17 @@ test('failed upgrades preserve the selected installation and remove temporary do
     $next = chromeReleaseFixture('156.0.8078.12');
     $mock = new MockHandler([
         new Response(200, [], json_encode($first)),
-        new Response(200, [], chromeArchiveFixture($this->directory)),
+        new Response(200, [], chromeArchiveFixture(temporaryDirectory())),
         new Response(200, [], json_encode($next)),
         $response,
     ]);
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create($mock)]));
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
     $path = $installer->install($first['version']);
 
     expect(fn () => $installer->install($next['version']))->toThrow(RuntimeException::class);
     expect($installer->path())->toBe($path)
         ->and(is_file($path))->toBeTrue()
-        ->and(glob($this->directory.'/.install-*'))->toBe([]);
+        ->and(glob(temporaryDirectory().'/.install-*'))->toBe([]);
 })->with([
     'corrupt archive' => [new Response(200, [], 'not a zip')],
     'download failure' => [new Response(503)],
@@ -111,18 +110,18 @@ test('a browser that cannot run is not activated', function () {
     $release = chromeReleaseFixture();
     $mock = new MockHandler([
         new Response(200, [], json_encode($release)),
-        new Response(200, [], chromeArchiveFixture($this->directory, "#!/bin/sh\necho 'missing library' >&2\nexit 127\n")),
+        new Response(200, [], chromeArchiveFixture(temporaryDirectory(), "#!/bin/sh\necho 'missing library' >&2\nexit 127\n")),
     ]);
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create($mock)]));
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
 
     expect(fn () => $installer->install($release['version']))->toThrow(RuntimeException::class, 'system libraries');
     expect($installer->path())->toBeNull()
-        ->and(glob($this->directory.'/.install-*'))->toBe([]);
+        ->and(glob(temporaryDirectory().'/.install-*'))->toBe([]);
 });
 
 test('unsafe or mismatched manifests cannot choose an arbitrary download', function ($release) {
     $mock = new MockHandler([new Response(200, [], json_encode($release))]);
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create($mock)]));
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
 
     expect(fn () => $installer->install('155.0.8059.79'))->toThrow(RuntimeException::class);
     expect($installer->path())->toBeNull();
@@ -136,10 +135,10 @@ test('unsafe or mismatched manifests cannot choose an arbitrary download', funct
 ]);
 
 test('installation refuses concurrent writers and accepts a retry after the lock is released', function () {
-    $lock = fopen($this->directory.'/install.lock', 'c');
+    $lock = fopen(temporaryDirectory().'/install.lock', 'c');
     flock($lock, LOCK_EX);
-    $mock = new MockHandler([new Response(200, [], json_encode(chromeReleaseFixture())), new Response(200, [], chromeArchiveFixture($this->directory))]);
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create($mock)]));
+    $mock = new MockHandler([new Response(200, [], json_encode(chromeReleaseFixture())), new Response(200, [], chromeArchiveFixture(temporaryDirectory()))]);
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create($mock)]));
 
     try {
         expect(fn () => $installer->install())->toThrow(RuntimeException::class, 'in progress');
@@ -153,13 +152,13 @@ test('installation refuses concurrent writers and accepts a retry after the lock
 });
 
 test('invalid version selectors are rejected before any HTTP request', function ($version) {
-    $installer = new ChromeInstaller($this->directory, new Client(['handler' => HandlerStack::create(new MockHandler)]));
+    $installer = new ChromeInstaller(temporaryDirectory(), new Client(['handler' => HandlerStack::create(new MockHandler)]));
 
     expect(fn () => $installer->install($version))->toThrow(InvalidArgumentException::class);
 })->with(['stable', '155', '../155.0.1.2', "155.0.1.2\n", '']);
 
 test('missing or invalid installation records allow normal browser discovery', function ($contents) {
-    file_put_contents($this->directory.'/installed.json', $contents);
+    file_put_contents(temporaryDirectory().'/installed.json', $contents);
 
-    expect((new ChromeInstaller($this->directory))->path())->toBeNull();
+    expect((new ChromeInstaller(temporaryDirectory()))->path())->toBeNull();
 })->with(['{}', 'invalid json', '{"version":"../escape"}', '{"platform":"unknown","version":"155.0.8059.79"}']);

@@ -15,9 +15,9 @@ test('a service provider configures defaults with a replaceable driver', functio
     $driver = Mockery::mock(Driver::class);
     $driver->shouldReceive('capture')->once()->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->width === 900)
         ->andReturn(new ScreenshotResult(imageFixture()));
-    $this->app->instance(Driver::class, $driver);
+    app()->instance(Driver::class, $driver);
 
-    $this->app->register(new class($this->app) extends ServiceProvider
+    app()->register(new class(app()) extends ServiceProvider
     {
         public function boot(): void
         {
@@ -37,7 +37,7 @@ test('the facade fake replaces the container factory and renders escaped Blade v
     Screenshot::fake();
     expect($calls)->toBe(0);
     Screenshot::assertNothingCaptured();
-    $this->app->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
+    app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
     Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
         && $type === 'html' && $options->format === 'jpeg' && $options->quality === 85);
     Screenshot::assertCapturedCount(1);
@@ -104,7 +104,7 @@ test('the configured socket directory is used for lifecycle operations', functio
 test('partial socket configuration preserves the remaining package defaults', function () {
     config(['screenshot' => ['sockets' => ['lock_timeout' => 250]]]);
 
-    (new ScreenshotServiceProvider($this->app))->register();
+    (new ScreenshotServiceProvider(app()))->register();
 
     expect(config('screenshot.sockets.directory'))->toBe(storage_path('framework/cache/screenshots'))
         ->and(config('screenshot.sockets.lock_timeout'))->toBe(250)
@@ -114,7 +114,7 @@ test('partial socket configuration preserves the remaining package defaults', fu
 test('partial browser configuration preserves installation and socket defaults', function () {
     config(['screenshot' => ['browser' => ['options' => ['startupTimeout' => 15]]]]);
 
-    (new ScreenshotServiceProvider($this->app))->register();
+    (new ScreenshotServiceProvider(app()))->register();
 
     expect(config('screenshot.browser.directory'))->toBe(storage_path('app/private/screenshot/browsers'))
         ->and(config('screenshot.browser.options'))->toBe(['startupTimeout' => 15])

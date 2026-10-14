@@ -44,7 +44,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, dom, pdo_sqlite, zip
           coverage: none
-      - run: composer require --dev "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "pestphp/pest:${{ matrix.pest }}" --no-interaction --no-update
+      - run: composer require --dev "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "pestphp/pest:${{ matrix.pest }}" "pestphp/pest-plugin-laravel:${{ matrix.pest }}" --no-interaction --no-update
       - run: composer update --prefer-dist --no-interaction
       - run: composer validate --strict
       - run: composer test

@@ -31,7 +31,8 @@
         "laravel/pint": "^1.0",
         "mockery/mockery": "^1.6",
         "orchestra/testbench": "^10.0|^11.0",
-        "pestphp/pest": "^3.0|^4.0"
+        "pestphp/pest": "^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0"
     },
     "suggest": {
         "ext-zip": "Required to download Chrome using screenshot:install."

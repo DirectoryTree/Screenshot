@@ -1,7 +1,10 @@
 <?php
 
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot;
+use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('pending captures do not start the driver until requested', function () {
@@ -28,13 +31,61 @@ test('options cannot leak between captures', function () {
     $fake->assertCapturedCount(2);
 });
 
-test('invalid mutations leave the pending screenshot usable', function () {
+test('directly constructed pending screenshots own their options', function () {
+    $fake = new ScreenshotFake;
+    $options = new CaptureOptions(width: 900);
+    $first = new PendingScreenshot($fake, 'first', 'html', $options);
+    $second = new PendingScreenshot($fake, 'second', 'html', $options);
+
+    $options->width = 1200;
+    $first->size(500, 400)->capture();
+    $second->capture();
+
+    expect($options->width)->toBe(1200)->and($options->height)->toBe(768);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first'
+        && $options->width === 500 && $options->height === 400);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second'
+        && $options->width === 900 && $options->height === 768);
+});
+
+test('drivers receive independent options snapshots', function () {
+    $snapshots = [];
+    $driver = Mockery::mock(Driver::class);
+    $driver->shouldReceive('capture')->twice()->andReturnUsing(function ($source, $type, $options) use (&$snapshots) {
+        $snapshots[] = $options;
+
+        return new ScreenshotResult(imageFixture());
+    });
+    $pending = new PendingScreenshot($driver, 'hello', 'html', new CaptureOptions);
+    $pending->capture();
+    $pending->size(640, 480);
+    expect($snapshots[0]->width)->toBe(1024)->and($snapshots[0]->height)->toBe(768);
+
+    $snapshots[0]->width = 1;
+    $pending->capture();
+    expect($snapshots[1]->width)->toBe(640)->and($snapshots[1]->height)->toBe(480);
+});
+
+test('invalid mutations leave all pending screenshot options unchanged', function ($method, $arguments) {
     $fake = new ScreenshotFake;
     $pending = $fake->html('hello');
-    expect(fn () => $pending->size(0, 768))->toThrow(InvalidArgumentException::class);
+    expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->width === 1024);
-});
+    $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions);
+})->with([
+    'zero width' => ['size', [0, 768]],
+    'invalid height' => ['size', [500, -1]],
+    'oversized width' => ['size', [16385, 1]],
+    'oversized height' => ['size', [1, 16385]],
+    'oversized viewport area' => ['size', [10000, 10000]],
+    'invalid maximum height' => ['maxSize', [500, 0]],
+    'oversized maximum area' => ['maxSize', [10000, 10000]],
+    'negative quality' => ['jpeg', [-1]],
+    'excessive quality' => ['jpeg', [101]],
+    'zero timeout' => ['timeout', [0]],
+    'negative load timeout' => ['loadTimeout', [-1]],
+    'empty socket key' => ['socket', [' ']],
+]);
 
 test('unsupported URLs are rejected', function ($url) {
     expect(fn () => (new Screenshot)->url($url))->toThrow(InvalidArgumentException::class);

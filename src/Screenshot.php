@@ -75,7 +75,7 @@ class Screenshot
      */
     protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
     {
-        $screenshot = new PendingScreenshot($this->driver, $source, $type, clone $this->options);
+        $screenshot = new PendingScreenshot($this->driver, $source, $type, $this->options);
 
         if ($this->configureUsing) {
             ($this->configureUsing)($screenshot);

@@ -14,14 +14,21 @@ class PendingScreenshot
         protected string $source,
         protected string $type,
         protected CaptureOptions $options,
-    ) {}
+    ) {
+        $this->options = clone $options;
+    }
 
     /**
      * Set the browser viewport size in pixels.
      */
     public function size(int $width, int $height): static
     {
-        return $this->withOptions(['width' => $width, 'height' => $height]);
+        CaptureOptions::validateDimensions($width, $height);
+
+        $this->options->width = $width;
+        $this->options->height = $height;
+
+        return $this;
     }
 
     /**
@@ -29,7 +36,12 @@ class PendingScreenshot
      */
     public function maxSize(int $width, int $height): static
     {
-        return $this->withOptions(['maxWidth' => $width, 'maxHeight' => $height]);
+        CaptureOptions::validateDimensions($width, $height);
+
+        $this->options->maxWidth = $width;
+        $this->options->maxHeight = $height;
+
+        return $this;
     }
 
     /**
@@ -37,7 +49,9 @@ class PendingScreenshot
      */
     public function fullPage(bool $value = true): static
     {
-        return $this->withOptions(['fullPage' => $value]);
+        $this->options->fullPage = $value;
+
+        return $this;
     }
 
     /**
@@ -53,7 +67,9 @@ class PendingScreenshot
      */
     public function png(): static
     {
-        return $this->withOptions(['format' => 'png']);
+        $this->options->format = 'png';
+
+        return $this;
     }
 
     /**
@@ -61,7 +77,12 @@ class PendingScreenshot
      */
     public function jpeg(int $quality = 80): static
     {
-        return $this->withOptions(['format' => 'jpeg', 'quality' => $quality]);
+        CaptureOptions::validateQuality($quality);
+
+        $this->options->format = 'jpeg';
+        $this->options->quality = $quality;
+
+        return $this;
     }
 
     /**
@@ -69,7 +90,11 @@ class PendingScreenshot
      */
     public function timeout(int $milliseconds): static
     {
-        return $this->withOptions(['timeout' => $milliseconds]);
+        CaptureOptions::validateTimeout($milliseconds);
+
+        $this->options->timeout = $milliseconds;
+
+        return $this;
     }
 
     /**
@@ -77,7 +102,11 @@ class PendingScreenshot
      */
     public function loadTimeout(int $milliseconds): static
     {
-        return $this->withOptions(['loadTimeout' => $milliseconds]);
+        CaptureOptions::validateTimeout($milliseconds);
+
+        $this->options->loadTimeout = $milliseconds;
+
+        return $this;
     }
 
     /**
@@ -85,7 +114,9 @@ class PendingScreenshot
      */
     public function javascript(bool $value = true): static
     {
-        return $this->withOptions(['javascript' => $value]);
+        $this->options->javascript = $value;
+
+        return $this;
     }
 
     /**
@@ -93,7 +124,9 @@ class PendingScreenshot
      */
     public function failOnTimeout(bool $value = true): static
     {
-        return $this->withOptions(['failOnTimeout' => $value]);
+        $this->options->failOnTimeout = $value;
+
+        return $this;
     }
 
     /**
@@ -101,7 +134,11 @@ class PendingScreenshot
      */
     public function socket(string $key): static
     {
-        return $this->withOptions(['socket' => $key]);
+        CaptureOptions::validateSocket($key);
+
+        $this->options->socket = $key;
+
+        return $this;
     }
 
     /**
@@ -109,7 +146,9 @@ class PendingScreenshot
      */
     public function withoutSocket(): static
     {
-        return $this->withOptions(['socket' => null]);
+        $this->options->socket = null;
+
+        return $this;
     }
 
     /**
@@ -136,23 +175,5 @@ class PendingScreenshot
     public function store(string $path, ?string $disk = null): ScreenshotResult
     {
         return $this->capture()->store($path, $disk);
-    }
-
-    /**
-     * Apply validated options without leaving partially updated state.
-     */
-    protected function withOptions(array $values): static
-    {
-        $options = clone $this->options;
-
-        foreach ($values as $key => $value) {
-            $options->{$key} = $value;
-        }
-
-        $options->validate();
-
-        $this->options = $options;
-
-        return $this;
     }
 }

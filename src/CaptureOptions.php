@@ -31,26 +31,56 @@ class CaptureOptions
      */
     public function validate(): void
     {
-        if ($this->socket !== null && trim($this->socket) === '') {
-            throw new InvalidArgumentException('The socket key must not be empty.');
-        }
-
-        foreach ([[$this->width, $this->height], [$this->maxWidth, $this->maxHeight]] as [$width, $height]) {
-            if ($width < 1 || $height < 1 || $width > 16384 || $height > 16384 || $width * $height > 40000000) {
-                throw new InvalidArgumentException('Dimensions must be between 1 and 16384 pixels and no more than 40 million pixels in total.');
-            }
-        }
+        static::validateSocket($this->socket);
+        static::validateDimensions($this->width, $this->height);
+        static::validateDimensions($this->maxWidth, $this->maxHeight);
 
         if (! in_array($this->format, ['png', 'jpeg'], true)) {
             throw new InvalidArgumentException('The screenshot format must be png or jpeg.');
         }
 
-        if ($this->quality < 0 || $this->quality > 100) {
+        static::validateQuality($this->quality);
+        static::validateTimeout($this->timeout);
+        static::validateTimeout($this->loadTimeout);
+    }
+
+    /**
+     * Validate a pair of dimensions before applying either value.
+     */
+    public static function validateDimensions(int $width, int $height): void
+    {
+        if ($width < 1 || $height < 1 || $width > 16384 || $height > 16384 || $width * $height > 40000000) {
+            throw new InvalidArgumentException('Dimensions must be between 1 and 16384 pixels and no more than 40 million pixels in total.');
+        }
+    }
+
+    /**
+     * Validate the JPEG quality before selecting the format.
+     */
+    public static function validateQuality(int $quality): void
+    {
+        if ($quality < 0 || $quality > 100) {
             throw new InvalidArgumentException('JPEG quality must be between 0 and 100.');
         }
+    }
 
-        if ($this->timeout < 1 || $this->loadTimeout < 1) {
+    /**
+     * Validate a timeout in milliseconds.
+     */
+    public static function validateTimeout(int $milliseconds): void
+    {
+        if ($milliseconds < 1) {
             throw new InvalidArgumentException('Timeouts must be greater than zero milliseconds.');
+        }
+    }
+
+    /**
+     * Validate an optional shared browser key.
+     */
+    public static function validateSocket(?string $key): void
+    {
+        if ($key !== null && trim($key) === '') {
+            throw new InvalidArgumentException('The socket key must not be empty.');
         }
     }
 }

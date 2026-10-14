@@ -221,7 +221,7 @@ After each capture, Screenshot closes its page and disconnects the worker, leavi
 
 Screenshot stores Chrome's WebSocket address (`ws://...`) in a local file; it is not a Unix domain socket. If no live browser is available, Screenshot starts one and atomically saves its address. Concurrent startup uses filesystem locks, so cooperating workers do not create competing browsers. A dead or unresponsive saved connection is replaced on the next capture, subject to Chrome being able to start. Capture failures are not automatically retried.
 
-A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running.
+A named key is hashed into a filename under `screenshot.sockets.directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running.
 
 To enable a named socket for every capture, register a [configuration callback](#capture-defaults) in `AppServiceProvider::boot()`:
 
@@ -249,7 +249,7 @@ Without a socket configured, Screenshot starts a dedicated browser and closes it
 Screenshot::close(key: 'emails');
 ```
 
-Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Do not call shutdown from inside an active capture on the same socket.
+Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.sockets.lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Do not call shutdown from inside an active capture on the same socket.
 
 Only use this lifecycle method for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
 
@@ -270,8 +270,10 @@ The published `config/screenshot.php` contains browser infrastructure settings: 
     'startupTimeout' => 30,
 ],
 
-'socket_directory' => storage_path('framework/cache/screenshots'),
-'socket_lock_timeout' => 60000,
+'sockets' => [
+    'directory' => storage_path('framework/cache/screenshots'),
+    'lock_timeout' => 60000,
+],
 ```
 
 Browser options use [Chrome PHP's option names](https://github.com/chrome-php/chrome#available-options). Screenshot always manages `keepAlive`, `windowSize`, and `sendSyncDefaultTimeout` to maintain capture lifetime and dimensions. Keep Chrome's sandbox enabled in production; `noSandbox` is available only as an explicit browser option for environments that require it.

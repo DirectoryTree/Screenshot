@@ -5,6 +5,7 @@ use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
+use DirectoryTree\Screenshot\ScreenshotServiceProvider;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -89,13 +90,41 @@ test('the facade fake preserves configured socket defaults without starting a br
 
 test('the configured socket directory is used for lifecycle operations', function () {
     $directory = sys_get_temp_dir().'/screenshot-config-'.bin2hex(random_bytes(8));
-    config(['screenshot.socket_directory' => $directory]);
+    config(['screenshot.sockets.directory' => $directory]);
 
     try {
         Screenshot::close('emails');
         $path = BrowserSocket::named('emails', $directory)->path();
         expect(file_exists($path.'.lock'))->toBeTrue();
     } finally {
+        (new Filesystem)->deleteDirectory($directory);
+    }
+});
+
+test('partial socket configuration preserves the remaining package defaults', function () {
+    config(['screenshot' => ['sockets' => ['lock_timeout' => 250]]]);
+
+    (new ScreenshotServiceProvider($this->app))->register();
+
+    expect(config('screenshot.sockets.directory'))->toBe(storage_path('framework/cache/screenshots'))
+        ->and(config('screenshot.sockets.lock_timeout'))->toBe(250)
+        ->and(config('screenshot.browser_options'))->toBe([]);
+});
+
+test('the configured socket lock timeout bounds lifecycle operations', function () {
+    $directory = sys_get_temp_dir().'/screenshot-timeout-'.bin2hex(random_bytes(8));
+    config(['screenshot.sockets' => ['directory' => $directory, 'lock_timeout' => 10]]);
+    mkdir($directory, 0700);
+    $lease = fopen(BrowserSocket::named('emails', $directory)->path().'.usage', 'c');
+
+    try {
+        flock($lease, LOCK_SH);
+
+        expect(fn () => Screenshot::close('emails'))
+            ->toThrow(RuntimeException::class, 'Timed out waiting for browser socket lock');
+    } finally {
+        flock($lease, LOCK_UN);
+        fclose($lease);
         (new Filesystem)->deleteDirectory($directory);
     }
 });

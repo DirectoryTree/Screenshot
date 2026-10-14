@@ -30,8 +30,9 @@ return [
     |
     */
 
-    'socket_directory' => storage_path('framework/cache/screenshots'),
-
-    'socket_lock_timeout' => 60000,
+    'sockets' => [
+        'directory' => storage_path('framework/cache/screenshots'),
+        'lock_timeout' => 60000,
+    ],
 
 ];

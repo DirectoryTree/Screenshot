@@ -8,6 +8,7 @@ use HeadlessChromium\Communication\Connection;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Response;
 use HeadlessChromium\Communication\Session;
+use HeadlessChromium\Communication\Target;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
 use HeadlessChromium\PageUtils\PageScreenshot;
@@ -144,6 +145,10 @@ test('shared page initialization failures close only the owned target and preser
         $cleanup->andThrow(new RuntimeException('cleanup failure'));
     } else {
         $cleanup->andReturn(new Response([], new Message('test')));
+        $connection->shouldReceive('getSendSyncDefaultTimeout')->once()->andReturn(60000);
+        $target = Mockery::mock(Target::class);
+        $browser->shouldReceive('getTarget')->with('owned-target')->twice()->andReturn($target, null);
+        $connection->shouldReceive('readData')->once();
     }
 
     $driver = new class extends ChromeDriver

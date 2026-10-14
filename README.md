@@ -32,6 +32,7 @@ Screenshot is licensed under the [MIT license](LICENSE.md). The repository remai
 ## Requirements
 
 - PHP 8.2 or higher (PHP 8.3 or higher for Laravel 13)
+- PHP's `sockets` extension for Chrome's WebSocket connection
 - Laravel 12 or 13 for the Laravel integration
 - A locally installed Chrome or Chromium executable and its system libraries
 - Permission for PHP to start processes and write browser temporary files

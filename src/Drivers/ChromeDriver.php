@@ -13,6 +13,7 @@ use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
+use HeadlessChromium\Utils;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
@@ -141,6 +142,15 @@ class ChromeDriver implements Driver, ManagesBrowsers
         } catch (Throwable $e) {
             try {
                 $connection->sendMessageSync(new Message('Target.closeTarget', ['targetId' => $target]));
+
+                // Chrome can acknowledge closure before the target is destroyed.
+                Utils::tryWithTimeout($connection->getSendSyncDefaultTimeout() * 1000, (function () use ($browser, $connection, $target) {
+                    while ($browser->getTarget($target)) {
+                        yield 1000;
+
+                        $connection->readData();
+                    }
+                })());
             } catch (Throwable) {
                 // Preserve the initialization failure without closing other workers' pages.
             }

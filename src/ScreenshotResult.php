@@ -115,9 +115,9 @@ class ScreenshotResult
     /**
      * Store the image on a Laravel filesystem disk.
      */
-    public function store(string $path, ?string $disk = null): static
+    public function store(string $path, ?string $disk = null, array $options = []): static
     {
-        if (! Storage::disk($disk)->put($path, $this->contents)) {
+        if (! Storage::disk($disk)->put($path, $this->contents, $options)) {
             throw new RuntimeException("Unable to store the screenshot at [{$path}].");
         }
 

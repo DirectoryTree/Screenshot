@@ -61,6 +61,36 @@ test('failed disk writes throw an exception', function () {
         ->toThrow(RuntimeException::class, 'Unable to store');
 });
 
+test('storage options control visibility for pending screenshots and captured results', function () {
+    Storage::fake('screenshots');
+    Screenshot::fake();
+
+    $result = Screenshot::html('hello')->store(
+        path: 'public.png', disk: 'screenshots', options: ['visibility' => 'public'],
+    );
+    $stored = $result->store(
+        path: 'private.png', disk: 'screenshots', options: ['visibility' => 'private'],
+    );
+
+    expect(Storage::disk('screenshots')->getVisibility('public.png'))->toBe('public')
+        ->and(Storage::disk('screenshots')->getVisibility('private.png'))->toBe('private')
+        ->and(Storage::disk('screenshots')->get('private.png'))->toBe($result->contents())
+        ->and($stored)->toBe($result);
+    Screenshot::assertCapturedCount(1);
+});
+
+test('disk-specific storage options are forwarded unchanged', function ($pending) {
+    $result = new ScreenshotResult(imageFixture());
+    $options = ['visibility' => 'private', 'CacheControl' => 'max-age=3600', 'Metadata' => ['source' => 'screenshot']];
+    Screenshot::fake($result);
+    Storage::shouldReceive('disk')->once()->with('screenshots')->andReturnSelf();
+    Storage::shouldReceive('put')->once()->with('preview.png', $result->contents(), $options)->andReturn(true);
+
+    $source = $pending ? Screenshot::html('hello') : $result;
+
+    expect($source->store(path: 'preview.png', disk: 'screenshots', options: $options))->toBe($result);
+})->with(['pending screenshot' => true, 'captured result' => false]);
+
 test('configuration has a publishable tag', function () {
     $paths = ServiceProvider::pathsToPublish(null, 'screenshot-config');
 

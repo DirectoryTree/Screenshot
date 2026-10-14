@@ -138,9 +138,9 @@ class PendingScreenshot
     /**
      * Capture the screenshot and store it on a Laravel filesystem disk.
      */
-    public function store(string $path, ?string $disk = null): ScreenshotResult
+    public function store(string $path, ?string $disk = null, array $options = []): ScreenshotResult
     {
-        return $this->capture()->store($path, $disk);
+        return $this->capture()->store($path, $disk, $options);
     }
 
     /**

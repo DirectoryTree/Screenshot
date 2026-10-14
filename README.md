@@ -125,7 +125,7 @@ Call `save()` or `store()` directly on a pending screenshot, or capture once and
 $image = Screenshot::html($html)->capture();
 
 $image->save(storage_path('app/preview.png'));
-$image->store(path: 'previews/example.png', disk: 's3');
+$image->store(path: 'previews/example.png', disk: 's3', options: ['visibility' => 'private']);
 
 $image->contents(); // Raw image bytes
 $image->base64();   // Base64-encoded image
@@ -136,6 +136,8 @@ $image->height();
 ```
 
 `save()` requires an existing local directory. `store()` uses Laravel's default disk unless you specify one. Both overwrite an existing destination, return the result, and throw if writing fails.
+
+Both pending screenshots and captured results accept `options` on `store()`. These are passed directly to Laravel's filesystem, including visibility and any metadata supported by your disk.
 
 Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a new screenshot. Keep the result when you need to save or return the same image more than once.
 

@@ -316,6 +316,31 @@ Storage::disk('screenshots')->assertExists('invoice.png');
 
 `Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. Socket keys are recorded on `CaptureOptions`; the fake does not start browsers, write socket files, or perform shutdown. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
 
+Assert that a job selects the intended socket and leaves shared browsers running:
+
+```php
+Screenshot::fake();
+
+Screenshot::html('<h1>Invoice</h1>')->socket(key: 'emails')->capture();
+
+Screenshot::assertCaptured(fn ($source, $type, CaptureOptions $options) =>
+    $options->socket === 'emails'
+);
+Screenshot::assertNotClosed(key: 'emails');
+Screenshot::assertNothingClosed();
+```
+
+The fake also records explicit shutdown requests, so you can test maintenance commands:
+
+```php
+Screenshot::close(key: 'emails');
+
+Screenshot::assertClosed(key: 'emails');
+Screenshot::assertNotClosed(key: 'invoices');
+```
+
+These assertions check calls to `close()` using exact socket keys; they do not verify a real browser's state. Captures and shutdown requests are recorded separately. Calling `Screenshot::fake()` again resets both records.
+
 The `DirectoryTree\Screenshot\Contracts\Driver` contract can also be replaced in Laravel's container or supplied to the standalone factory.
 
 ### Running the Package Tests

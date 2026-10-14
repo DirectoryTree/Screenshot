@@ -55,11 +55,18 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::fake();
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
+    Screenshot::assertNothingClosed();
     Screenshot::close('emails');
+    Screenshot::assertClosed(key: 'emails');
+    Screenshot::assertNotClosed(key: 'invoices');
 
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->socket === 'emails');
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
     Screenshot::assertCapturedCount(2);
+
+    Screenshot::fake();
+    Screenshot::assertNothingClosed();
+    Screenshot::assertNothingCaptured();
 });
 
 test('the configured socket directory is used for lifecycle operations', function () {

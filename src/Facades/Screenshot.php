@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Facade;
  * @method static void assertCaptured(?callable $callback = null)
  * @method static void assertCapturedCount(int $count)
  * @method static void assertNothingCaptured()
+ * @method static void assertClosed(string $key)
+ * @method static void assertNotClosed(string $key)
+ * @method static void assertNothingClosed()
  *
  * @see Factory
  */

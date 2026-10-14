@@ -17,6 +17,11 @@ class ScreenshotFake extends Screenshot implements Driver
     protected array $captures = [];
 
     /**
+     * The recorded browser shutdown requests.
+     */
+    protected array $closed = [];
+
+    /**
      * Create a recording fake that returns a small PNG by default.
      */
     public function __construct(
@@ -28,9 +33,12 @@ class ScreenshotFake extends Screenshot implements Driver
     }
 
     /**
-     * Ignore named browser shutdown while faking captures.
+     * Record a browser shutdown request without connecting to Chrome.
      */
-    public function close(string $key): void {}
+    public function close(string $key): void
+    {
+        $this->closed[] = $key;
+    }
 
     /**
      * Record a capture without starting Chrome.
@@ -74,5 +82,35 @@ class ScreenshotFake extends Screenshot implements Driver
     public function assertNothingCaptured(): void
     {
         $this->assertCapturedCount(0);
+    }
+
+    /**
+     * Assert that a shutdown was requested for the given browser key.
+     */
+    public function assertClosed(string $key): void
+    {
+        Assert::assertTrue(
+            in_array($key, $this->closed, true),
+            "The expected browser [{$key}] was not closed.",
+        );
+    }
+
+    /**
+     * Assert that no shutdown was requested for the given browser key.
+     */
+    public function assertNotClosed(string $key): void
+    {
+        Assert::assertFalse(
+            in_array($key, $this->closed, true),
+            "The unexpected browser [{$key}] was closed.",
+        );
+    }
+
+    /**
+     * Assert that no browser shutdowns were requested.
+     */
+    public function assertNothingClosed(): void
+    {
+        Assert::assertCount(0, $this->closed, 'Unexpected browser shutdowns were requested.');
     }
 }

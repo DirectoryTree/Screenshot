@@ -59,6 +59,18 @@ class Screenshot
     }
 
     /**
+     * Render a Laravel view and prepare its screenshot.
+     */
+    public function view(string $view, array $data = []): PendingScreenshot
+    {
+        if (! $this->views) {
+            throw new LogicException('A view factory is required to capture Laravel views.');
+        }
+
+        return $this->html($this->views->make($view, $data)->render());
+    }
+
+    /**
      * Apply defaults to a fresh screenshot before caller-specific options.
      */
     protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
@@ -90,17 +102,5 @@ class Screenshot
         }
 
         return $this->driver;
-    }
-
-    /**
-     * Render a Laravel view and prepare its screenshot.
-     */
-    public function view(string $view, array $data = []): PendingScreenshot
-    {
-        if (! $this->views) {
-            throw new LogicException('A view factory is required to capture Laravel views.');
-        }
-
-        return $this->html($this->views->make($view, $data)->render());
     }
 }

@@ -2,7 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
-use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 
 class JpegCapture extends ImageCapture
 {

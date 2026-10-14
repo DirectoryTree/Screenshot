@@ -2,6 +2,8 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use InvalidArgumentException;
 
 class PdfOptions extends BrowserOptions

@@ -3,13 +3,13 @@
 namespace DirectoryTree\Screenshot\Testing;
 
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\SourceType;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 

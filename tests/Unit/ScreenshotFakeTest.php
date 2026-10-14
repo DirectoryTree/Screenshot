@@ -1,8 +1,8 @@
 <?php
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;

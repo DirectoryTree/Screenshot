@@ -2,6 +2,8 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Enums\PaperSize;
+
 /**
  * @extends PendingCapture<PdfOptions, PdfResult>
  */

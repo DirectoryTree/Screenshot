@@ -6,6 +6,8 @@ use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use InvalidArgumentException;
 use LogicException;

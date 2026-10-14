@@ -3,10 +3,10 @@
 use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\OutputFormat;
-use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Clip;

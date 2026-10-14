@@ -4,6 +4,7 @@ namespace DirectoryTree\Screenshot;
 
 use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Enums\SourceType;
 
 /**
  * @template TOptions of ImageOptions|PdfOptions

@@ -1,8 +1,8 @@
 <?php
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
-use DirectoryTree\Screenshot\OutputFormat;
-use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;

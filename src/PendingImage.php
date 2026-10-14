@@ -2,6 +2,8 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+
 /**
  * @extends PendingCapture<ImageOptions, ImageResult>
  */

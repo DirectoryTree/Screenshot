@@ -1,6 +1,6 @@
 <?php
 
-use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 

@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use InvalidArgumentException;
 
 abstract class BrowserOptions

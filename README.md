@@ -195,6 +195,8 @@ Screenshot::html($html)
 
 Workers using the same key and socket directory connect to the same Chrome instance. Each capture gets its own page, viewport, and JavaScript settings. Captures can run at the same time; the startup lock is released before rendering begins. Different keys select different browsers.
 
+After each capture, Screenshot closes its page and disconnects the worker, leaving the shared browser available for the next job. **You do not need to call `close()` after each screenshot or queue job.**
+
 Screenshot stores Chrome's WebSocket address (`ws://...`) in a local file; it is not a Unix domain socket. If no live browser is available, Screenshot starts one and atomically saves its address. Concurrent startup uses filesystem locks, so cooperating workers do not create competing browsers. A dead or unresponsive saved connection is replaced on the next capture, subject to Chrome being able to start. Capture failures are not automatically retried.
 
 A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running.
@@ -215,13 +217,15 @@ The API is synchronous within each PHP process. Run captures in separate Laravel
 
 ### Browser Lifetime
 
-Shared browsers outlive individual captures and worker exits. Close a shared browser explicitly when it is no longer needed:
+Without a socket configured, Screenshot starts a dedicated browser and closes it automatically after the capture. A named socket enables browser reuse: Chrome stays running between captures, even after the PHP workers exit. Restarting a queue worker does not shut down its shared browser.
+
+`close()` is an optional maintenance operation. Use it to deliberately stop a shared browser when it is no longer needed or when changing browser launch settings. Stop dispatching jobs that use the key before shutting it down:
 
 ```php
 Screenshot::close(key: 'emails');
 ```
 
-Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
+Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Do not call shutdown from inside an active capture on the same socket.
 
 Only use this lifecycle method for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
 

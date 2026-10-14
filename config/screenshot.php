@@ -7,13 +7,15 @@ return [
     | Chrome / Chromium
     |--------------------------------------------------------------------------
     |
-    | Leave the binary unset to use Chrome PHP's automatic discovery. Browser
-    | options are passed to Chrome PHP. Browser lifetime, viewport size and
-    | command timeouts are managed by Screenshot.
+    | Leave the binary unset to use downloaded Chrome, then Chrome PHP's
+    | automatic discovery. Browser options are passed to Chrome PHP.
+    | Browser lifetime, viewport and timeouts are managed by Screenshot.
     |
     */
 
     'binary' => env('SCREENSHOT_CHROME_PATH'),
+
+    'browser_directory' => storage_path('app/private/screenshot/browsers'),
 
     'browser_options' => [],
 

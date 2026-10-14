@@ -36,7 +36,7 @@ The package is currently private and unreleased. License selection is pending re
 - A locally installed Chrome or Chromium executable and its system libraries
 - Permission for PHP to start processes and write browser temporary files
 
-Screenshot uses [Chrome PHP](https://github.com/chrome-php/chrome). Node.js, Puppeteer, and a separate browser service are not required. Chrome must be installed separately; Composer does not install it. Use a current browser maintained by your operating system or deployment image.
+Screenshot uses [Chrome PHP](https://github.com/chrome-php/chrome). Node.js, Puppeteer, and a separate browser service are not required. Composer does not install Chrome. Use the installer below, or a current browser maintained by your operating system or deployment image.
 
 ## Installation
 
@@ -59,7 +59,29 @@ Then install the review branch:
 composer require directorytree/screenshot:dev-master
 ```
 
-The service provider is registered automatically. If Chrome is not discovered automatically, set its executable path in your environment:
+The service provider is registered automatically. Download Chrome for your operating system and architecture:
+
+```bash
+php artisan screenshot:install
+```
+
+The command downloads the latest stable [Chrome for Testing](https://github.com/GoogleChromeLabs/chrome-for-testing) directly from Google, extracts it, and checks that its executable can run. It requires PHP's `zip` extension and HTTPS access to `googlechromelabs.github.io` and `storage.googleapis.com`. Node.js and npm are not required.
+
+Chrome is installed under `storage/app/private/screenshot/browsers`, configurable through `screenshot.browser_directory`. Screenshot automatically discovers the selected installation when the application boots. Install during deployment, using a directory readable and executable by your application workers; downloads never happen during a capture or Composer install.
+
+To pin a complete browser version for reproducible deployments:
+
+```bash
+php artisan screenshot:install --browser-version=155.0.8059.79
+```
+
+Repeating a pinned installation reuses the downloaded version without contacting Google. Running the command without a version checks for the latest stable release and reuses it if already installed. Failed downloads leave the previously selected browser intact. Earlier versions are retained, allowing a previously downloaded version to be selected again with `--browser-version`.
+
+The installer supports Google's available Linux x64 / ARM64, macOS Intel / Apple Silicon, and Windows x86 / x64 archives. Availability depends on the selected version. It does not install operating-system libraries or fonts, and checking `--version` does not guarantee that the browser can launch with your sandbox configuration. Provision those dependencies in your deployment image. Alpine Linux and unsupported architectures may require distribution-provided Chromium.
+
+After changing the installed version, close any shared browsers and restart long-running queue workers. Old installation directories may be removed once no browsers or workers are using them.
+
+An explicitly configured binary takes precedence over the downloaded installation. If neither is available, Screenshot falls back to Chrome PHP's normal system discovery. To use your own browser, set its executable path in your environment:
 
 ```dotenv
 SCREENSHOT_CHROME_PATH=/usr/bin/chromium
@@ -242,6 +264,8 @@ The published `config/screenshot.php` contains browser infrastructure settings: 
 ```php
 'binary' => env('SCREENSHOT_CHROME_PATH'),
 
+'browser_directory' => storage_path('app/private/screenshot/browsers'),
+
 'browser_options' => [
     'startupTimeout' => 30,
 ],
@@ -378,6 +402,8 @@ composer lint
 
 CHROME_PATH=/usr/bin/chromium composer test-browser
 ```
+
+Installer tests require PHP's `zip` extension. They cover platform detection, archive extraction, failed upgrades, installation locking, offline reuse, and command integration using local fixtures. To also download and capture with real Chrome from Google, run `SCREENSHOT_TEST_INSTALL=1 composer test-browser`.
 
 The unit and Laravel tests cover validation, capture isolation, facade fakes, view rendering, storage failures, page-load timeouts, cleanup on failures, socket publication, and lock contention. Browser tests exercise separate concurrent PHP workers sharing one browser, independent page settings, reuse after worker exit, dead socket recovery, and shutdown. They use local fixtures and require a working Chrome executable. In a disposable test container that cannot enable the sandbox, opt in with `SCREENSHOT_NO_SANDBOX=1`.
 

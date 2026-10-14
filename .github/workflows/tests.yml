@@ -42,7 +42,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, dom, pdo_sqlite
+          extensions: mbstring, dom, pdo_sqlite, zip
           coverage: none
       - run: composer require --dev "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "pestphp/pest:${{ matrix.pest }}" --no-interaction --no-update
       - run: composer update --prefer-dist --no-interaction
@@ -60,11 +60,12 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, dom, pdo_sqlite
+          extensions: mbstring, dom, pdo_sqlite, zip
           coverage: none
       - run: composer install --prefer-dist --no-interaction
       - name: Execute browser tests
         env:
           CHROME_PATH: /usr/bin/google-chrome
           SCREENSHOT_NO_SANDBOX: '1'
+          SCREENSHOT_TEST_INSTALL: '1'
         run: composer test-browser

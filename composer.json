@@ -21,6 +21,8 @@
     "require": {
         "php": "^8.2",
         "chrome-php/chrome": "^1.16",
+        "guzzlehttp/guzzle": "^7.0|^8.0",
+        "illuminate/console": "^12.0|^13.0",
         "illuminate/contracts": "^12.0|^13.0",
         "illuminate/filesystem": "^12.0|^13.0",
         "illuminate/support": "^12.0|^13.0"
@@ -30,6 +32,9 @@
         "mockery/mockery": "^1.6",
         "orchestra/testbench": "^10.0|^11.0",
         "pestphp/pest": "^3.0|^4.0"
+    },
+    "suggest": {
+        "ext-zip": "Required to download Chrome using screenshot:install."
     },
     "autoload": {
         "psr-4": {

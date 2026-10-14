@@ -57,7 +57,7 @@ class PageCapture
      */
     protected function configurePage(Page $page): void
     {
-        $options = $this->options->browser;
+        $options = $this->options->browser();
 
         if ($this->shared) {
             $page->setViewport($options->getWidth(), $options->getHeight())->await($options->getBrowserTimeout());
@@ -78,7 +78,7 @@ class PageCapture
      */
     protected function loadPage(Page $page, string $source, SourceType $type): void
     {
-        $options = $this->options->browser;
+        $options = $this->options->browser();
 
         try {
             if ($type === SourceType::Html) {
@@ -106,9 +106,17 @@ class PageCapture
     {
         $options = $this->options;
 
-        return match ($options->getFormat()) {
-            OutputFormat::Png, OutputFormat::Jpeg => new ImageCapture($options->browser, $options->output),
-            OutputFormat::Pdf => new PdfCapture($options->browser, $options->output),
+        return match ($options->format()) {
+            OutputFormat::Png, OutputFormat::Jpeg => new ImageCapture(
+                $options->browser(),
+                $options->output(),
+                $options->element()
+            ),
+            OutputFormat::Pdf => new PdfCapture(
+                $options->browser(),
+                $options->output(),
+                $options->element()
+            ),
         };
     }
 

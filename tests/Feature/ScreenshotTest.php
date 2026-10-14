@@ -21,7 +21,7 @@ test('a service provider configures defaults with a replaceable driver', functio
 
     $driver->shouldReceive('capture')
         ->once()
-        ->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->browser->getWidth() === 900)
+        ->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->browser()->getWidth() === 900)
         ->andReturn(new ImageResult(imageFixture()));
 
     app()->instance(Driver::class, $driver);
@@ -45,8 +45,8 @@ test('the facade fake replaces the container factory and renders escaped Blade v
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
             && $type === SourceType::Html
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 85,
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 85,
     );
     Screenshot::assertCapturedCount(1);
 });
@@ -134,11 +134,11 @@ test('the facade fake preserves configured socket defaults without starting a br
 
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => $source === 'shared'
-            && $options->browser->getSocket() === 'emails',
+            && $options->browser()->getSocket() === 'emails',
     );
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => $source === 'dedicated'
-            && $options->browser->getSocket() === null,
+            && $options->browser()->getSocket() === null,
     );
     Screenshot::assertCapturedCount(2);
 
@@ -151,7 +151,7 @@ test('the facade fake preserves configured socket defaults without starting a br
 
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => $type === SourceType::Url
-            && $options->browser->getSocket() === 'emails',
+            && $options->browser()->getSocket() === 'emails',
     );
 });
 
@@ -225,10 +225,10 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     expect(Storage::disk('pdfs')->get('invoice.pdf'))->toBe($result->contents());
     expect(Storage::disk('pdfs')->getVisibility('invoice.pdf'))->toBe('private');
     Screenshot::assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
             && str_contains($source, '&lt;Steve&gt;')
-            && $options->browser->getSocket() === 'invoices'
-            && $options->output->getPaperWidth() === 215.9,
+            && $options->browser()->getSocket() === 'invoices'
+            && $options->output()->getPaperWidth() === 215.9,
     );
     Screenshot::assertCapturedCount(1);
 
@@ -262,7 +262,7 @@ test('a single fake result is reused only for matching output captures', functio
     $fake->assertCapturedCount(6);
 })->with(['image' => false, 'PDF' => true])->with(['positional' => false, 'named' => true]);
 
-test('fake assertions receive the source enum for every source and output format', function ($source, $format) {
+test('fake assertions receive the source type and element selector for every source and output format', function ($source, $format) {
     Screenshot::fake();
 
     $pending = match ($source) {
@@ -270,6 +270,8 @@ test('fake assertions receive the source enum for every source and output format
         'url' => Screenshot::url('https://example.com/invoice'),
         'view' => Screenshot::view('card', ['name' => 'Steve']),
     };
+
+    $pending->element('#invoice');
 
     (match ($format) {
         OutputFormat::Png => $pending->png(),
@@ -281,7 +283,8 @@ test('fake assertions receive the source enum for every source and output format
 
     $expected = $source === 'url' ? SourceType::Url : SourceType::Html;
     $callback = fn (string $contents, SourceType $type, CaptureOptions $options) => $type === $expected
-        && $options->getFormat() === $format;
+        && $options->format() === $format
+        && $options->element() === '#invoice';
 
     Screenshot::assertCaptured($callback);
 })->with(['html', 'url', 'view'])->with(OutputFormat::cases());
@@ -317,39 +320,39 @@ test('capture image and PDF configuration reaches independent pending captures',
     Screenshot::html('next')->capture();
 
     Screenshot::assertCaptured(function ($source, $type, CaptureOptions $options) {
-        if ($options->getFormat() !== OutputFormat::Pdf) {
+        if ($options->format() !== OutputFormat::Pdf) {
             return false;
         }
 
-        expect($options->browser->getWidth())->toBe(900);
-        expect($options->browser->getHeight())->toBe(600);
-        expect($options->browser->getLoadTimeout())->toBe(2000);
-        expect($options->browser->getBrowserTimeout())->toBe(4000);
-        expect($options->browser->getJavascript())->toBeTrue();
-        expect($options->browser->getFailOnTimeout())->toBeTrue();
-        expect($options->browser->getSocket())->toBe('documents');
-        expect($options->output->getPaperWidth())->toBe(215.9);
-        expect($options->output->getPaperHeight())->toBe(279.4);
-        expect($options->output->getLandscape())->toBeTrue();
-        expect($options->output->getMargins())->toBe(['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
-        expect($options->output->getBackground())->toBeFalse();
-        expect($options->output->getPreferCssPageSize())->toBeTrue();
+        expect($options->browser()->getWidth())->toBe(900);
+        expect($options->browser()->getHeight())->toBe(600);
+        expect($options->browser()->getLoadTimeout())->toBe(2000);
+        expect($options->browser()->getBrowserTimeout())->toBe(4000);
+        expect($options->browser()->getJavascript())->toBeTrue();
+        expect($options->browser()->getFailOnTimeout())->toBeTrue();
+        expect($options->browser()->getSocket())->toBe('documents');
+        expect($options->output()->getPaperWidth())->toBe(215.9);
+        expect($options->output()->getPaperHeight())->toBe(279.4);
+        expect($options->output()->getLandscape())->toBeTrue();
+        expect($options->output()->getMargins())->toBe(['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
+        expect($options->output()->getBackground())->toBeFalse();
+        expect($options->output()->getPreferCssPageSize())->toBeTrue();
 
         return true;
     });
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => $source === 'invoice'
-            && $options->getFormat() === OutputFormat::Png
-            && $options->browser->getWidth() === 320,
+            && $options->format() === OutputFormat::Png
+            && $options->browser()->getWidth() === 320,
     );
     Screenshot::assertCaptured(
         fn ($source, $type, $options) => $source === 'next'
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->browser->getWidth() === 900
-            && $options->output->getQuality() === 92
-            && $options->output->getMaxWidth() === 500
-            && $options->output->getMaxHeight() === 700
-            && ! $options->output->getFullPage(),
+            && $options->format() === OutputFormat::Jpeg
+            && $options->browser()->getWidth() === 900
+            && $options->output()->getQuality() === 92
+            && $options->output()->getMaxWidth() === 500
+            && $options->output()->getMaxHeight() === 700
+            && ! $options->output()->getFullPage(),
     );
 });
 
@@ -366,15 +369,15 @@ test('partial capture configuration inherits remaining defaults including indivi
     Screenshot::html('pdf')->pdf()->capture();
 
     Screenshot::assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 768
-            && $options->output->getQuality() === 95
-            && $options->output->getFullPage(),
+        fn ($source, $type, $options) => $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 768
+            && $options->output()->getQuality() === 95
+            && $options->output()->getFullPage(),
     );
     Screenshot::assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === 210.0
-            && $options->output->getMargins() === ['top' => 5.0, 'right' => 10.0, 'bottom' => 10.0, 'left' => 10.0],
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === 210.0
+            && $options->output()->getMargins() === ['top' => 5.0, 'right' => 10.0, 'bottom' => 10.0, 'left' => 10.0],
     );
 });
 
@@ -390,10 +393,10 @@ test('PDF defaults validate paper orientation and margins together', function ()
     Screenshot::html('landscape')->pdf()->capture();
 
     Screenshot::assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === 148.0
-            && $options->output->getLandscape()
-            && $options->output->getMargins()['left'] === 80.0,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === 148.0
+            && $options->output()->getLandscape()
+            && $options->output()->getMargins()['left'] === 80.0,
     );
 });
 

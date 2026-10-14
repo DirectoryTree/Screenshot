@@ -110,6 +110,15 @@ JavaScript is disabled by default. Enable it with `javascript()` when needed. Ca
 
 The default viewport is 1024 × 768 pixels. Full-page capture is enabled by default, cropped to a maximum of 2048 × 10000 pixels.
 
+Viewport dimensions control page layout. Full-page capture sizes the image to the document without changing the viewport:
+
+| Configuration | Effect |
+| --- | --- |
+| `capture.width` / `capture.height` | Sets the viewport used to lay out the page |
+| `image.full_page` (`true`) | Captures the document within the maximum image bounds |
+| `image.full_page` (`false`) | Captures only the viewport within the maximum image bounds |
+| `image.max_width` / `image.max_height` | Crops the image without scaling it |
+
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
 
@@ -144,6 +153,27 @@ $image = Screenshot::html($html)->png()->capture();
 File extensions do not select the format. Use `jpeg()` for JPEG output or `pdf()` for PDF output.
 
 Switching between `png()` and `jpeg()` on an image builder preserves its other settings, including JPEG quality.
+
+### Capturing an Element
+
+Call `element()` on an HTML, view, or URL source before selecting an output. It captures the first element matching the CSS selector:
+
+```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
+$source = Screenshot::view('invoices.preview', ['invoice' => $invoice])
+    ->size(1200, 800)
+    ->element('#invoice');
+
+$source->png()->save($imagePath);
+$source->pdf()->save($pdfPath);
+```
+
+Images crop to the element's bounds, including padding and borders. The viewport still controls page layout. Element selection takes precedence over `fullPage()` and `viewport()`; `maxSize()` crops from the element's top-left corner.
+
+PDFs move the selected element directly into the document body and print it using the configured paper, margins, print styles, and page breaks. Document stylesheets are retained. Styles inherited from removed wrappers or selectors that depend on those wrappers may need adjustment. The package does not reset the element's layout; use print CSS to control it.
+
+Selection works with JavaScript disabled. Missing elements and invalid selectors throw exceptions. Images require an element with nonzero layout bounds; PDFs follow the document's print styles. Each output builder keeps the selector chosen when it was created.
 
 ### Saving and Reading Captures
 
@@ -205,7 +235,7 @@ $source->jpeg(90)->maxSize(1600, 6000)->save($imagePath);
 $source->pdf()->save($pdfPath);
 ```
 
-Select each output on the source. Each builder starts with the source's current browser settings and its output defaults. Later changes to one builder do not affect the source or other builders.
+Select each output on the source. Each builder starts with the source's current browser settings, element selector, and its output defaults. Later changes to one builder do not affect the source or other builders.
 
 ### Timeouts
 
@@ -270,7 +300,7 @@ Publish the [configuration file](config/screenshot.php) to set application defau
 php artisan vendor:publish --tag=screenshot-config
 ```
 
-The `capture` settings apply to both images and PDFs. The `image` and `pdf` settings control their respective outputs. For example, these entries configure a shared viewport, JPEG quality, and PDF paper size:
+The `capture` settings apply to both images and PDFs. The `image` and `pdf` settings control their respective outputs. For example, these entries configure a shared viewport, full-page image bounds, JPEG quality, and PDF paper size:
 
 ```php
 // config/screenshot.php
@@ -283,6 +313,9 @@ return [
     ],
 
     'image' => [
+        'full_page' => true,
+        'max_width' => 1600,
+        'max_height' => 6000,
         'quality' => 85,
     ],
 
@@ -291,6 +324,8 @@ return [
     ],
 ];
 ```
+
+Images use a 1280 × 720 viewport for layout and capture the document up to 1600 × 6000 pixels. Set `image.full_page` to `false` to capture only the viewport; the maximum image bounds still apply.
 
 See the [configuration file](config/screenshot.php) for all available settings. Omitted entries use the package defaults. Capture dimensions are in pixels, timeouts are in milliseconds, and PDF margins are in millimeters. Use `socket => null` for dedicated browsers.
 
@@ -329,12 +364,13 @@ Pass `BrowserOptions`, `ImageOptions`, or `PdfOptions` objects through the `brow
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture(string $source, SourceType $type, CaptureOptions $options)`. Blade views are rendered to HTML first. `CaptureOptions` combines two independent objects:
+Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture(string $source, SourceType $type, CaptureOptions $options)`. Blade views are rendered to HTML first. `CaptureOptions` contains:
 
-- `$options->browser` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
-- `$options->output` is an `ImageOptions` or `PdfOptions` object containing output settings.
+- `$options->browser()` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
+- `$options->output()` is an `ImageOptions` or `PdfOptions` object containing output settings.
+- `$options->element()` is the selected CSS selector, or `null` for the whole page.
 
-`$options->getFormat()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects.
+`$options->format()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects.
 
 ## Testing
 
@@ -353,7 +389,7 @@ Screenshot::html('<h1>Invoice</h1>')
 
 Screenshot::assertCapturedCount(count: 1);
 Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
-    return $source === '<h1>Invoice</h1>' && $options->browser->getWidth() === 800;
+    return $source === '<h1>Invoice</h1>' && $options->browser()->getWidth() === 800;
 });
 ```
 
@@ -373,7 +409,7 @@ Screenshot::html('<h1>Invoice</h1>')->pdf()->landscape()->capture();
 
 Screenshot::assertCapturedCount(1);
 Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
-    return $options->getFormat() === OutputFormat::Pdf && $options->output->getLandscape();
+    return $options->format() === OutputFormat::Pdf && $options->output()->getLandscape();
 });
 ```
 

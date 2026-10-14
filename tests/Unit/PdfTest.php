@@ -39,25 +39,25 @@ test('PDF selection snapshots browser defaults without capturing or changing the
         ->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
+        fn ($source, $type, CaptureOptions $options) => $options->format() === OutputFormat::Pdf
             && $source === 'invoice'
             && $type === SourceType::Html
-            && $options->browser->getSocket() === 'invoices'
-            && $options->browser->getLoadTimeout() === 5000
-            && $options->browser->getBrowserTimeout() === 10000
-            && $options->output->getPaperWidth() === 215.9
-            && $options->output->getLandscape()
-            && $options->output->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
-            && ! $options->output->getBackground()
-            && $options->output->getPreferCssPageSize(),
+            && $options->browser()->getSocket() === 'invoices'
+            && $options->browser()->getLoadTimeout() === 5000
+            && $options->browser()->getBrowserTimeout() === 10000
+            && $options->output()->getPaperWidth() === 215.9
+            && $options->output()->getLandscape()
+            && $options->output()->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
+            && ! $options->output()->getBackground()
+            && $options->output()->getPreferCssPageSize(),
     );
     $fake->assertCapturedCount(1);
 
     $image->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getSocket() === 'images'
-            && $options->getFormat() === OutputFormat::Jpeg,
+        fn ($source, $type, $options) => $options->browser()->getSocket() === 'images'
+            && $options->format() === OutputFormat::Jpeg,
     );
 });
 
@@ -77,28 +77,28 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
     $second->capture();
 
     $fake->assertCaptured(function ($source, $type, $options) {
-        if ($options->getFormat() !== OutputFormat::Pdf) {
+        if ($options->format() !== OutputFormat::Pdf) {
             return false;
         }
 
-        $options->output->setPaper(PaperSize::Legal);
-        $options->browser->setSocket('mutated');
+        $options->output()->setPaper(PaperSize::Legal);
+        $options->browser()->setSocket('mutated');
 
         return true;
     });
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === 100.0
-            && $options->browser->getSocket() === null
-            && $options->browser->getJavascript()
-            && $options->browser->getFailOnTimeout()
-            && $options->browser->getBrowserTimeout() === 2000,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === 100.0
+            && $options->browser()->getSocket() === null
+            && $options->browser()->getJavascript()
+            && $options->browser()->getFailOnTimeout()
+            && $options->browser()->getBrowserTimeout() === 2000,
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === 210.0
-            && $options->browser->getSocket() === 'shared'
-            && ! $options->browser->getJavascript(),
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === 210.0
+            && $options->browser()->getSocket() === 'shared'
+            && ! $options->browser()->getJavascript(),
     );
 });
 
@@ -112,7 +112,7 @@ test('one driver contract handles images and PDFs with the requested enum format
         ->withArgs(
             fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
                 && $type === SourceType::Html
-                && $options->getFormat() === OutputFormat::Jpeg,
+                && $options->format() === OutputFormat::Jpeg,
         )
         ->andReturn($image);
 
@@ -121,8 +121,8 @@ test('one driver contract handles images and PDFs with the requested enum format
         ->withArgs(
             fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
                 && $type === SourceType::Html
-                && $options->getFormat() === OutputFormat::Pdf
-                && $options->output->getLandscape(),
+                && $options->format() === OutputFormat::Pdf
+                && $options->output()->getLandscape(),
         )
         ->andReturn($pdf);
 

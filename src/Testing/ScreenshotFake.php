@@ -73,7 +73,7 @@ class ScreenshotFake extends Screenshot implements Driver
     {
         $this->captures[] = [$source, $type, clone $options];
 
-        if ($options->getFormat() === OutputFormat::Pdf) {
+        if ($options->format() === OutputFormat::Pdf) {
             return $this->result instanceof PdfResult
                 ? $this->result
                 : new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));

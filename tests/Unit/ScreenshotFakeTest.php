@@ -86,14 +86,14 @@ test('capture assertions inspect mixed outputs in capture order', function () {
     $fake->assertCaptured(function ($source, $type, CaptureOptions $options) use (&$sources) {
         $sources[] = $source;
 
-        return $source === 'second pdf' && $options->getFormat() === OutputFormat::Pdf;
+        return $source === 'second pdf' && $options->format() === OutputFormat::Pdf;
     });
 
     expect($sources)->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
 
     $fake->assertCaptured(
         fn ($source, $type, CaptureOptions $options) => $source === 'jpeg'
-            && $options->getFormat() === OutputFormat::Jpeg,
+            && $options->format() === OutputFormat::Jpeg,
     );
 });
 
@@ -113,7 +113,7 @@ test('capture assertions support every output format', function (OutputFormat $f
     $fake->assertCaptured(
         fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
             && $type === SourceType::Html
-            && $options->getFormat() === $format,
+            && $options->format() === $format,
     );
 
     expect(fn () => $fake->assertNothingCaptured())->toThrow(AssertionFailedError::class);
@@ -121,7 +121,7 @@ test('capture assertions support every output format', function (OutputFormat $f
     expect(fn () => $fake->assertCapturedCount(2))->toThrow(AssertionFailedError::class);
     expect(fn () => $fake->assertCaptured(fn () => false))->toThrow(AssertionFailedError::class);
     expect(fn () => $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() !== $format,
+        fn ($source, $type, CaptureOptions $options) => $options->format() !== $format,
     ))->toThrow(AssertionFailedError::class);
 })->with(OutputFormat::cases());
 
@@ -153,22 +153,22 @@ test('assertion callbacks cannot mutate recorded browser or output settings', fu
     })->capture();
 
     $fake->assertCaptured(function ($source, $type, CaptureOptions $options) {
-        $options->browser->setSize(320, 240);
+        $options->browser()->setSize(320, 240);
 
-        if ($options->getFormat() === OutputFormat::Pdf) {
-            $options->output->setLandscape(true);
+        if ($options->format() === OutputFormat::Pdf) {
+            $options->output()->setLandscape(true);
         } else {
-            $options->output->setFormat(OutputFormat::Jpeg, 20);
+            $options->output()->setFormat(OutputFormat::Jpeg, 20);
         }
 
         return true;
     });
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 1024
-            && $options->getFormat() === $format
+        fn ($source, $type, CaptureOptions $options) => $options->browser()->getWidth() === 1024
+            && $options->format() === $format
             && ($format === OutputFormat::Pdf
-                ? ! $options->output->getLandscape()
-                : $options->output->getQuality() === 80),
+                ? ! $options->output()->getLandscape()
+                : $options->output()->getQuality() === 80),
     );
 })->with(OutputFormat::cases());
 
@@ -178,15 +178,15 @@ test('failed matches cannot mutate records before a later assertion', function (
     $fake->html('invoice')->capture();
 
     expect(fn () => $fake->assertCaptured(function ($source, $type, CaptureOptions $options) {
-        $options->browser->setSize(320, 240);
-        $options->output->setFormat(OutputFormat::Jpeg, 20);
+        $options->browser()->setSize(320, 240);
+        $options->output()->setFormat(OutputFormat::Jpeg, 20);
 
         return false;
     }))->toThrow(AssertionFailedError::class);
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 1024
-            && $options->getFormat() === OutputFormat::Png
-            && $options->output->getQuality() === 80,
+        fn ($source, $type, CaptureOptions $options) => $options->browser()->getWidth() === 1024
+            && $options->format() === OutputFormat::Png
+            && $options->output()->getQuality() === 80,
     );
 });
 

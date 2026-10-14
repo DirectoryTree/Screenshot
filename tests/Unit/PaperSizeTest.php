@@ -16,9 +16,9 @@ test('standard paper sizes reach the driver with their dimensions in millimeters
         ->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === $width
-            && $options->output->getPaperHeight() === $height,
+        fn ($source, $type, CaptureOptions $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === $width
+            && $options->output()->getPaperHeight() === $height,
     );
 })->with([
     'A3' => [PaperSize::A3, 297.0, 420.0],

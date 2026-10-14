@@ -12,6 +12,39 @@ use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\PendingSource;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
+test('element selection is snapshotted for each output and direct image capture', function () {
+    $fake = new ScreenshotFake;
+    $source = $fake->html('invoice');
+    $wholePage = $source->png();
+
+    expect($source->element('#invoice'))->toBe($source);
+
+    $png = $source->png();
+    $jpeg = $source->jpeg();
+    $pdf = $source->pdf();
+
+    $source->element('#receipt');
+
+    $wholePage->capture();
+    $png->capture();
+    $jpeg->capture();
+    $pdf->capture();
+    $source->capture();
+    $fake->html('another document')->pdf()->capture();
+
+    foreach (OutputFormat::cases() as $format) {
+        $fake->assertCaptured(fn ($contents, $type, $options) => $options->element() === '#invoice'
+            && $options->format() === $format);
+    }
+
+    $fake->assertCaptured(fn ($contents, $type, $options) => $contents === 'invoice'
+        && $options->element() === null);
+    $fake->assertCaptured(fn ($contents, $type, $options) => $options->element() === '#receipt');
+    $fake->assertCaptured(fn ($contents, $type, $options) => $contents === 'another document'
+        && $options->element() === null);
+    $fake->assertCapturedCount(6);
+});
+
 test('sources only copy output options when that output is selected', function () {
     $copies = (object) ['image' => 0, 'pdf' => 0];
     $image = new class($copies) extends ImageOptions
@@ -97,40 +130,40 @@ test('output selection snapshots browser settings without sharing image or PDF m
     $fake->assertCaptured(
         fn ($contents, $type, $options) => $contents === 'invoice'
             && $type === SourceType::Html
-            && $options->getFormat() === OutputFormat::Png
-            && $options->browser->getWidth() === 640
-            && $options->output->getMaxWidth() === 500
-            && ! $options->output->getFullPage(),
+            && $options->format() === OutputFormat::Png
+            && $options->browser()->getWidth() === 640
+            && $options->output()->getMaxWidth() === 500
+            && ! $options->output()->getFullPage(),
     );
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Jpeg
-            && $options->browser->getWidth() === 800
-            && $options->output->getQuality() === 90
-            && $options->output->getMaxWidth() === 2048
-            && $options->output->getFullPage(),
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Jpeg
+            && $options->browser()->getWidth() === 800
+            && $options->output()->getQuality() === 90
+            && $options->output()->getMaxWidth() === 2048
+            && $options->output()->getFullPage(),
     );
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && $options->browser->getSocket() === 'documents'
-            && $options->browser->getJavascript()
-            && $options->browser->getFailOnTimeout()
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 2000
-            && $options->output->getPaperWidth() === 148.0,
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getSocket() === 'documents'
+            && $options->browser()->getJavascript()
+            && $options->browser()->getFailOnTimeout()
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 2000
+            && $options->output()->getPaperWidth() === 148.0,
     );
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 320
-            && $options->browser->getSocket() === null
-            && ! $options->browser->getJavascript()
-            && ! $options->browser->getFailOnTimeout()
-            && $options->output->getPaperWidth() === 215.9,
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 320
+            && $options->browser()->getSocket() === null
+            && ! $options->browser()->getJavascript()
+            && ! $options->browser()->getFailOnTimeout()
+            && $options->output()->getPaperWidth() === 215.9,
     );
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->browser->getWidth() === 320
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 85,
+        fn ($contents, $type, $options) => $options->browser()->getWidth() === 320
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 85,
     );
 });
 
@@ -148,9 +181,9 @@ test('directly constructed source requests snapshot their browser settings', fun
     $source->pdf()->capture();
 
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 600,
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 600,
     );
 });
 
@@ -180,12 +213,12 @@ test('directly supplied output defaults remain unchanged when output builders ar
     expect($image->getMaxWidth())->toBe(2048);
     expect($pdf->getPaperWidth())->toBe(215.9);
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 85
-            && $options->output->getMaxWidth() === 2048,
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 85
+            && $options->output()->getMaxWidth() === 2048,
     );
-    $fake->assertCaptured(fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-        && $options->output->getPaperWidth() === 215.9);
+    $fake->assertCaptured(fn ($contents, $type, $options) => $options->format() === OutputFormat::Pdf
+        && $options->output()->getPaperWidth() === 215.9);
 });
 
 test('invalid source browser changes preserve current settings', function ($method, $arguments) {
@@ -200,12 +233,12 @@ test('invalid source browser changes preserve current settings', function ($meth
     $source->pdf()->capture();
 
     $fake->assertCaptured(
-        fn ($contents, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 600
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 2000
-            && $options->browser->getSocket() === 'documents',
+        fn ($contents, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 600
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 2000
+            && $options->browser()->getSocket() === 'documents',
     );
 })->with([
     'size' => ['size', [400, 0]],

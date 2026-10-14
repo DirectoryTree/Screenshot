@@ -183,6 +183,32 @@ test('different keys select different browsers', function () {
     expect(file_exists($second))->toBeTrue();
 });
 
+test('element capture failures and PDF preparation do not leak into shared browser pages', function () {
+    $factory = sharedScreenshot();
+    $source = $factory->html('<header style="height:900px">Header</header><div id="invoice" style="width:200px;height:100px">Invoice</div>')
+        ->size(400, 300)
+        ->socket('elements');
+    $wholePage = $source->png();
+
+    expect(fn () => $source->element('#missing')->pdf()->capture())
+        ->toThrow(RuntimeException::class, 'No element matches');
+
+    $source->element('#invoice');
+
+    expect($source->pdf()->capture()->mimeType())->toBe('application/pdf');
+    expect($source->png()->capture()->height())->toBe(100);
+    expect($wholePage->capture()->height())->toBeGreaterThan(900);
+
+    $uri = file_get_contents(BrowserSocket::named('elements', temporaryDirectory())->path());
+    $browser = BrowserFactory::connectToBrowser($uri);
+
+    try {
+        expect(count($browser->getPages()))->toBeLessThanOrEqual(1);
+    } finally {
+        $browser->getConnection()->disconnect();
+    }
+});
+
 test('failed page initialization does not leak tabs or close another workers page', function () {
     $factory = sharedScreenshot();
 

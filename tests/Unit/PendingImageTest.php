@@ -30,17 +30,17 @@ test('pending captures do not start the driver until requested', function () {
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === '<h1>Hello</h1>'
             && $type === SourceType::Html
-            && $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 600
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 90
-            && ! $options->output->getFullPage()
-            && $options->output->getMaxWidth() === 1000
-            && $options->output->getMaxHeight() === 2000
-            && $options->browser->getBrowserTimeout() === 2000
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getJavascript()
-            && $options->browser->getFailOnTimeout(),
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 600
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 90
+            && ! $options->output()->getFullPage()
+            && $options->output()->getMaxWidth() === 1000
+            && $options->output()->getMaxHeight() === 2000
+            && $options->browser()->getBrowserTimeout() === 2000
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getJavascript()
+            && $options->browser()->getFailOnTimeout(),
     );
 });
 
@@ -54,13 +54,13 @@ test('omitted timeouts preserve configured values without changing other capture
 
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'override'
-            && $options->browser->getLoadTimeout() === $load
-            && $options->browser->getBrowserTimeout() === $browser,
+            && $options->browser()->getLoadTimeout() === $load
+            && $options->browser()->getBrowserTimeout() === $browser,
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'default'
-            && $options->browser->getLoadTimeout() === 20000
-            && $options->browser->getBrowserTimeout() === 80000,
+            && $options->browser()->getLoadTimeout() === 20000
+            && $options->browser()->getBrowserTimeout() === 80000,
     );
 })->with([
     'load only' => [['load' => 30000], 30000, 80000],
@@ -77,8 +77,8 @@ test('successive timeout updates preserve the other current value', function () 
         ->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getLoadTimeout() === 30000
-            && $options->browser->getBrowserTimeout() === 90000,
+        fn ($source, $type, $options) => $options->browser()->getLoadTimeout() === 30000
+            && $options->browser()->getBrowserTimeout() === 90000,
     );
 });
 
@@ -93,8 +93,8 @@ test('options cannot leak between captures', function () {
 
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'second'
-            && $options->browser->getWidth() === 1024
-            && ! $options->browser->getJavascript(),
+            && $options->browser()->getWidth() === 1024
+            && ! $options->browser()->getJavascript(),
     );
     $fake->assertCapturedCount(2);
 });
@@ -105,24 +105,24 @@ test('directly constructed pending screenshots own their options', function () {
     $first = new PendingImage(new PendingCapture($fake, 'first', SourceType::Html), $settings);
     $second = new PendingImage(new PendingCapture($fake, 'second', SourceType::Html), $settings);
 
-    $settings->browser->setSize(1200, $settings->browser->getHeight());
-    $settings->output->setFormat(OutputFormat::Jpeg, 50);
+    $settings->browser()->setSize(1200, $settings->browser()->getHeight());
+    $settings->output()->setFormat(OutputFormat::Jpeg, 50);
     $first->size(500, 400)->capture();
     $second->capture();
 
-    expect($settings->browser->getWidth())->toBe(1200);
-    expect($settings->browser->getHeight())->toBe(768);
+    expect($settings->browser()->getWidth())->toBe(1200);
+    expect($settings->browser()->getHeight())->toBe(768);
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'first'
-            && $options->browser->getWidth() === 500
-            && $options->browser->getHeight() === 400,
+            && $options->browser()->getWidth() === 500
+            && $options->browser()->getHeight() === 400,
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'second'
-            && $options->browser->getWidth() === 900
-            && $options->browser->getHeight() === 768
-            && $options->getFormat() === OutputFormat::Png
-            && $options->output->getQuality() === 80,
+            && $options->browser()->getWidth() === 900
+            && $options->browser()->getHeight() === 768
+            && $options->format() === OutputFormat::Png
+            && $options->output()->getQuality() === 80,
     );
 });
 
@@ -146,17 +146,17 @@ test('drivers receive independent options snapshots', function () {
     $pending->jpeg(95)->capture();
     $pending->size(640, 480);
 
-    expect($snapshots[0]->browser->getWidth())->toBe(1024);
-    expect($snapshots[0]->browser->getHeight())->toBe(768);
+    expect($snapshots[0]->browser()->getWidth())->toBe(1024);
+    expect($snapshots[0]->browser()->getHeight())->toBe(768);
 
-    $snapshots[0]->browser->setSize(1, $snapshots[0]->browser->getHeight());
-    $snapshots[0]->output->setFormat(OutputFormat::Png, 50);
+    $snapshots[0]->browser()->setSize(1, $snapshots[0]->browser()->getHeight());
+    $snapshots[0]->output()->setFormat(OutputFormat::Png, 50);
     $pending->capture();
 
-    expect($snapshots[1]->browser->getWidth())->toBe(640);
-    expect($snapshots[1]->browser->getHeight())->toBe(480);
-    expect($snapshots[1]->getFormat())->toBe(OutputFormat::Jpeg);
-    expect($snapshots[1]->output->getQuality())->toBe(95);
+    expect($snapshots[1]->browser()->getWidth())->toBe(640);
+    expect($snapshots[1]->browser()->getHeight())->toBe(480);
+    expect($snapshots[1]->format())->toBe(OutputFormat::Jpeg);
+    expect($snapshots[1]->output()->getQuality())->toBe(95);
 });
 
 test('invalid mutations leave all pending screenshot options unchanged', function ($method, $arguments) {
@@ -228,15 +228,15 @@ test('socket keys can be overridden and disabled without changing defaults', fun
 
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'named'
-            && $options->browser->getSocket() === 'emails',
+            && $options->browser()->getSocket() === 'emails',
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'dedicated'
-            && $options->browser->getSocket() === null,
+            && $options->browser()->getSocket() === null,
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'default'
-            && $options->browser->getSocket() === 'default',
+            && $options->browser()->getSocket() === 'default',
     );
 });
 

@@ -21,10 +21,10 @@ Screenshot turns HTML, Blade views, and web pages into PNG or JPEG images using 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
 
-Screenshot::view('invoices.preview', ['invoice' => $invoice])
-    ->size(1200, 800)
-    ->jpeg(90)
-    ->store('invoices/preview.jpg', 's3');
+Screenshot::view('invoices.preview', data: ['invoice' => $invoice])
+    ->size(width: 1200, height: 800)
+    ->jpeg(quality: 90)
+    ->store(path: 'invoices/preview.jpg', disk: 's3');
 ```
 
 The package is currently private and unreleased. License selection is pending review; no open-source license has been granted.
@@ -86,7 +86,7 @@ Use a complete HTML document for predictable styling. Relative image, stylesheet
 ### Capturing Views
 
 ```php
-Screenshot::view('reports.summary', ['report' => $report])
+Screenshot::view('reports.summary', data: ['report' => $report])
     ->save(storage_path('app/summary.png'));
 ```
 
@@ -108,13 +108,13 @@ The default viewport is 1024 × 768 pixels. Full-page capture is enabled by defa
 
 ```php
 Screenshot::html($html)
-    ->size(1200, 800)
-    ->maxSize(1600, 6000)
+    ->size(width: 1200, height: 800)
+    ->maxSize(width: 1600, height: 6000)
     ->fullPage()
     ->capture();
 
 Screenshot::html($html)
-    ->size(1200, 800)
+    ->size(width: 1200, height: 800)
     ->viewport()
     ->capture();
 ```
@@ -126,7 +126,7 @@ Screenshot::html($html)
 PNG is the default. Select JPEG and its quality (0–100) explicitly:
 
 ```php
-$image = Screenshot::html($html)->jpeg(85)->capture();
+$image = Screenshot::html($html)->jpeg(quality: 85)->capture();
 $image = Screenshot::html($html)->png()->capture();
 ```
 
@@ -139,7 +139,7 @@ $image = Screenshot::html($html)->capture();
 
 $image->save('/existing/directory/preview.png');
 $image->store('previews/example.png');
-$image->store('previews/example.png', 's3');
+$image->store(path: 'previews/example.png', disk: 's3');
 ```
 
 `save()` writes a local path in an existing directory. `store()` uses a Laravel disk, defaulting to your application's default disk. Both return the image result and throw if a write fails; existing files at the destination are overwritten. The pending capture also exposes `save()` and `store()` as shortcuts.
@@ -165,8 +165,8 @@ Each call to `capture()`, or a pending capture's `save()` / `store()`, starts a 
 
 ```php
 Screenshot::html($html)
-    ->loadTimeout(15000)
-    ->timeout(60000)
+    ->loadTimeout(milliseconds: 15000)
+    ->timeout(milliseconds: 60000)
     ->capture();
 ```
 
@@ -188,8 +188,8 @@ Use a named socket to reuse one browser across queue workers or PHP processes:
 
 ```php
 Screenshot::html($html)
-    ->socket('emails')
-    ->size(1024, 768)
+    ->socket(key: 'emails')
+    ->size(width: 1024, height: 768)
     ->save($path);
 ```
 
@@ -218,7 +218,7 @@ The API is synchronous within each PHP process. Run captures in separate Laravel
 Shared browsers outlive individual captures and worker exits. Close a shared browser explicitly when it is no longer needed:
 
 ```php
-Screenshot::closeSocket('emails');
+Screenshot::closeSocket(key: 'emails');
 ```
 
 Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
@@ -270,12 +270,12 @@ use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Screenshot;
 
 $screenshot = new Screenshot(new ChromeDriver(
-    '/usr/bin/chromium',
+    binary: '/usr/bin/chromium',
     socketDirectory: __DIR__.'/storage/screenshots',
 ));
 
 $screenshot->html('<h1>Hello, world!</h1>')
-    ->size(800, 600)
+    ->size(width: 800, height: 600)
     ->save(__DIR__.'/preview.png');
 ```
 
@@ -300,13 +300,13 @@ Storage::fake('screenshots');
 Screenshot::fake();
 
 Screenshot::html('<h1>Invoice</h1>')
-    ->size(800, 600)
-    ->store('invoice.png', 'screenshots');
+    ->size(width: 800, height: 600)
+    ->store(path: 'invoice.png', disk: 'screenshots');
 
 Screenshot::assertCaptured(fn (string $source, string $type, CaptureOptions $options) =>
     $type === 'html' && $options->width === 800
 );
-Screenshot::assertCapturedCount(1);
+Screenshot::assertCapturedCount(count: 1);
 Storage::disk('screenshots')->assertExists('invoice.png');
 ```
 

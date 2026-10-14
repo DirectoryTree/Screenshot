@@ -70,16 +70,9 @@ class PdfOptions extends BrowserOptions
     /**
      * Select a standard paper size.
      */
-    public function setPaper(string $format): static
+    public function setPaper(PaperSize $size): static
     {
-        [$width, $height] = match (strtolower($format)) {
-            'a3' => [297, 420],
-            'a4' => [210, 297],
-            'a5' => [148, 210],
-            'letter' => [215.9, 279.4],
-            'legal' => [215.9, 355.6],
-            default => throw new InvalidArgumentException('Paper must be A3, A4, A5, Letter, or Legal.'),
-        };
+        [$width, $height] = $size->dimensions();
 
         return $this->setPaperSize($width, $height);
     }

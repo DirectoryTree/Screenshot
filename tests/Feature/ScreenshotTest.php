@@ -4,6 +4,7 @@ use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
@@ -177,7 +178,7 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     $result = new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
     Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->socket('invoices'));
     Screenshot::fake(pdfResult: $result);
-    $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper('letter')
+    $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper(PaperSize::Letter)
         ->store('invoice.pdf', 'pdfs', ['visibility' => 'private']);
 
     expect($stored)->toBe($result)

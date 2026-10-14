@@ -161,21 +161,23 @@ Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a 
 Use `pdf()` to print HTML, a Blade view, or a URL as a PDF:
 
 ```php
+use DirectoryTree\Screenshot\PaperSize;
+
 Screenshot::view('invoices.preview', ['invoice' => $invoice])
     ->socket(key: 'invoices')
     ->pdf()
-    ->paper('a4')
+    ->paper(PaperSize::A4)
     ->margins(top: 10, right: 10, bottom: 10, left: 10)
     ->store(path: 'invoices/invoice.pdf', disk: 's3');
 ```
 
-PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` accepts A3, A4, A5, Letter, or Legal. Use `paperSize(width: 100, height: 150)` for custom dimensions in millimeters, `landscape()` for landscape orientation, and `background(false)` to omit backgrounds. `preferCssPageSize()` gives CSS `@page` sizes precedence over the selected paper size.
+PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` accepts `PaperSize::A3`, `A4`, `A5`, `Letter`, or `Legal`. Use `paperSize(width: 100, height: 150)` for custom dimensions in millimeters, `landscape()` for landscape orientation, and `background(false)` to omit backgrounds. `preferCssPageSize()` gives CSS `@page` sizes precedence over the selected paper size.
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 
 `html()`, `view()`, and `url()` return a `PendingImage`. Calling `pdf()` creates an independent `PendingPdf` with a snapshot of its browser settings. Both builders support `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Configure image options on `PendingImage` and print options on `PendingPdf`; images and PDFs can share the same named browser.
 
-Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns a `ImageResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns an `ImageResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
 
 ### Timeouts
 
@@ -231,6 +233,7 @@ Configure defaults for each output format in your `AppServiceProvider::boot()` m
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 
@@ -241,7 +244,7 @@ public function boot(): void
         ->jpeg(quality: 85));
 
     Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->paper('a4')
+        ->paper(PaperSize::A4)
         ->margins(top: 10, right: 10, bottom: 10, left: 10)
         ->socket(key: 'invoices'));
 }
@@ -253,7 +256,7 @@ Explicit options override these defaults, including options set before selecting
 
 ```php
 Screenshot::html($html)->size(800, 600)->jpeg()->capture();
-Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper('letter')->capture();
+Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(PaperSize::Letter)->capture();
 ```
 
 `jpeg()` uses the configured quality; `jpeg(quality: 90)` overrides it. Image defaults do not carry into PDFs. Explicit browser options, such as sockets and timeouts, do carry over when calling `pdf()`.

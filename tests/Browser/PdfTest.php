@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;
@@ -75,7 +76,7 @@ test('PDF URL captures honor strict and partial page load timeouts', function ()
 
 test('image and PDF builders capture independently using the same terminal methods', function () {
     $image = pdfScreenshot()->html('<h1>Any format</h1>')->size(320, 240)->viewport();
-    $pdf = $image->pdf()->paper('letter');
+    $pdf = $image->pdf()->paper(PaperSize::Letter);
 
     expect($pdf->capture()->mimeType())->toBe('application/pdf')
         ->and($image->png()->capture()->mimeType())->toBe('image/png')
@@ -93,7 +94,7 @@ test('real PDFs use format defaults and explicit paper overrides', function () {
     [$width, $height] = pdfPageSize($default->contents());
     expect($width)->toEqualWithDelta(150 / 25.4 * 72, 1)->and($height)->toEqualWithDelta(100 / 25.4 * 72, 1);
 
-    $override = $factory->html('<h1>Override</h1>')->pdf()->paper('letter')->landscape(false)->capture();
+    $override = $factory->html('<h1>Override</h1>')->pdf()->paper(PaperSize::Letter)->landscape(false)->capture();
     [$width, $height] = pdfPageSize($override->contents());
     expect($width)->toEqualWithDelta(612, 1)->and($height)->toEqualWithDelta(792, 1);
 });

@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
@@ -20,7 +21,7 @@ test('only the selected format callback runs with its matching builder', functio
     });
     $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$calls) {
         $calls[] = 'pdf';
-        $pdf->paper('letter')->landscape()->socket('documents');
+        $pdf->paper(PaperSize::Letter)->landscape()->socket('documents');
     });
 
     $image = $fake->html('source');
@@ -74,9 +75,9 @@ test('PDF defaults respect explicit browser and print options without image defa
     $fake = new ScreenshotFake;
     $fake->configure(OutputFormat::Png, fn () => throw new RuntimeException('image callback must not run'));
     $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->paper('letter')->landscape()->margins(20, 20, 20, 20)->socket('pdfs')->javascript()->timeouts(browser: 80000));
+        ->paper(PaperSize::Letter)->landscape()->margins(20, 20, 20, 20)->socket('pdfs')->javascript()->timeouts(browser: 80000));
     $image = $fake->html('invoice')->withoutSocket()->javascript(false)->timeouts(load: 3000);
-    $pdf = $image->pdf()->paper('a4')->landscape(false)->margins(10, 10, 10, 10);
+    $pdf = $image->pdf()->paper(PaperSize::A4)->landscape(false)->margins(10, 10, 10, 10);
     $image->socket('later');
     $pdf->capture();
 
@@ -106,7 +107,7 @@ test('callbacks run once per capture and do not mutate pending state', function 
 test('format callbacks can be replaced or cleared independently of existing pending captures', function () {
     $fake = new ScreenshotFake;
     $fake->configure(OutputFormat::Png, fn (PendingImage $image) => $image->size(800, 600));
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper('letter'));
+    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper(PaperSize::Letter));
     $first = $fake->html('first');
     $fake->configure(OutputFormat::Png, fn (PendingImage $image) => $image->size(900, 600));
     $second = $fake->html('second');
@@ -132,7 +133,7 @@ test('failed PDF configuration does not capture or contaminate a subsequent atte
     $fail = true;
     $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$fail) {
         if ($fail) {
-            $pdf->paper('letter')->margins(-1);
+            $pdf->paper(PaperSize::Letter)->margins(-1);
         }
     });
     $pending = $fake->html('invoice')->pdf();
@@ -147,7 +148,7 @@ test('fakes preserve all format callbacks and independent baseline options', fun
     $options = new ImageOptions(width: 900);
     $factory = new Screenshot(options: $options);
     $factory->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image->jpeg(85));
-    $factory->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper('letter'));
+    $factory->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper(PaperSize::Letter));
     $fake = ScreenshotFake::from($factory);
     $options->setSize(800, 600);
     $factory->configure(OutputFormat::Jpeg, null)->configure(OutputFormat::Pdf, null);

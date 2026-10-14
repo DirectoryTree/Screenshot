@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -28,12 +29,12 @@ test('PDF options reject invalid browser changes without modifying either settin
 test('PDF captures retain shared settings while applying print overrides to one options object', function () {
     $fake = new ScreenshotFake(options: new ImageOptions(width: 900, height: 600, javascript: true));
     $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->size(800, 500)->timeouts(load: 2000, browser: 4000)->socket('documents')->paper('letter'));
+        ->size(800, 500)->timeouts(load: 2000, browser: 4000)->socket('documents')->paper(PaperSize::Letter));
     $image = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)
         ->javascript(false)->failOnTimeout()->maxSize(100, 100)->viewport()->jpeg(95);
     $pdf = $image->pdf();
     $image->size(320, 240);
-    $pdf->paper('a5')->capture();
+    $pdf->paper(PaperSize::A5)->capture();
 
     $fake->assertPdfCaptured(function ($source, $type, PdfOptions $options) {
         expect(func_num_args())->toBe(3)

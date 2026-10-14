@@ -4,6 +4,7 @@ use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
@@ -26,7 +27,7 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
     $fake->assertNoPdfsCaptured();
     $fake->assertNothingCaptured();
 
-    $pdf->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
+    $pdf->paper(PaperSize::Letter)->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
     $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
         && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
         && $options->getBrowserTimeout() === 10000 && $options->getPaperWidth() === 215.9 && $options->getLandscape()
@@ -45,11 +46,11 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
     $first = $source->pdf()->paperSize(100, 150)->withoutSocket()->javascript()->failOnTimeout()->timeouts(browser: 2000);
     $second = $source->pdf();
     $first->capture();
-    $first->paper('a3');
+    $first->paper(PaperSize::A3);
     $second->capture();
 
     $fake->assertPdfCaptured(function ($source, $type, $options) {
-        $options->setPaper('legal');
+        $options->setPaper(PaperSize::Legal);
         $options->setSocket('mutated');
 
         return true;
@@ -101,7 +102,7 @@ test('PDF fake assertions fail when no matching document was captured', function
 });
 
 test('paper dimensions and margins are converted from millimeters to inches', function () {
-    $options = (new PdfOptions)->setPaper('Letter')->setMargins(25.4, 12.7, 25.4, 12.7);
+    $options = (new PdfOptions)->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
     $parameters = $options->toArray();
 
     expect($parameters['paperWidth'])->toEqualWithDelta(8.5, 0.00001)
@@ -115,7 +116,6 @@ test('invalid print settings leave the entire PDF configuration unchanged', func
     expect(fn () => $options->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     expect($options)->toEqual(new PdfOptions);
 })->with([
-    ['setPaper', ['unknown']],
     ['setPaperSize', [0, 297]],
     ['setPaperSize', [210, INF]],
     ['setPaperSize', [NAN, 297]],

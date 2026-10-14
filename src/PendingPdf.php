@@ -60,11 +60,11 @@ class PendingPdf
     }
 
     /**
-     * Select a standard paper size: A3, A4, A5, Letter, or Legal.
+     * Select a standard paper size.
      */
-    public function paper(string $format): static
+    public function paper(PaperSize $size): static
     {
-        $this->options->setPaper($format);
+        $this->options->setPaper($size);
         $this->paperOverride = [$this->options->getPaperWidth(), $this->options->getPaperHeight()];
 
         return $this;

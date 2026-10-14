@@ -83,3 +83,24 @@ test('the inherited factory respects subclass defaults and validated setters', f
         ->and($options->setSize(800, 600))->toBe($options);
     expect(fn () => $options->setSize(0, 600))->toThrow(InvalidArgumentException::class);
 });
+
+test('merging defaults preserves explicit values and leaves both inputs unchanged', function () {
+    $options = ImageOptions::make()->setSocket(null)->setJavascript(false)->setLoadTimeout(15000);
+    $defaults = ImageOptions::make()->setSocket('shared')->setJavascript(true)->setTimeouts(1000, 90000);
+    $merged = $options->withDefaults($defaults);
+
+    expect($merged->getSocket())->toBeNull()->and($merged->getJavascript())->toBeFalse()
+        ->and($merged->getLoadTimeout())->toBe(15000)->and($merged->getBrowserTimeout())->toBe(90000)
+        ->and($options->getBrowserTimeout())->toBe(60000)->and($defaults->getSocket())->toBe('shared');
+
+    $inherited = $options->asDefaults()->withDefaults($defaults);
+    expect($inherited->getSocket())->toBe('shared')->and($inherited->getJavascript())->toBeTrue()
+        ->and($options->withDefaults($defaults)->getSocket())->toBeNull();
+});
+
+test('image and PDF defaults cannot be mixed', function ($options, $defaults) {
+    expect(fn () => $options->withDefaults($defaults))->toThrow(InvalidArgumentException::class);
+})->with([
+    fn () => [ImageOptions::make(), PdfOptions::make()],
+    fn () => [PdfOptions::make(), ImageOptions::make()],
+]);

@@ -169,3 +169,49 @@ test('explicit print layout replaces defaults atomically', function () {
     $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 30.0
         && $options->getPaperHeight() === 30.0 && $options->getMargins()['top'] === 0.0);
 });
+
+test('the latest explicit settings survive repeated format changes', function () {
+    $fake = new ScreenshotFake;
+    $fake->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image
+        ->maxSize(2000, 2000)->fullPage()->jpeg(95)->timeouts(load: 900, browser: 3000));
+
+    $fake->html('latest')->jpeg(70)->png()->jpeg()
+        ->size(800, 600)->size(640, 480)->maxSize(1200, 1600)->viewport()
+        ->timeouts(load: 1000)->timeouts(browser: 2000)->timeouts()->capture();
+
+    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $options->getFormat() === OutputFormat::Jpeg
+        && $options->getQuality() === 70 && $options->getWidth() === 640 && $options->getHeight() === 480
+        && $options->getMaxWidth() === 1200 && $options->getMaxHeight() === 1600 && ! $options->getFullPage()
+        && $options->getLoadTimeout() === 1000 && $options->getBrowserTimeout() === 2000);
+});
+
+test('invalid combined PDF defaults fail before capture and leave the pending capture reusable', function () {
+    $fake = new ScreenshotFake;
+    $largeMargins = true;
+    $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$largeMargins) {
+        if ($largeMargins) {
+            $pdf->margins(20, 20, 20, 20);
+        }
+    });
+    $pending = $fake->html('small')->pdf()->paperSize(30, 30);
+
+    expect(fn () => $pending->capture())->toThrow(InvalidArgumentException::class);
+    $fake->assertNoPdfsCaptured();
+
+    $largeMargins = false;
+    $pending->capture();
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 30.0
+        && $options->getMargins()['top'] === 10.0);
+});
+
+test('explicit PDF booleans and each margin win over defaults', function () {
+    $fake = new ScreenshotFake;
+    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
+        ->background()->preferCssPageSize()->margins(20, 20, 20, 20));
+    $fake->html('document')->pdf()->background(false)->preferCssPageSize(false)
+        ->margins(top: 1, right: 2, bottom: 3, left: 4)->capture();
+
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => ! $options->getBackground()
+        && ! $options->getPreferCssPageSize()
+        && $options->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
+});

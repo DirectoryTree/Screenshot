@@ -7,6 +7,13 @@ use InvalidArgumentException;
 abstract class BrowserOptions
 {
     /**
+     * Settings explicitly assigned through the validated setters.
+     *
+     * @var array<string, true>
+     */
+    protected array $specified = [];
+
+    /**
      * The browser viewport width in pixels.
      */
     protected int $width = 1024;
@@ -87,6 +94,7 @@ abstract class BrowserOptions
 
         $this->width = $width;
         $this->height = $height;
+        $this->specified['size'] = true;
 
         return $this;
     }
@@ -128,14 +136,18 @@ abstract class BrowserOptions
      */
     public function setTimeouts(?int $load = null, ?int $browser = null): static
     {
-        $load ??= $this->loadTimeout;
-        $browser ??= $this->browserTimeout;
+        $this->validateTimeout($load ?? $this->loadTimeout);
+        $this->validateTimeout($browser ?? $this->browserTimeout);
 
-        $this->validateTimeout($load);
-        $this->validateTimeout($browser);
+        if ($load !== null) {
+            $this->loadTimeout = $load;
+            $this->specified['loadTimeout'] = true;
+        }
 
-        $this->loadTimeout = $load;
-        $this->browserTimeout = $browser;
+        if ($browser !== null) {
+            $this->browserTimeout = $browser;
+            $this->specified['browserTimeout'] = true;
+        }
 
         return $this;
     }
@@ -154,6 +166,7 @@ abstract class BrowserOptions
     public function setJavascript(bool $value): static
     {
         $this->javascript = $value;
+        $this->specified['javascript'] = true;
 
         return $this;
     }
@@ -172,6 +185,7 @@ abstract class BrowserOptions
     public function setFailOnTimeout(bool $value): static
     {
         $this->failOnTimeout = $value;
+        $this->specified['failOnTimeout'] = true;
 
         return $this;
     }
@@ -192,8 +206,53 @@ abstract class BrowserOptions
         $this->validateSocket($key);
 
         $this->socket = $key;
+        $this->specified['socket'] = true;
 
         return $this;
+    }
+
+    /**
+     * Treat the current values as defaults for a new capture.
+     */
+    public function asDefaults(): static
+    {
+        $options = clone $this;
+        $options->specified = [];
+
+        return $options;
+    }
+
+    /**
+     * Fill unspecified settings from defaults and validate the complete result.
+     */
+    public function withDefaults(self $defaults): static
+    {
+        if (! $defaults instanceof static) {
+            throw new InvalidArgumentException('Defaults must use the same options type.');
+        }
+
+        $options = clone $this;
+        $options->mergeDefaults($defaults);
+        $options->validate();
+
+        return $options;
+    }
+
+    /**
+     * Merge shared browser defaults without replacing explicit values.
+     */
+    protected function mergeDefaults(self $defaults): void
+    {
+        if (! isset($this->specified['size'])) {
+            $this->width = $defaults->width;
+            $this->height = $defaults->height;
+        }
+
+        $this->browserTimeout = isset($this->specified['browserTimeout']) ? $this->browserTimeout : $defaults->browserTimeout;
+        $this->loadTimeout = isset($this->specified['loadTimeout']) ? $this->loadTimeout : $defaults->loadTimeout;
+        $this->javascript = isset($this->specified['javascript']) ? $this->javascript : $defaults->javascript;
+        $this->failOnTimeout = isset($this->specified['failOnTimeout']) ? $this->failOnTimeout : $defaults->failOnTimeout;
+        $this->socket = isset($this->specified['socket']) ? $this->socket : $defaults->socket;
     }
 
     /**

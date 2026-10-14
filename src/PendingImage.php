@@ -2,42 +2,19 @@
 
 namespace DirectoryTree\Screenshot;
 
-use Closure;
-use DirectoryTree\Screenshot\Concerns\AppliesConfiguration;
-use DirectoryTree\Screenshot\Concerns\ConfiguresBrowser;
-use DirectoryTree\Screenshot\Contracts\Driver;
-
-class PendingImage
+/**
+ * @extends PendingCapture<ImageOptions, ImageResult>
+ */
+class PendingImage extends PendingCapture
 {
-    use AppliesConfiguration, ConfiguresBrowser;
-
-    /**
-     * Explicit image settings, independent of shared browser settings.
-     *
-     * @var list<Closure(ImageOptions): mixed>
-     */
-    protected array $imageOverrides = [];
-
-    /**
-     * Create a new pending screenshot.
-     */
-    public function __construct(
-        protected Driver $driver,
-        protected string $source,
-        protected SourceType $type,
-        protected ImageOptions $options,
-        protected array $configureUsing = [],
-    ) {
-        $this->defaults = clone $options;
-        $this->options = clone $options;
-    }
-
     /**
      * Limit the captured dimensions in pixels.
      */
     public function maxSize(int $width, int $height): static
     {
-        return $this->configureImageOptions(static fn (ImageOptions $options) => $options->setMaxSize($width, $height));
+        $this->options->setMaxSize($width, $height);
+
+        return $this;
     }
 
     /**
@@ -45,7 +22,9 @@ class PendingImage
      */
     public function fullPage(bool $value = true): static
     {
-        return $this->configureImageOptions(static fn (ImageOptions $options) => $options->setFullPage($value));
+        $this->options->setFullPage($value);
+
+        return $this;
     }
 
     /**
@@ -61,7 +40,9 @@ class PendingImage
      */
     public function png(): static
     {
-        return $this->configureImageOptions(static fn (ImageOptions $options) => $options->setFormat(OutputFormat::Png));
+        $this->options->setFormat(OutputFormat::Png);
+
+        return $this;
     }
 
     /**
@@ -69,7 +50,9 @@ class PendingImage
      */
     public function jpeg(?int $quality = null): static
     {
-        return $this->configureImageOptions(static fn (ImageOptions $options) => $options->setFormat(OutputFormat::Jpeg, $quality));
+        $this->options->setFormat(OutputFormat::Jpeg, $quality);
+
+        return $this;
     }
 
     /**
@@ -78,58 +61,9 @@ class PendingImage
     public function pdf(): PendingPdf
     {
         return new PendingPdf(
-            $this->driver, $this->source, $this->type, PdfOptions::fromBrowserOptions($this->defaults),
-            configureUsing: $this->configureUsing, overrides: $this->overrides,
+            $this->driver, $this->source, $this->type,
+            PdfOptions::fromBrowserOptions($this->options),
+            $this->configureUsing, PdfOptions::fromBrowserOptions($this->defaults),
         );
-    }
-
-    /**
-     * Capture the screenshot and save it to a local path.
-     */
-    public function save(string $path): ImageResult
-    {
-        return $this->capture()->save($path);
-    }
-
-    /**
-     * Capture the screenshot and store it on a Laravel filesystem disk.
-     */
-    public function store(string $path, ?string $disk = null, array $options = []): ImageResult
-    {
-        return $this->capture()->store($path, $disk, $options);
-    }
-
-    /**
-     * Capture the screenshot.
-     */
-    public function capture(): ImageResult
-    {
-        $capture = $this->configured();
-        $capture->options->validate();
-
-        return $this->driver->capture($this->source, $this->type, clone $capture->options);
-    }
-
-    /**
-     * Validate and remember an explicit image option change.
-     */
-    protected function configureImageOptions(Closure $callback): static
-    {
-        $callback($this->options);
-        $this->imageOverrides[] = $callback;
-
-        return $this;
-    }
-
-    /**
-     * Apply explicit image settings after the selected format's defaults.
-     */
-    protected function configuredOutputOptions(ImageOptions $options): ImageOptions
-    {
-        foreach ($this->imageOverrides as $override) {
-            $override($options);
-        }
-
-        return $options;
     }
 }

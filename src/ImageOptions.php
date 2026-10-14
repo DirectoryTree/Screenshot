@@ -56,6 +56,7 @@ class ImageOptions extends BrowserOptions
 
         $this->maxWidth = $width;
         $this->maxHeight = $height;
+        $this->specified['maxSize'] = true;
 
         return $this;
     }
@@ -88,9 +89,11 @@ class ImageOptions extends BrowserOptions
         }
 
         $this->format = $format;
+        $this->specified['format'] = true;
 
         if ($quality !== null) {
             $this->quality = $quality;
+            $this->specified['quality'] = true;
         }
 
         return $this;
@@ -110,6 +113,7 @@ class ImageOptions extends BrowserOptions
     public function setFullPage(bool $value): static
     {
         $this->fullPage = $value;
+        $this->specified['fullPage'] = true;
 
         return $this;
     }
@@ -124,6 +128,25 @@ class ImageOptions extends BrowserOptions
         $this->validateFormat($this->format);
         $this->validateDimensions($this->maxWidth, $this->maxHeight);
         $this->validateQuality($this->quality);
+    }
+
+    /**
+     * Merge image defaults without replacing explicit values.
+     *
+     * @param  ImageOptions  $defaults
+     */
+    protected function mergeDefaults(BrowserOptions $defaults): void
+    {
+        parent::mergeDefaults($defaults);
+
+        if (! isset($this->specified['maxSize'])) {
+            $this->maxWidth = $defaults->maxWidth;
+            $this->maxHeight = $defaults->maxHeight;
+        }
+
+        $this->format = isset($this->specified['format']) ? $this->format : $defaults->format;
+        $this->quality = isset($this->specified['quality']) ? $this->quality : $defaults->quality;
+        $this->fullPage = isset($this->specified['fullPage']) ? $this->fullPage : $defaults->fullPage;
     }
 
     /**

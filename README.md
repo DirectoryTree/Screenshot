@@ -130,7 +130,7 @@ $image = Screenshot::html($html)->jpeg(quality: 85)->capture();
 $image = Screenshot::html($html)->png()->capture();
 ```
 
-File extensions do not select the format. Use `jpeg()` when saving a `.jpg` file.
+File extensions do not select the format. Use `jpeg()` for JPEG output or `pdf()` for PDF output.
 
 ### Saving and Reading Images
 
@@ -173,9 +173,9 @@ PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` a
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 
-`pdf()` snapshots the pending screenshot's browser settings and returns a `PendingPdf`. Application defaults for JavaScript, timeouts, and sockets carry over, and those methods remain available after `pdf()`. Set print options on the returned PDF. Images and PDFs can share the same named browser.
+`pdf()`, `png()`, and `jpeg()` select the output format on the same fluent builder; the last selection wins. Browser and print settings can be configured in any order, including through the global `configure()` callback. Print settings only apply to PDFs. Images and PDFs can share the same named browser.
 
-`capture()` returns a `PdfResult` with `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. It has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+`capture()`, `save()`, and `store()` return a `ScreenshotResult` for images or a `PdfResult` for PDFs. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
 
 ### Timeouts
 

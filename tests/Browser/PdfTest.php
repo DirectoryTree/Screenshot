@@ -70,3 +70,15 @@ test('PDF URL captures honor strict and partial page load timeouts', function ()
         $server->stop();
     }
 });
+
+test('one builder can switch between PDF PNG and JPEG output', function () {
+    $pending = pdfScreenshot()->html('<h1>Any format</h1>')->paper('letter')->size(320, 240)->viewport();
+
+    expect($pending->pdf()->capture()->mimeType())->toBe('application/pdf')
+        ->and($pending->png()->capture()->mimeType())->toBe('image/png')
+        ->and($pending->jpeg()->capture()->mimeType())->toBe('image/jpeg');
+
+    $result = $pending->pdf()->capture();
+    [$width, $height] = pdfPageSize($result->contents());
+    expect($width)->toEqualWithDelta(612, 1)->and($height)->toEqualWithDelta(792, 1);
+});

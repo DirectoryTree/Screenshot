@@ -85,7 +85,7 @@ class CaptureOptions
     }
 
     /**
-     * Get the image format.
+     * Get the output format.
      */
     public function getFormat(): string
     {
@@ -101,7 +101,7 @@ class CaptureOptions
     }
 
     /**
-     * Set the image format and optional JPEG quality atomically.
+     * Set the output format and optional JPEG quality atomically.
      */
     public function setFormat(string $format, ?int $quality = null): static
     {
@@ -268,12 +268,12 @@ class CaptureOptions
     }
 
     /**
-     * Validate the image format.
+     * Validate the output format.
      */
     protected function validateFormat(string $format): void
     {
-        if (! in_array($format, ['png', 'jpeg'], true)) {
-            throw new InvalidArgumentException('The screenshot format must be png or jpeg.');
+        if (! in_array($format, ['png', 'jpeg', 'pdf'], true)) {
+            throw new InvalidArgumentException('The screenshot format must be png, jpeg, or pdf.');
         }
     }
 

@@ -324,6 +324,8 @@ Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output 
 Use the facade fake to test your application without starting Chrome:
 
 ```php
+use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 
 Screenshot::fake();
@@ -332,11 +334,10 @@ Screenshot::html('<h1>Invoice</h1>')
     ->size(width: 800, height: 600)
     ->capture();
 
-Screenshot::assertCaptured(fn ($source, $type, $options) =>
-    $source === '<h1>Invoice</h1>'
-    && $options->browser->getWidth() === 800
-);
 Screenshot::assertCapturedCount(count: 1);
+Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
+    return $source === '<h1>Invoice</h1>' && $options->browser->getWidth() === 800;
+});
 ```
 
 Use `assertNothingCaptured()` when no image should be taken. Assert browser shutdown requests with `assertClosed($key)`, `assertNotClosed($key)`, and `assertNothingClosed()`.
@@ -348,9 +349,7 @@ Screenshot::fake();
 
 Screenshot::html('<h1>Invoice</h1>')->pdf()->landscape()->capture();
 
-Screenshot::assertPdfCaptured(fn ($source, $type, $options) =>
-    $options->output->getLandscape()
-);
+Screenshot::assertPdfCaptured(fn ($source, $type, $options) => $options->output->getLandscape());
 Screenshot::assertPdfCapturedCount(1);
 Screenshot::assertNothingCaptured(); // No image captures.
 ```

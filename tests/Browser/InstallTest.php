@@ -24,8 +24,10 @@ test('the install command downloads a browser that the application can capture w
         $installer = app()->make(ChromeInstaller::class);
         $path = $installer->path();
         expect($path)->not->toBeNull();
-        expect(artisan('screenshot:install'))->toBe(0, Artisan::output());
-        expect(Artisan::output())->toContain('Chrome is already installed.')
+        $status = artisan('screenshot:install');
+        $output = Artisan::output();
+        expect($status)->toBe(0, $output);
+        expect($output)->toContain('Chrome is already installed.')
             ->and($installer->path())->toBe($path);
         $installed = json_decode(file_get_contents($directory.'/installed.json'), true);
         expect($installer->install($installed['version']))->toBe($path);

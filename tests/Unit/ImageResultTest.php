@@ -1,9 +1,9 @@
 <?php
 
-use DirectoryTree\Screenshot\ScreenshotResult;
+use DirectoryTree\Screenshot\ImageResult;
 
 test('results expose image bytes and metadata', function () {
-    $result = new ScreenshotResult(imageFixture());
+    $result = new ImageResult(imageFixture());
 
     expect($result->base64())->toBe(imageFixture())
         ->and($result->contents())->toBe(base64_decode(imageFixture()))
@@ -14,14 +14,14 @@ test('results expose image bytes and metadata', function () {
 });
 
 test('invalid image data is rejected', function ($data) {
-    expect(fn () => new ScreenshotResult($data))->toThrow(InvalidArgumentException::class);
+    expect(fn () => new ImageResult($data))->toThrow(InvalidArgumentException::class);
 })->with(['', 'not base64!', base64_encode('hello'), base64_encode("\x89PNG"), base64_encode('GIF89a')]);
 
 test('results can be saved to a local file', function () {
     $path = tempnam(sys_get_temp_dir(), 'screenshot-test-');
 
     try {
-        $result = new ScreenshotResult(imageFixture());
+        $result = new ImageResult(imageFixture());
         expect($result->save($path))->toBe($result)
             ->and(file_get_contents($path))->toBe($result->contents());
     } finally {
@@ -30,6 +30,6 @@ test('results can be saved to a local file', function () {
 });
 
 test('failed local writes throw an exception', function () {
-    expect(fn () => (new ScreenshotResult(imageFixture()))->save('/missing-screenshot-directory/image.png'))
+    expect(fn () => (new ImageResult(imageFixture()))->save('/missing-screenshot-directory/image.png'))
         ->toThrow(RuntimeException::class, 'Unable to save');
 });

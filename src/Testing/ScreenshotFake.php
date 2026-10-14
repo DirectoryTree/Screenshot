@@ -4,11 +4,11 @@ namespace DirectoryTree\Screenshot\Testing;
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 
@@ -39,7 +39,7 @@ class ScreenshotFake extends Screenshot implements Driver
      * Create a recording fake that returns a small PNG by default.
      */
     public function __construct(
-        protected ?ScreenshotResult $result = null,
+        protected ?ImageResult $result = null,
         ?ViewFactory $views = null,
         ImageOptions $options = new ImageOptions,
         protected ?PdfResult $pdfResult = null,
@@ -50,7 +50,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Create a fresh fake using an existing factory's configuration.
      */
-    public static function from(Screenshot $factory, ?ScreenshotResult $result = null, ?PdfResult $pdfResult = null): static
+    public static function from(Screenshot $factory, ?ImageResult $result = null, ?PdfResult $pdfResult = null): static
     {
         return (new static(
             result: $result,
@@ -71,7 +71,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
+    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
     {
         if ($options->getFormat() === OutputFormat::Pdf) {
             $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
@@ -81,7 +81,7 @@ class ScreenshotFake extends Screenshot implements Driver
 
         $this->captures[] = [$source, $type, clone $options];
 
-        return $this->result ?? new ScreenshotResult(
+        return $this->result ?? new ImageResult(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
         );
     }

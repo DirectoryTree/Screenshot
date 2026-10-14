@@ -2,9 +2,9 @@
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use HeadlessChromium\Browser;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Connection;
@@ -205,5 +205,5 @@ test('the output enum selects Chrome image format and JPEG quality', function (O
     $browser->shouldReceive('close')->once();
 
     expect(chromeDriver($browser)->capture('image', 'html', new ImageOptions(format: $format, quality: 91)))
-        ->toBeInstanceOf(ScreenshotResult::class);
+        ->toBeInstanceOf(ImageResult::class);
 })->with([OutputFormat::Png, OutputFormat::Jpeg]);

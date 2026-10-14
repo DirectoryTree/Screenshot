@@ -1,6 +1,6 @@
 <?php
 
-use DirectoryTree\Screenshot\ScreenshotResult;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
 
@@ -8,7 +8,7 @@ test('a fake created from another factory starts with fresh records and uses the
     $original = new ScreenshotFake;
     $original->html('previous')->capture();
     $original->close('emails');
-    $result = new ScreenshotResult(imageFixture());
+    $result = new ImageResult(imageFixture());
 
     $fake = ScreenshotFake::from(factory: $original, result: $result);
     $fake->assertNothingCaptured();

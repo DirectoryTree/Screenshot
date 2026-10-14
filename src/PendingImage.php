@@ -95,7 +95,7 @@ class PendingImage
     /**
      * Capture the screenshot and save it to a local path.
      */
-    public function save(string $path): ScreenshotResult
+    public function save(string $path): ImageResult
     {
         return $this->capture()->save($path);
     }
@@ -103,7 +103,7 @@ class PendingImage
     /**
      * Capture the screenshot and store it on a Laravel filesystem disk.
      */
-    public function store(string $path, ?string $disk = null, array $options = []): ScreenshotResult
+    public function store(string $path, ?string $disk = null, array $options = []): ImageResult
     {
         return $this->capture()->store($path, $disk, $options);
     }
@@ -111,7 +111,7 @@ class PendingImage
     /**
      * Capture the screenshot.
      */
-    public function capture(): ScreenshotResult
+    public function capture(): ImageResult
     {
         $this->options->validate();
 

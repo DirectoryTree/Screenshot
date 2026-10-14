@@ -5,10 +5,10 @@ namespace DirectoryTree\Screenshot\Drivers;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Generator;
 use HeadlessChromium\Browser;
@@ -37,7 +37,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture an image or PDF using a dedicated or shared browser process.
      */
-    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
+    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
     {
         $options->validate();
 
@@ -74,7 +74,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture the selected output format from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false, PdfOptions $pdf = new PdfOptions): ScreenshotResult|PdfResult
+    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
     {
         return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options, $pdf) {
             if ($options->getFormat() === OutputFormat::Pdf) {
@@ -99,7 +99,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 $parameters['quality'] = $options->getQuality();
             }
 
-            return new ScreenshotResult($page->screenshot($parameters)->getBase64($options->getBrowserTimeout()));
+            return new ImageResult($page->screenshot($parameters)->getBase64($options->getBrowserTimeout()));
         });
     }
 

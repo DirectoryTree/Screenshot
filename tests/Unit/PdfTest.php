@@ -2,13 +2,13 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
 
@@ -63,7 +63,7 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
 
 test('one driver contract handles images and PDFs with the requested enum format', function () {
     $driver = Mockery::mock(Driver::class);
-    $image = new ScreenshotResult(imageFixture());
+    $image = new ImageResult(imageFixture());
     $pdf = new PdfResult(pdfFixture());
     $driver->shouldReceive('capture')->once()
         ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg)
@@ -145,7 +145,7 @@ test('image and PDF builders save their own result types without changing each o
 
         expect($image)->toBeInstanceOf(PendingImage::class)
             ->and($pdf)->toBeInstanceOf(PendingPdf::class)
-            ->and($imageResult)->toBeInstanceOf(ScreenshotResult::class)
+            ->and($imageResult)->toBeInstanceOf(ImageResult::class)
             ->and($pdfResult)->toBeInstanceOf(PdfResult::class)
             ->and(file_get_contents($imagePath))->toBe($imageResult->contents())
             ->and(file_get_contents($pdfPath))->toBe($pdfResult->contents());

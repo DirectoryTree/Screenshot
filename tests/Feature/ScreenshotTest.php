@@ -2,11 +2,11 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot as Factory;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Illuminate\Filesystem\Filesystem;
@@ -16,7 +16,7 @@ use Illuminate\Support\ServiceProvider;
 test('a service provider configures defaults with a replaceable driver', function () {
     $driver = Mockery::mock(Driver::class);
     $driver->shouldReceive('capture')->once()->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->getWidth() === 900)
-        ->andReturn(new ScreenshotResult(imageFixture()));
+        ->andReturn(new ImageResult(imageFixture()));
     app()->instance(Driver::class, $driver);
 
     app()->register(new class(app()) extends ServiceProvider
@@ -59,7 +59,7 @@ test('failed disk writes throw an exception', function () {
     Storage::shouldReceive('disk')->with(null)->once()->andReturnSelf();
     Storage::shouldReceive('put')->once()->andReturn(false);
 
-    expect(fn () => (new ScreenshotResult(imageFixture()))->store('preview.png'))
+    expect(fn () => (new ImageResult(imageFixture()))->store('preview.png'))
         ->toThrow(RuntimeException::class, 'Unable to store');
 });
 
@@ -82,7 +82,7 @@ test('storage options control visibility for pending screenshots and captured re
 });
 
 test('disk-specific storage options are forwarded unchanged', function ($pending) {
-    $result = new ScreenshotResult(imageFixture());
+    $result = new ImageResult(imageFixture());
     $options = ['visibility' => 'private', 'CacheControl' => 'max-age=3600', 'Metadata' => ['source' => 'screenshot']];
     Screenshot::fake($result);
     Storage::shouldReceive('disk')->once()->with('screenshots')->andReturnSelf();

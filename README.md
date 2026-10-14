@@ -175,7 +175,7 @@ PDFs use Chrome's print layout, including print styles and page breaks. Screensh
 
 `html()`, `view()`, and `url()` return a `PendingImage`. Calling `pdf()` creates an independent `PendingPdf` with a snapshot of its browser settings. Both builders support `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Configure image options on `PendingImage` and print options on `PendingPdf`; images and PDFs can share the same named browser.
 
-Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns a `ScreenshotResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns a `ImageResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
 
 ### Timeouts
 
@@ -295,7 +295,7 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, and use the supplied `PdfOptions` for PDF print settings. Return a `ScreenshotResult` for images or a `PdfResult` for PDFs.
+Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, and use the supplied `PdfOptions` for PDF print settings. Return a `ImageResult` for images or a `PdfResult` for PDFs.
 
 ## Testing
 
@@ -333,7 +333,7 @@ Screenshot::assertClosed(key: 'invoices');
 Screenshot::assertNotClosed(key: 'reports');
 ```
 
-The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Views still render and explicit file writes still happen, so pair it with `Storage::fake()` where appropriate.
+The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass a `ImageResult` to `Screenshot::fake($result)` when specific output matters. Views still render and explicit file writes still happen, so pair it with `Storage::fake()` where appropriate.
 
 PDF captures are recorded separately and return a valid blank one-page PDF:
 

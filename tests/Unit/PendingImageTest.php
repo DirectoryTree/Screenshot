@@ -2,10 +2,10 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('pending captures do not start the driver until requested', function () {
@@ -80,7 +80,7 @@ test('drivers receive independent options snapshots', function () {
     $driver->shouldReceive('capture')->twice()->andReturnUsing(function ($source, $type, $options) use (&$snapshots) {
         $snapshots[] = $options;
 
-        return new ScreenshotResult(imageFixture());
+        return new ImageResult(imageFixture());
     });
     $pending = new PendingImage($driver, 'hello', 'html', new ImageOptions);
     $pending->capture();

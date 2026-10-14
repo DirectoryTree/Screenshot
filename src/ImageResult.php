@@ -4,7 +4,7 @@ namespace DirectoryTree\Screenshot;
 
 use InvalidArgumentException;
 
-class ScreenshotResult extends CaptureResult
+class ImageResult extends CaptureResult
 {
     /**
      * The image dimensions and metadata returned by getimagesizefromstring.

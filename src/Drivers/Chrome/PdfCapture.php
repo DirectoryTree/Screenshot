@@ -6,7 +6,7 @@ use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Page;
 
-class PdfCapture implements CaptureStrategy
+class PdfCapture implements CapturesPage
 {
     /**
      * Create a PDF capture strategy.

@@ -6,7 +6,7 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Page;
 
-interface CaptureStrategy
+interface CapturesPage
 {
     /**
      * Capture the prepared page in the selected output format.

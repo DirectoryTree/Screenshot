@@ -7,7 +7,7 @@ use DirectoryTree\Screenshot\ImageResult;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Page;
 
-abstract class ImageCapture implements CaptureStrategy
+abstract class ImageCapture implements CapturesPage
 {
     /**
      * Create an image capture strategy.

@@ -5,7 +5,7 @@ namespace DirectoryTree\Screenshot\Drivers;
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
-use DirectoryTree\Screenshot\Drivers\Chrome\CaptureStrategy;
+use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
 use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
@@ -78,14 +78,14 @@ class ChromeDriver implements Driver, ManagesBrowsers
     {
         return $this->withPage(
             $browser, $source, $type, $options, $shared,
-            fn (Page $page) => $this->resolveCaptureStrategy($options)->capture($page),
+            fn (Page $page) => $this->resolveCapture($options)->capture($page),
         );
     }
 
     /**
      * Resolve the capture implementation for the selected output format.
      */
-    protected function resolveCaptureStrategy(ImageOptions|PdfOptions $options): CaptureStrategy
+    protected function resolveCapture(ImageOptions|PdfOptions $options): CapturesPage
     {
         return match ($options->getFormat()) {
             OutputFormat::Png => new PngCapture($options),

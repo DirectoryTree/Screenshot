@@ -1,7 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
-use DirectoryTree\Screenshot\Drivers\Chrome\CaptureStrategy;
+use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
@@ -225,7 +225,7 @@ test('strategy resolution failures still close the page and browser', function (
             return $this->browser;
         }
 
-        protected function resolveCaptureStrategy(ImageOptions|PdfOptions $options): CaptureStrategy
+        protected function resolveCapture(ImageOptions|PdfOptions $options): CapturesPage
         {
             throw new RuntimeException('strategy failure');
         }

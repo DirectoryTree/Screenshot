@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowserSockets;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
@@ -12,6 +13,11 @@ use LogicException;
 class Screenshot
 {
     /**
+     * The callback used to configure each new pending screenshot.
+     */
+    protected ?Closure $configureUsing = null;
+
+    /**
      * Create a new screenshot factory.
      */
     public function __construct(
@@ -21,11 +27,23 @@ class Screenshot
     ) {}
 
     /**
+     * Set or clear the default configuration callback for future screenshots.
+     *
+     * @param  (callable(PendingScreenshot): mixed)|null  $callback
+     */
+    public function configure(?callable $callback): static
+    {
+        $this->configureUsing = $callback === null ? null : Closure::fromCallable($callback);
+
+        return $this;
+    }
+
+    /**
      * Prepare a screenshot of an HTML document.
      */
     public function html(string $html): PendingScreenshot
     {
-        return new PendingScreenshot($this->driver, $html, 'html', clone $this->options);
+        return $this->newPendingScreenshot($html, 'html');
     }
 
     /**
@@ -37,7 +55,21 @@ class Screenshot
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 
-        return new PendingScreenshot($this->driver, $url, 'url', clone $this->options);
+        return $this->newPendingScreenshot($url, 'url');
+    }
+
+    /**
+     * Apply defaults to a fresh screenshot before caller-specific options.
+     */
+    protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
+    {
+        $screenshot = new PendingScreenshot($this->driver, $source, $type, clone $this->options);
+
+        if ($this->configureUsing) {
+            ($this->configureUsing)($screenshot);
+        }
+
+        return $screenshot;
     }
 
     /**

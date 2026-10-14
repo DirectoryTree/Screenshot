@@ -201,13 +201,15 @@ Screenshot stores Chrome's WebSocket address (`ws://...`) in a local file; it is
 
 A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running.
 
-To enable a named socket by default:
+To enable a named socket for every capture, register a [configuration callback](#capture-defaults) in `AppServiceProvider::boot()`:
 
-```dotenv
-SCREENSHOT_SOCKET=emails
+```php
+Screenshot::configure(
+    fn (PendingScreenshot $screenshot) => $screenshot->socket(key: 'emails')
+);
 ```
 
-Or set `defaults.socket` in `config/screenshot.php`. You can override the default on any capture with `socket()`, or opt out with `withoutSocket()`:
+Import `DirectoryTree\Screenshot\PendingScreenshot` and the `Screenshot` facade. You can override the default on any capture with `socket()`, or opt out with `withoutSocket()`:
 
 ```php
 Screenshot::html($html)->withoutSocket()->capture();
@@ -235,7 +237,7 @@ Browser launch settings such as the binary, proxy, and custom flags are chosen b
 
 ## Configuration
 
-The published `config/screenshot.php` contains the executable path, browser options, and capture defaults:
+The published `config/screenshot.php` contains browser infrastructure settings: the executable path, launch options, socket directory, and lock timeout:
 
 ```php
 'binary' => env('SCREENSHOT_CHROME_PATH'),
@@ -246,24 +248,46 @@ The published `config/screenshot.php` contains the executable path, browser opti
 
 'socket_directory' => storage_path('framework/cache/screenshots'),
 'socket_lock_timeout' => 60000,
-
-'defaults' => [
-    'width' => 1024,
-    'height' => 768,
-    'maxWidth' => 2048,
-    'maxHeight' => 10000,
-    'format' => 'png',
-    'quality' => 80,
-    'timeout' => 60000,
-    'loadTimeout' => 15000,
-    'fullPage' => true,
-    'javascript' => false,
-    'failOnTimeout' => false,
-    'socket' => env('SCREENSHOT_SOCKET'),
-],
 ```
 
 Browser options use [Chrome PHP's option names](https://github.com/chrome-php/chrome#available-options). Screenshot always manages `keepAlive`, `windowSize`, and `sendSyncDefaultTimeout` to maintain capture lifetime and dimensions. Keep Chrome's sandbox enabled in production; `noSandbox` is available only as an explicit browser option for environments that require it.
+
+### Capture Defaults
+
+Register application-wide capture defaults in the `boot()` method of `AppServiceProvider` using the same fluent options as an individual screenshot:
+
+```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\PendingScreenshot;
+
+public function boot(): void
+{
+    Screenshot::configure(
+        fn (PendingScreenshot $screenshot) => $screenshot
+            ->size(width: 1280, height: 720)
+            ->jpeg(quality: 85)
+            ->socket(key: 'emails')
+    );
+}
+```
+
+The callback runs once on each new pending screenshot created by `html()`, `url()`, or `view()`. It should only set options; call `capture()`, `save()`, or `store()` outside the callback. Returning the screenshot is optional.
+
+Options apply in order: built-in defaults, the configuration callback, then per-capture overrides. Each screenshot receives its own options, so overrides do not affect subsequent captures:
+
+```php
+Screenshot::html($html)
+    ->size(width: 800, height: 600)
+    ->png()
+    ->withoutSocket()
+    ->capture();
+```
+
+Without a callback, screenshots use a 1024 × 768 viewport, PNG output, full-page capture bounded to 2048 × 10000 pixels, disabled JavaScript, and a dedicated browser. Browser operations time out after 60000 milliseconds; page loading times out after 15000 milliseconds and allows partial content by default. JPEG quality defaults to 80 when selected.
+
+Calling `configure()` again replaces the callback for future screenshots. `Screenshot::configure(null)` clears it. Existing pending screenshots retain their options. Register application defaults during boot; use per-capture methods for request- or job-specific overrides in long-running workers.
+
+Capture defaults are configured through this API, not through a `defaults` array in `config/screenshot.php`. When upgrading from the earlier preview, move those options into `configure()`, including any socket previously selected with `SCREENSHOT_SOCKET`. Keep callbacks in your service provider so the config file remains cacheable.
 
 ### Using PHP Without Laravel
 
@@ -282,6 +306,8 @@ $screenshot->html('<h1>Hello, world!</h1>')
     ->size(width: 800, height: 600)
     ->save(__DIR__.'/preview.png');
 ```
+
+The same callback API is available without Laravel via `$screenshot->configure(...)`.
 
 Named standalone sockets default to `sys_get_temp_dir().'/directorytree-screenshot'`; set an application-specific `socketDirectory` as shown above when sharing browsers.
 
@@ -339,7 +365,7 @@ Screenshot::assertClosed(key: 'emails');
 Screenshot::assertNotClosed(key: 'invoices');
 ```
 
-These assertions check calls to `close()` using exact socket keys; they do not verify a real browser's state. Captures and shutdown requests are recorded separately. Calling `Screenshot::fake()` again resets both records.
+These assertions check calls to `close()` using exact socket keys; they do not verify a real browser's state. Captures and shutdown requests are recorded separately. The fake preserves the current configuration callback and applies it to each new pending screenshot, so assertions inspect the same configured options as real captures. Calling `Screenshot::fake()` again resets both records while preserving the configuration. You can also call `configure()` on the fake to replace or clear its callback.
 
 The `DirectoryTree\Screenshot\Contracts\Driver` contract can also be replaced in Laravel's container or supplied to the standalone factory.
 

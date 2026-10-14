@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
@@ -9,22 +10,37 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 
-test('the provider resolves configured defaults and a replaceable driver', function () {
-    config(['screenshot.defaults.width' => 900]);
+test('a service provider configures defaults with a replaceable driver', function () {
     $driver = Mockery::mock(Driver::class);
     $driver->shouldReceive('capture')->once()->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->width === 900)
         ->andReturn(new ScreenshotResult(imageFixture()));
     $this->app->instance(Driver::class, $driver);
 
+    $this->app->register(new class($this->app) extends ServiceProvider
+    {
+        public function boot(): void
+        {
+            Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->size(900, 600));
+        }
+    });
+
     expect(Screenshot::html('hello')->capture()->width())->toBe(1);
 });
 
 test('the facade fake replaces the container factory and renders escaped Blade views', function () {
+    $calls = 0;
+    Screenshot::configure(function (PendingScreenshot $screenshot) use (&$calls) {
+        $calls++;
+        $screenshot->jpeg(85);
+    });
     Screenshot::fake();
+    expect($calls)->toBe(0);
     Screenshot::assertNothingCaptured();
     $this->app->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
-    Screenshot::assertCaptured(fn ($source, $type) => str_contains($source, '&lt;Steve&gt;') && $type === 'html');
+    Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
+        && $type === 'html' && $options->format === 'jpeg' && $options->quality === 85);
     Screenshot::assertCapturedCount(1);
+    expect($calls)->toBe(1);
 });
 
 test('captures can be stored on named Laravel disks', function () {
@@ -51,7 +67,7 @@ test('configuration has a publishable tag', function () {
 });
 
 test('the facade fake preserves configured socket defaults without starting a browser', function () {
-    config(['screenshot.defaults.socket' => 'emails']);
+    Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->socket('emails'));
     Screenshot::fake();
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
@@ -67,6 +83,8 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::fake();
     Screenshot::assertNothingClosed();
     Screenshot::assertNothingCaptured();
+    Screenshot::url('https://example.com')->capture();
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $type === 'url' && $options->socket === 'emails');
 });
 
 test('the configured socket directory is used for lifecycle operations', function () {

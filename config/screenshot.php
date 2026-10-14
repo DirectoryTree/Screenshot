@@ -32,30 +32,4 @@ return [
 
     'socket_lock_timeout' => 60000,
 
-    /*
-    |--------------------------------------------------------------------------
-    | Capture Defaults
-    |--------------------------------------------------------------------------
-    |
-    | Dimensions are in pixels. Timeouts are in milliseconds. JavaScript is
-    | disabled by default. Slow pages are stopped and captured as rendered
-    | unless failOnTimeout is enabled. These limits crop rather than resize.
-    |
-    */
-
-    'defaults' => [
-        'width' => 1024,
-        'height' => 768,
-        'maxWidth' => 2048,
-        'maxHeight' => 10000,
-        'format' => 'png',
-        'quality' => 80,
-        'timeout' => 60000,
-        'loadTimeout' => 15000,
-        'fullPage' => true,
-        'javascript' => false,
-        'failOnTimeout' => false,
-        'socket' => env('SCREENSHOT_SOCKET'),
-    ],
-
 ];

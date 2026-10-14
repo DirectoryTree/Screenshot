@@ -2,7 +2,6 @@
 
 namespace DirectoryTree\Screenshot\Facades;
 
-use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -10,6 +9,7 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use Illuminate\Support\Facades\Facade;
 
 /**
+ * @method static Factory configure(?callable $callback)
  * @method static PendingScreenshot html(string $html)
  * @method static PendingScreenshot url(string $url)
  * @method static PendingScreenshot view(string $view, array $data = [])
@@ -32,8 +32,7 @@ class Screenshot extends Facade
     {
         static::swap($fake = new ScreenshotFake(
             $result,
-            static::$app['view'],
-            new CaptureOptions(...static::$app['config']->get('screenshot.defaults', [])),
+            factory: static::getFacadeRoot(),
         ));
 
         return $fake;

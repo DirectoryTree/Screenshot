@@ -26,9 +26,8 @@ class ScreenshotServiceProvider extends ServiceProvider
 
         $this->app->singleton(Screenshot::class, function ($app) {
             return new Screenshot(
-                $app->make(Driver::class),
-                new CaptureOptions(...$app['config']->get('screenshot.defaults', [])),
-                $app['view'],
+                driver: $app->make(Driver::class),
+                views: $app['view'],
             );
         });
     }

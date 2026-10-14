@@ -28,8 +28,11 @@ class ScreenshotFake extends Screenshot implements Driver
         protected ?ScreenshotResult $result = null,
         ?ViewFactory $views = null,
         CaptureOptions $options = new CaptureOptions,
+        ?Screenshot $factory = null,
     ) {
-        parent::__construct($this, $options, $views);
+        parent::__construct($this, clone ($factory?->options ?? $options), $factory?->views ?? $views);
+
+        $this->configureUsing = $factory?->configureUsing;
     }
 
     /**

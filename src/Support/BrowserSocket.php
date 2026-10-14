@@ -89,6 +89,20 @@ class BrowserSocket
 
                     try {
                         $browser->close();
+                    } catch (SocketException $e) {
+                        // Chrome can disconnect before acknowledging Browser.close.
+                        // Retain the endpoint if a new connection still succeeds.
+                        try {
+                            $probe = $this->connect($uri, $connectionOptions);
+                        } catch (BrowserConnectionFailed) {
+                            $this->forget();
+
+                            return;
+                        }
+
+                        $this->disconnect($probe);
+
+                        throw $e;
                     } finally {
                         $this->disconnect($browser);
                     }
@@ -134,10 +148,20 @@ class BrowserSocket
      */
     protected function connect(string $uri, array $options): Browser
     {
+        $previous = set_error_handler(function (int $severity, string $message, string $file, int $line) use (&$previous) {
+            if ($severity === E_WARNING && str_starts_with($message, 'stream_socket_client():')) {
+                throw new BrowserConnectionFailed($message);
+            }
+
+            return $previous ? $previous($severity, $message, $file, $line) : false;
+        });
+
         try {
             return BrowserFactory::connectToBrowser($uri, $options);
         } catch (SocketException $e) {
             throw new BrowserConnectionFailed('The saved browser is no longer responding.', previous: $e);
+        } finally {
+            restore_error_handler();
         }
     }
 

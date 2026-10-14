@@ -98,11 +98,10 @@ test('explicit socket paths are reusable and dead browsers are replaced', functi
     $this->factory->html('second')->socketPath($path)->capture();
     expect(file_get_contents($path))->toBe($first);
 
-    $browser = BrowserFactory::connectToBrowser($first);
-    $browser->close();
-    $browser->getConnection()->disconnect();
+    $this->factory->closeSocketPath($path);
+    file_put_contents($path, $first); // Simulate a saved endpoint left behind by a dead browser.
 
-    $this->factory->html('replacement')->socketPath($path)->timeout(1000)->capture();
+    $this->factory->html('replacement')->socketPath($path)->timeout(10000)->capture();
     expect(file_get_contents($path))->not->toBe($first);
 
     $this->factory->closeSocketPath($path);

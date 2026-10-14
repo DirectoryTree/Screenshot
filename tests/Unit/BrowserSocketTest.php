@@ -7,6 +7,7 @@ use HeadlessChromium\Communication\Connection;
 use HeadlessChromium\Exception\BrowserConnectionFailed;
 use HeadlessChromium\Exception\OperationTimedOut;
 use Illuminate\Filesystem\Filesystem;
+use Wrench\Exception\SocketException;
 
 beforeEach(function () {
     $this->directory = sys_get_temp_dir().'/screenshot-sockets-'.bin2hex(random_bytes(8));
@@ -184,5 +185,36 @@ test('shutdown does not forget a browser when its response times out', function 
     $socket = socketWithConnector($this->path, fn () => throw new OperationTimedOut);
 
     expect(fn () => $socket->close())->toThrow(OperationTimedOut::class);
+    expect(file_exists($this->path))->toBeTrue();
+});
+
+test('shutdown accepts a disconnect after Chrome has stopped', function () {
+    file_put_contents($this->path, 'ws://localhost/closing');
+    $browser = socketBrowser();
+    $browser->shouldReceive('close')->once()->andThrow(new SocketException('disconnected'));
+    $attempt = 0;
+    $socket = socketWithConnector($this->path, function () use ($browser, &$attempt) {
+        if ($attempt++ === 0) {
+            return $browser;
+        }
+
+        throw new BrowserConnectionFailed;
+    });
+
+    $socket->close();
+    expect(file_exists($this->path))->toBeFalse();
+});
+
+test('shutdown retains the socket when a disconnected browser is still reachable', function () {
+    file_put_contents($this->path, 'ws://localhost/running');
+    $browser = socketBrowser();
+    $browser->shouldReceive('close')->once()->andThrow(new SocketException('disconnected'));
+    $probe = socketBrowser();
+    $attempt = 0;
+    $socket = socketWithConnector($this->path, function () use ($browser, $probe, &$attempt) {
+        return $attempt++ === 0 ? $browser : $probe;
+    });
+
+    expect(fn () => $socket->close())->toThrow(SocketException::class);
     expect(file_exists($this->path))->toBeTrue();
 });

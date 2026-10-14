@@ -137,16 +137,6 @@ class PendingScreenshot
     }
 
     /**
-     * Capture the screenshot.
-     */
-    public function capture(): ScreenshotResult
-    {
-        $this->options->validate();
-
-        return $this->driver->capture($this->source, $this->type, clone $this->options);
-    }
-
-    /**
      * Capture the screenshot and save it to a local path.
      */
     public function save(string $path): ScreenshotResult
@@ -160,5 +150,15 @@ class PendingScreenshot
     public function store(string $path, ?string $disk = null): ScreenshotResult
     {
         return $this->capture()->store($path, $disk);
+    }
+
+    /**
+     * Capture the screenshot.
+     */
+    public function capture(): ScreenshotResult
+    {
+        $this->options->validate();
+
+        return $this->driver->capture($this->source, $this->type, clone $this->options);
     }
 }

@@ -60,7 +60,7 @@ test('options cannot leak between captures', function () {
 
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
-    $options = new ImageOptions(width: 900);
+    $options = ImageOptions::make()->setSize(900, 768);
     $first = new PendingImage($fake, 'first', SourceType::Html, $options);
     $second = new PendingImage($fake, 'second', SourceType::Html, $options);
 
@@ -83,7 +83,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ImageResult(imageFixture());
     });
-    $pending = new PendingImage($driver, 'hello', SourceType::Html, new ImageOptions);
+    $pending = new PendingImage($driver, 'hello', SourceType::Html, ImageOptions::make());
     $pending->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);
@@ -98,7 +98,7 @@ test('invalid mutations leave all pending screenshot options unchanged', functio
     $pending = $fake->html('hello');
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options == new ImageOptions);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options == ImageOptions::make());
 })->with([
     'zero width' => ['size', [0, 768]],
     'invalid height' => ['size', [500, -1]],
@@ -132,17 +132,18 @@ test('standalone views require a view factory', function () {
     expect(fn () => (new Screenshot)->view('card'))->toThrow(LogicException::class);
 });
 
-test('unsafe capture options are rejected', function ($values) {
-    expect(fn () => new ImageOptions(...$values))->toThrow(InvalidArgumentException::class);
+test('unsafe capture options are rejected', function ($method, $arguments) {
+    expect(fn () => ImageOptions::make()->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
 })->with([
-    [['width' => 0]], [['height' => -1]], [['width' => 16385]],
-    [['width' => 10000, 'height' => 10000]], [['maxWidth' => 0]],
-    [['maxWidth' => 10000, 'maxHeight' => 10000]],
-    [['quality' => -1]], [['quality' => 101]], [['browserTimeout' => 0]], [['loadTimeout' => 0]],
+    ['setSize', [0, 768]], ['setSize', [1024, -1]], ['setSize', [16385, 768]],
+    ['setSize', [10000, 10000]], ['setMaxSize', [0, 10000]],
+    ['setMaxSize', [10000, 10000]],
+    ['setFormat', [OutputFormat::Jpeg, -1]], ['setFormat', [OutputFormat::Jpeg, 101]],
+    ['setBrowserTimeout', [0]], ['setLoadTimeout', [0]],
 ]);
 
 test('socket keys can be overridden and disabled without changing defaults', function () {
-    $fake = new ScreenshotFake(options: new ImageOptions(socket: 'default'));
+    $fake = new ScreenshotFake(options: ImageOptions::make()->setSocket('default'));
     $fake->html('named')->socket('old')->socket('emails')->capture();
     $fake->html('dedicated')->withoutSocket()->capture();
     $fake->html('default')->capture();
@@ -152,13 +153,13 @@ test('socket keys can be overridden and disabled without changing defaults', fun
 });
 
 test('empty socket keys fail before a capture starts', function ($key) {
-    expect(fn () => new ImageOptions(socket: $key))->toThrow(InvalidArgumentException::class);
+    expect(fn () => ImageOptions::make()->setSocket($key))->toThrow(InvalidArgumentException::class);
 })->with(['', ' ']);
 
 test('image builders reject PDF defaults before calling the driver', function () {
     $driver = Mockery::mock(Driver::class);
     $driver->shouldNotReceive('capture');
 
-    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, new ImageOptions(format: OutputFormat::Pdf)))
+    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, ImageOptions::make()->setFormat(OutputFormat::Pdf)))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
 });

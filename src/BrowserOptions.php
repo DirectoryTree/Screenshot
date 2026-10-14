@@ -9,59 +9,52 @@ abstract class BrowserOptions
     /**
      * The browser viewport width in pixels.
      */
-    protected int $width;
+    protected int $width = 1024;
 
     /**
      * The browser viewport height in pixels.
      */
-    protected int $height;
+    protected int $height = 768;
 
     /**
      * The browser-operation timeout in milliseconds.
      */
-    protected int $browserTimeout;
+    protected int $browserTimeout = 60000;
 
     /**
      * The page-load timeout in milliseconds.
      */
-    protected int $loadTimeout;
+    protected int $loadTimeout = 15000;
 
     /**
      * Whether JavaScript execution is enabled.
      */
-    protected bool $javascript;
+    protected bool $javascript = false;
 
     /**
      * Whether page-load timeouts should throw.
      */
-    protected bool $failOnTimeout;
+    protected bool $failOnTimeout = false;
 
     /**
      * The shared browser key, if configured.
      */
-    protected ?string $socket;
+    protected ?string $socket = null;
 
     /**
-     * Create browser options. Dimensions are pixels and timeouts are milliseconds.
+     * Create options using the declared defaults.
      */
-    public function __construct(
-        int $width = 1024,
-        int $height = 768,
-        int $browserTimeout = 60000,
-        int $loadTimeout = 15000,
-        bool $javascript = false,
-        bool $failOnTimeout = false,
-        ?string $socket = null,
-    ) {
-        $this->width = $width;
-        $this->height = $height;
-        $this->browserTimeout = $browserTimeout;
-        $this->loadTimeout = $loadTimeout;
-        $this->javascript = $javascript;
-        $this->failOnTimeout = $failOnTimeout;
-        $this->socket = $socket;
-
+    protected function __construct()
+    {
         $this->validate();
+    }
+
+    /**
+     * Create a fresh set of options.
+     */
+    public static function make(): static
+    {
+        return new static;
     }
 
     /**

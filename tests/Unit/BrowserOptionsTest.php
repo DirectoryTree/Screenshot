@@ -7,18 +7,18 @@ use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
-test('both output options validate shared browser settings on construction', function ($class, $settings) {
-    expect(fn () => new $class(...$settings))->toThrow(InvalidArgumentException::class);
+test('both output options validate shared browser settings when set', function ($class, $method, $arguments) {
+    expect(fn () => $class::make()->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
 })->with([ImageOptions::class, PdfOptions::class])->with([
-    'width' => [['width' => 0]],
-    'height' => [['height' => 20000]],
-    'browser timeout' => [['browserTimeout' => 0]],
-    'load timeout' => [['loadTimeout' => -1]],
-    'socket' => [['socket' => ' ']],
+    'width' => ['setSize', [0, 768]],
+    'height' => ['setSize', [1024, 20000]],
+    'browser timeout' => ['setBrowserTimeout', [0]],
+    'load timeout' => ['setLoadTimeout', [-1]],
+    'socket' => ['setSocket', [' ']],
 ]);
 
 test('PDF options reject invalid browser changes without modifying either setting', function () {
-    $options = new PdfOptions(width: 400, height: 300, loadTimeout: 500, browserTimeout: 1000);
+    $options = PdfOptions::make()->setSize(400, 300)->setTimeouts(load: 500, browser: 1000);
 
     expect(fn () => $options->setSize(800, 0))->toThrow(InvalidArgumentException::class);
     expect(fn () => $options->setTimeouts(load: 100, browser: 0))->toThrow(InvalidArgumentException::class);
@@ -27,7 +27,7 @@ test('PDF options reject invalid browser changes without modifying either settin
 });
 
 test('PDF captures retain shared settings while applying print overrides to one options object', function () {
-    $fake = new ScreenshotFake(options: new ImageOptions(width: 900, height: 600, javascript: true));
+    $fake = new ScreenshotFake(options: ImageOptions::make()->setSize(900, 600)->setJavascript(true));
     $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
         ->size(800, 500)->timeouts(load: 2000, browser: 4000)->socket('documents')->paper(PaperSize::Letter));
     $image = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)
@@ -50,7 +50,36 @@ test('PDF captures retain shared settings while applying print overrides to one 
 });
 
 test('image options cannot switch to PDF or partially update quality', function () {
-    $options = new ImageOptions;
+    $options = ImageOptions::make();
     expect(fn () => $options->setFormat(OutputFormat::Pdf, 95))->toThrow(InvalidArgumentException::class);
     expect($options->getFormat())->toBe(OutputFormat::Png)->and($options->getQuality())->toBe(80);
+});
+
+test('option factories return independent instances with browser defaults', function ($class) {
+    $first = $class::make()->setSize(400, 300)->setSocket('first')->setJavascript(true);
+    $second = $class::make();
+
+    expect($first)->toBeInstanceOf($class)->not->toBe($second)
+        ->and($second->getWidth())->toBe(1024)->and($second->getHeight())->toBe(768)
+        ->and($second->getBrowserTimeout())->toBe(60000)->and($second->getLoadTimeout())->toBe(15000)
+        ->and($second->getSocket())->toBeNull()->and($second->getJavascript())->toBeFalse()
+        ->and($second->getFailOnTimeout())->toBeFalse();
+})->with([ImageOptions::class, PdfOptions::class]);
+
+test('options require factory construction', function ($class) {
+    expect(fn () => new $class)->toThrow(Error::class, 'protected');
+})->with([ImageOptions::class, PdfOptions::class]);
+
+class CustomImageOptions extends ImageOptions
+{
+    protected int $width = 1200;
+}
+
+test('the inherited factory respects subclass defaults and validated setters', function () {
+    $options = CustomImageOptions::make();
+
+    expect($options)->toBeInstanceOf(CustomImageOptions::class)
+        ->and($options->getWidth())->toBe(1200)
+        ->and($options->setSize(800, 600))->toBe($options);
+    expect(fn () => $options->setSize(0, 600))->toThrow(InvalidArgumentException::class);
 });

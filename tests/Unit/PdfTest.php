@@ -103,7 +103,7 @@ test('PDF fake assertions fail when no matching document was captured', function
 });
 
 test('paper dimensions and margins are converted from millimeters to inches', function () {
-    $options = (new PdfOptions)->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
+    $options = PdfOptions::make()->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
     $parameters = $options->toArray();
 
     expect($parameters['paperWidth'])->toEqualWithDelta(8.5, 0.00001)
@@ -113,9 +113,9 @@ test('paper dimensions and margins are converted from millimeters to inches', fu
 });
 
 test('invalid print settings leave the entire PDF configuration unchanged', function ($method, $arguments) {
-    $options = new PdfOptions;
+    $options = PdfOptions::make();
     expect(fn () => $options->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
-    expect($options)->toEqual(new PdfOptions);
+    expect($options)->toEqual(PdfOptions::make());
 })->with([
     ['setPaperSize', [0, 297]],
     ['setPaperSize', [210, INF]],
@@ -127,7 +127,7 @@ test('invalid print settings leave the entire PDF configuration unchanged', func
 ]);
 
 test('orientation changes cannot invalidate the printable area', function () {
-    $options = new PdfOptions(marginTop: 120, marginBottom: 120);
+    $options = PdfOptions::make()->setMargins(120, 10, 120, 10);
 
     expect(fn () => $options->setLandscape(true))->toThrow(InvalidArgumentException::class);
     expect($options->getLandscape())->toBeFalse();
@@ -156,4 +156,18 @@ test('image and PDF builders save their own result types without changing each o
         unlink($imagePath);
         unlink($pdfPath);
     }
+});
+
+test('combined layout changes validate the final paper and margins atomically', function () {
+    $options = PdfOptions::make()->setMargins(20, 20, 20, 20)->setSocket('invoices');
+
+    expect($options->setLayout(width: 30, height: 30, top: 0, right: 0, bottom: 0, left: 0))->toBe($options)
+        ->and($options->getPaperWidth())->toBe(30.0)
+        ->and($options->getMargins())->toBe(['top' => 0.0, 'right' => 0.0, 'bottom' => 0.0, 'left' => 0.0])
+        ->and($options->getSocket())->toBe('invoices');
+    $before = clone $options;
+
+    expect(fn () => $options->setLayout(width: 10, height: 10, landscape: true, top: 10))
+        ->toThrow(InvalidArgumentException::class);
+    expect($options)->toEqual($before);
 });

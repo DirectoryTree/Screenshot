@@ -20,13 +20,20 @@ class Screenshot
     protected array $configureUsing = [];
 
     /**
+     * The default image and browser options.
+     */
+    protected ImageOptions $options;
+
+    /**
      * Create a new screenshot factory.
      */
     public function __construct(
         protected Driver $driver = new ChromeDriver,
-        protected ImageOptions $options = new ImageOptions,
+        ?ImageOptions $options = null,
         protected ?ViewFactory $views = null,
-    ) {}
+    ) {
+        $this->options = $options ?? ImageOptions::make();
+    }
 
     /**
      * Set or clear the default configuration callback for an output format.

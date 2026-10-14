@@ -303,7 +303,7 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture()`. Blade views are rendered to HTML first. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs.
+Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture()`. Blade views are rendered to HTML first. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs. Create option objects with `ImageOptions::make()` or `PdfOptions::make()` and configure them through their setters.
 
 ## Testing
 

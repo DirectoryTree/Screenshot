@@ -19,7 +19,7 @@ test('standard paper sizes reach the driver with their dimensions in millimeters
 ]);
 
 test('selecting a smaller paper cannot invalidate the printable area', function () {
-    $options = new PdfOptions(marginLeft: 80, marginRight: 80);
+    $options = PdfOptions::make()->setMargins(10, 80, 10, 80);
     $original = clone $options;
 
     expect(fn () => $options->setPaper(PaperSize::A5))->toThrow(InvalidArgumentException::class);

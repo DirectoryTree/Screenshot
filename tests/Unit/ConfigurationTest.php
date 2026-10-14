@@ -146,7 +146,7 @@ test('failed PDF configuration does not capture or contaminate a subsequent atte
 });
 
 test('fakes preserve all format callbacks and independent baseline options', function () {
-    $options = new ImageOptions(width: 900);
+    $options = ImageOptions::make()->setSize(900, 768);
     $factory = new Screenshot(options: $options);
     $factory->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image->jpeg(85));
     $factory->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper(PaperSize::Letter));

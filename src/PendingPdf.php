@@ -11,6 +11,11 @@ class PendingPdf
     use AppliesConfiguration, ConfiguresBrowser;
 
     /**
+     * The browser and print options for this capture.
+     */
+    protected PdfOptions $options;
+
+    /**
      * Explicit print settings, applied together after format defaults.
      *
      * @var array{float, float}|null
@@ -46,10 +51,12 @@ class PendingPdf
         protected Driver $driver,
         protected string $source,
         protected SourceType $type,
-        protected PdfOptions $options = new PdfOptions,
+        ?PdfOptions $options = null,
         protected array $configureUsing = [],
         array $overrides = [],
     ) {
+        $options ??= PdfOptions::make();
+
         $this->defaults = clone $options;
         $this->options = clone $options;
         $this->overrides = $overrides;
@@ -160,16 +167,13 @@ class PendingPdf
         [$width, $height] = $this->paperOverride ?? [$defaults->getPaperWidth(), $defaults->getPaperHeight()];
         [$top, $right, $bottom, $left] = $this->marginsOverride ?? array_values($defaults->getMargins());
 
-        return new PdfOptions(
-            width: $defaults->getWidth(), height: $defaults->getHeight(),
-            browserTimeout: $defaults->getBrowserTimeout(), loadTimeout: $defaults->getLoadTimeout(),
-            javascript: $defaults->getJavascript(), failOnTimeout: $defaults->getFailOnTimeout(),
-            socket: $defaults->getSocket(),
-            paperWidth: $width, paperHeight: $height,
-            marginTop: $top, marginRight: $right, marginBottom: $bottom, marginLeft: $left,
-            landscape: $this->landscapeOverride ?? $defaults->getLandscape(),
-            background: $this->backgroundOverride ?? $defaults->getBackground(),
-            preferCssPageSize: $this->preferCssPageSizeOverride ?? $defaults->getPreferCssPageSize(),
-        );
+        return (clone $defaults)
+            ->setLayout(
+                width: $width, height: $height,
+                landscape: $this->landscapeOverride ?? $defaults->getLandscape(),
+                top: $top, right: $right, bottom: $bottom, left: $left,
+            )
+            ->setBackground($this->backgroundOverride ?? $defaults->getBackground())
+            ->setPreferCssPageSize($this->preferCssPageSizeOverride ?? $defaults->getPreferCssPageSize());
     }
 }

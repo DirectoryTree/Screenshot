@@ -9,93 +9,59 @@ class PdfOptions extends BrowserOptions
     /**
      * The paper width in millimeters, before orientation.
      */
-    protected float $paperWidth;
+    protected float $paperWidth = 210;
 
     /**
      * The paper height in millimeters, before orientation.
      */
-    protected float $paperHeight;
+    protected float $paperHeight = 297;
 
     /**
      * The top page margin in millimeters.
      */
-    protected float $marginTop;
+    protected float $marginTop = 10;
 
     /**
      * The right page margin in millimeters.
      */
-    protected float $marginRight;
+    protected float $marginRight = 10;
 
     /**
      * The bottom page margin in millimeters.
      */
-    protected float $marginBottom;
+    protected float $marginBottom = 10;
 
     /**
      * The left page margin in millimeters.
      */
-    protected float $marginLeft;
+    protected float $marginLeft = 10;
 
     /**
      * Whether landscape orientation is enabled.
      */
-    protected bool $landscape;
+    protected bool $landscape = false;
 
     /**
      * Whether background colors and images are printed.
      */
-    protected bool $background;
+    protected bool $background = true;
 
     /**
      * Whether CSS @page sizes take precedence.
      */
-    protected bool $preferCssPageSize;
-
-    /**
-     * Create print options. Paper dimensions and margins are in millimeters.
-     */
-    public function __construct(
-        float $paperWidth = 210,
-        float $paperHeight = 297,
-        float $marginTop = 10,
-        float $marginRight = 10,
-        float $marginBottom = 10,
-        float $marginLeft = 10,
-        bool $landscape = false,
-        bool $background = true,
-        bool $preferCssPageSize = false,
-        int $width = 1024,
-        int $height = 768,
-        int $browserTimeout = 60000,
-        int $loadTimeout = 15000,
-        bool $javascript = false,
-        bool $failOnTimeout = false,
-        ?string $socket = null,
-    ) {
-        $this->paperWidth = $paperWidth;
-        $this->paperHeight = $paperHeight;
-        $this->marginTop = $marginTop;
-        $this->marginRight = $marginRight;
-        $this->marginBottom = $marginBottom;
-        $this->marginLeft = $marginLeft;
-        $this->landscape = $landscape;
-        $this->background = $background;
-        $this->preferCssPageSize = $preferCssPageSize;
-
-        parent::__construct($width, $height, $browserTimeout, $loadTimeout, $javascript, $failOnTimeout, $socket);
-    }
+    protected bool $preferCssPageSize = false;
 
     /**
      * Create PDF options from shared browser settings.
      */
     public static function fromBrowserOptions(BrowserOptions $options): static
     {
-        return new static(
-            width: $options->getWidth(), height: $options->getHeight(),
-            browserTimeout: $options->getBrowserTimeout(), loadTimeout: $options->getLoadTimeout(),
-            javascript: $options->getJavascript(), failOnTimeout: $options->getFailOnTimeout(),
-            socket: $options->getSocket(),
-        );
+        return static::make()
+            ->setSize($options->getWidth(), $options->getHeight())
+            ->setTimeouts($options->getLoadTimeout(), $options->getBrowserTimeout())
+            ->setJavascript($options->getJavascript())
+            ->setFailOnTimeout($options->getFailOnTimeout())
+            ->setSocket($options->getSocket());
     }
 
     /**
@@ -137,12 +103,7 @@ class PdfOptions extends BrowserOptions
      */
     public function setPaperSize(float $width, float $height): static
     {
-        $this->validateLayout($width, $height, $this->landscape, $this->marginTop, $this->marginRight, $this->marginBottom, $this->marginLeft);
-
-        $this->paperWidth = $width;
-        $this->paperHeight = $height;
-
-        return $this;
+        return $this->setLayout(width: $width, height: $height);
     }
 
     /**
@@ -165,14 +126,7 @@ class PdfOptions extends BrowserOptions
      */
     public function setMargins(float $top, float $right, float $bottom, float $left): static
     {
-        $this->validateLayout($this->paperWidth, $this->paperHeight, $this->landscape, $top, $right, $bottom, $left);
-
-        $this->marginTop = $top;
-        $this->marginRight = $right;
-        $this->marginBottom = $bottom;
-        $this->marginLeft = $left;
-
-        return $this;
+        return $this->setLayout(top: $top, right: $right, bottom: $bottom, left: $left);
     }
 
     /**
@@ -188,9 +142,39 @@ class PdfOptions extends BrowserOptions
      */
     public function setLandscape(bool $value): static
     {
-        $this->validateLayout($this->paperWidth, $this->paperHeight, $value, $this->marginTop, $this->marginRight, $this->marginBottom, $this->marginLeft);
+        return $this->setLayout(landscape: $value);
+    }
 
-        $this->landscape = $value;
+    /**
+     * Validate and apply paper, orientation, and margins together.
+     * Omitted values retain their current settings.
+     */
+    public function setLayout(
+        ?float $width = null,
+        ?float $height = null,
+        ?bool $landscape = null,
+        ?float $top = null,
+        ?float $right = null,
+        ?float $bottom = null,
+        ?float $left = null,
+    ): static {
+        $width ??= $this->paperWidth;
+        $height ??= $this->paperHeight;
+        $landscape ??= $this->landscape;
+        $top ??= $this->marginTop;
+        $right ??= $this->marginRight;
+        $bottom ??= $this->marginBottom;
+        $left ??= $this->marginLeft;
+
+        $this->validateLayout($width, $height, $landscape, $top, $right, $bottom, $left);
+
+        $this->paperWidth = $width;
+        $this->paperHeight = $height;
+        $this->landscape = $landscape;
+        $this->marginTop = $top;
+        $this->marginRight = $right;
+        $this->marginBottom = $bottom;
+        $this->marginLeft = $left;
 
         return $this;
     }

@@ -17,8 +17,7 @@ use HeadlessChromium\PageUtils\PageScreenshot;
 test('image strategies capture bounded pages with the configured timeout and encoding', function ($class, $format, $fullPage) {
     $page = Mockery::mock(Page::class);
     $image = Mockery::mock(PageScreenshot::class);
-    $options = new ImageOptions(width: 640, height: 480, maxWidth: 500, maxHeight: 600,
-        format: $format, quality: 92, browserTimeout: 1234, fullPage: $fullPage);
+    $options = ImageOptions::make()->setSize(640, 480)->setMaxSize(500, 600)->setFormat($format, 92)->setTimeouts(load: 15000, browser: 1234)->setFullPage($fullPage);
 
     if ($fullPage) {
         $page->shouldReceive('getFullPageClip')->once()->with(1234)->andReturn(new Clip(0, 0, 800, 2000));
@@ -52,7 +51,7 @@ test('image strategies capture bounded pages with the configured timeout and enc
 test('the PDF strategy prints its layout without screenshot clipping', function () {
     $page = Mockery::mock(Page::class);
     $document = Mockery::mock(PagePdf::class);
-    $options = (new PdfOptions(browserTimeout: 4321))->setPaper(PaperSize::Letter)
+    $options = (PdfOptions::make()->setTimeouts(load: 15000, browser: 4321))->setPaper(PaperSize::Letter)
         ->setLandscape(true)->setMargins(25.4, 12.7, 25.4, 12.7)
         ->setBackground(false)->setPreferCssPageSize(true);
 

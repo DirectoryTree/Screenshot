@@ -7,22 +7,53 @@ use InvalidArgumentException;
 class ImageOptions extends BrowserOptions
 {
     /**
+     * The maximum captured width in pixels.
+     */
+    protected int $maxWidth;
+
+    /**
+     * The maximum captured height in pixels.
+     */
+    protected int $maxHeight;
+
+    /**
+     * The image output format.
+     */
+    protected OutputFormat $format;
+
+    /**
+     * The JPEG quality.
+     */
+    protected int $quality;
+
+    /**
+     * Whether to capture the full document.
+     */
+    protected bool $fullPage;
+
+    /**
      * Create a new set of capture options. Timeouts are in milliseconds.
      */
     public function __construct(
         int $width = 1024,
         int $height = 768,
-        protected int $maxWidth = 2048,
-        protected int $maxHeight = 10000,
-        protected OutputFormat $format = OutputFormat::Png,
-        protected int $quality = 80,
+        int $maxWidth = 2048,
+        int $maxHeight = 10000,
+        OutputFormat $format = OutputFormat::Png,
+        int $quality = 80,
         int $browserTimeout = 60000,
         int $loadTimeout = 15000,
-        protected bool $fullPage = true,
+        bool $fullPage = true,
         bool $javascript = false,
         bool $failOnTimeout = false,
         ?string $socket = null,
     ) {
+        $this->maxWidth = $maxWidth;
+        $this->maxHeight = $maxHeight;
+        $this->format = $format;
+        $this->quality = $quality;
+        $this->fullPage = $fullPage;
+
         parent::__construct($width, $height, $browserTimeout, $loadTimeout, $javascript, $failOnTimeout, $socket);
     }
 

@@ -7,17 +7,60 @@ use InvalidArgumentException;
 abstract class BrowserOptions
 {
     /**
+     * The browser viewport width in pixels.
+     */
+    protected int $width;
+
+    /**
+     * The browser viewport height in pixels.
+     */
+    protected int $height;
+
+    /**
+     * The browser-operation timeout in milliseconds.
+     */
+    protected int $browserTimeout;
+
+    /**
+     * The page-load timeout in milliseconds.
+     */
+    protected int $loadTimeout;
+
+    /**
+     * Whether JavaScript execution is enabled.
+     */
+    protected bool $javascript;
+
+    /**
+     * Whether page-load timeouts should throw.
+     */
+    protected bool $failOnTimeout;
+
+    /**
+     * The shared browser key, if configured.
+     */
+    protected ?string $socket;
+
+    /**
      * Create browser options. Dimensions are pixels and timeouts are milliseconds.
      */
     public function __construct(
-        protected int $width = 1024,
-        protected int $height = 768,
-        protected int $browserTimeout = 60000,
-        protected int $loadTimeout = 15000,
-        protected bool $javascript = false,
-        protected bool $failOnTimeout = false,
-        protected ?string $socket = null,
+        int $width = 1024,
+        int $height = 768,
+        int $browserTimeout = 60000,
+        int $loadTimeout = 15000,
+        bool $javascript = false,
+        bool $failOnTimeout = false,
+        ?string $socket = null,
     ) {
+        $this->width = $width;
+        $this->height = $height;
+        $this->browserTimeout = $browserTimeout;
+        $this->loadTimeout = $loadTimeout;
+        $this->javascript = $javascript;
+        $this->failOnTimeout = $failOnTimeout;
+        $this->socket = $socket;
+
         $this->validate();
     }
 

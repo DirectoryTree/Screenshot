@@ -7,18 +7,63 @@ use InvalidArgumentException;
 class PdfOptions extends BrowserOptions
 {
     /**
+     * The paper width in millimeters, before orientation.
+     */
+    protected float $paperWidth;
+
+    /**
+     * The paper height in millimeters, before orientation.
+     */
+    protected float $paperHeight;
+
+    /**
+     * The top page margin in millimeters.
+     */
+    protected float $marginTop;
+
+    /**
+     * The right page margin in millimeters.
+     */
+    protected float $marginRight;
+
+    /**
+     * The bottom page margin in millimeters.
+     */
+    protected float $marginBottom;
+
+    /**
+     * The left page margin in millimeters.
+     */
+    protected float $marginLeft;
+
+    /**
+     * Whether landscape orientation is enabled.
+     */
+    protected bool $landscape;
+
+    /**
+     * Whether background colors and images are printed.
+     */
+    protected bool $background;
+
+    /**
+     * Whether CSS @page sizes take precedence.
+     */
+    protected bool $preferCssPageSize;
+
+    /**
      * Create print options. Paper dimensions and margins are in millimeters.
      */
     public function __construct(
-        protected float $paperWidth = 210,
-        protected float $paperHeight = 297,
-        protected float $marginTop = 10,
-        protected float $marginRight = 10,
-        protected float $marginBottom = 10,
-        protected float $marginLeft = 10,
-        protected bool $landscape = false,
-        protected bool $background = true,
-        protected bool $preferCssPageSize = false,
+        float $paperWidth = 210,
+        float $paperHeight = 297,
+        float $marginTop = 10,
+        float $marginRight = 10,
+        float $marginBottom = 10,
+        float $marginLeft = 10,
+        bool $landscape = false,
+        bool $background = true,
+        bool $preferCssPageSize = false,
         int $width = 1024,
         int $height = 768,
         int $browserTimeout = 60000,
@@ -27,6 +72,16 @@ class PdfOptions extends BrowserOptions
         bool $failOnTimeout = false,
         ?string $socket = null,
     ) {
+        $this->paperWidth = $paperWidth;
+        $this->paperHeight = $paperHeight;
+        $this->marginTop = $marginTop;
+        $this->marginRight = $marginRight;
+        $this->marginBottom = $marginBottom;
+        $this->marginLeft = $marginLeft;
+        $this->landscape = $landscape;
+        $this->background = $background;
+        $this->preferCssPageSize = $preferCssPageSize;
+
         parent::__construct($width, $height, $browserTimeout, $loadTimeout, $javascript, $failOnTimeout, $socket);
     }
 

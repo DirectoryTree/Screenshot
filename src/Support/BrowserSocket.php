@@ -138,9 +138,12 @@ class BrowserSocket
     protected function isListening(string $uri): bool
     {
         $parts = parse_url($uri);
+
         $address = 'tcp://'.$parts['host'].':'.($parts['port'] ?? ($parts['scheme'] === 'wss' ? 443 : 80));
 
-        $connection = ErrorHandler::suppress(fn () => stream_socket_client($address, $errno, $error, 0.1));
+        $connection = ErrorHandler::suppress(
+            fn () => stream_socket_client($address, $errno, $error, 0.1)
+        );
 
         if ($connection === false) {
             return false;

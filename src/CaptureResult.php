@@ -47,7 +47,9 @@ abstract class CaptureResult
      */
     public function save(string $path): static
     {
-        $written = ErrorHandler::suppress(fn () => file_put_contents($path, $this->contents));
+        $written = ErrorHandler::suppress(
+            fn () => file_put_contents($path, $this->contents)
+        );
 
         if ($written !== strlen($this->contents)) {
             throw new RuntimeException("Unable to save the capture to [{$path}].");

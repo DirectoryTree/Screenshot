@@ -1,6 +1,6 @@
 <?php
 
-namespace DirectoryTree\Screenshot;
+namespace DirectoryTree\Screenshot\Enums;
 
 enum PaperSize: string
 {

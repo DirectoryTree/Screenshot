@@ -161,7 +161,7 @@ Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a 
 Use `pdf()` to print HTML, a Blade view, or a URL as a PDF:
 
 ```php
-use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 
 Screenshot::view('invoices.preview', ['invoice' => $invoice])
     ->socket(key: 'invoices')
@@ -232,8 +232,8 @@ Configure defaults for each output format in your `AppServiceProvider::boot()` m
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
-use DirectoryTree\Screenshot\OutputFormat;
-use DirectoryTree\Screenshot\PaperSize;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 
@@ -312,7 +312,7 @@ Use the facade fake to test your application without starting Chrome:
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\SourceType;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use Illuminate\Support\Facades\Storage;
 
 Storage::fake('screenshots');

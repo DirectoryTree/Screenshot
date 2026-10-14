@@ -2,11 +2,11 @@
 
 namespace DirectoryTree\Screenshot\Contracts;
 
+use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
-use DirectoryTree\Screenshot\SourceType;
 
 interface Driver
 {

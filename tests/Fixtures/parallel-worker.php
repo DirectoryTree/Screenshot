@@ -2,8 +2,8 @@
 
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\SourceType;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
 

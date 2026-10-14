@@ -2,8 +2,8 @@
 
 namespace DirectoryTree\Screenshot\Facades;
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot as Factory;

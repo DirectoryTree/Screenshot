@@ -1,7 +1,7 @@
 <?php
 
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\OutputFormat;
 
 test('format and quality updates reject invalid input without changing either value', function () {
     $options = ImageOptions::make()->setFormat(OutputFormat::Png, 85);

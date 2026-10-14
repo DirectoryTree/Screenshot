@@ -195,17 +195,9 @@ Screenshot::html($html)
 
 Workers using the same key and socket directory connect to the same Chrome instance. Each capture gets its own page, viewport, and JavaScript settings. Captures can run at the same time; the startup lock is released before rendering begins. Different keys select different browsers.
 
-You can also provide an explicit local socket file:
+Screenshot stores Chrome's WebSocket address (`ws://...`) in a local file; it is not a Unix domain socket. If no live browser is available, Screenshot starts one and atomically saves its address. Concurrent startup uses filesystem locks, so cooperating workers do not create competing browsers. A dead or unresponsive saved connection is replaced on the next capture, subject to Chrome being able to start. Capture failures are not automatically retried.
 
-```php
-Screenshot::html($html)
-    ->socketPath(storage_path('app/chromium.socket'))
-    ->capture();
-```
-
-The file contains Chrome's WebSocket address (`ws://...`); it is not a Unix domain socket. If no live browser is available, Screenshot starts one and atomically saves its address. Concurrent startup uses filesystem locks, so cooperating workers do not create competing browsers. A dead or unresponsive saved connection is replaced on the next capture, subject to Chrome being able to start. Capture failures are not automatically retried.
-
-A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running. An explicit socket path should be absolute and identical in every worker.
+A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running.
 
 To enable a named socket by default:
 
@@ -213,7 +205,7 @@ To enable a named socket by default:
 SCREENSHOT_SOCKET=emails
 ```
 
-Or set `defaults.socket` / `defaults.socketPath` in `config/screenshot.php`, specifying only one. You can override the default on any capture with `socket()` or `socketPath()`, or opt out with `withoutSocket()`:
+Or set `defaults.socket` in `config/screenshot.php`. You can override the default on any capture with `socket()`, or opt out with `withoutSocket()`:
 
 ```php
 Screenshot::html($html)->withoutSocket()->capture();
@@ -227,12 +219,11 @@ Shared browsers outlive individual captures and worker exits. Close a shared bro
 
 ```php
 Screenshot::closeSocket('emails');
-Screenshot::closeSocketPath(storage_path('app/chromium.socket'));
 ```
 
 Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
 
-Only use these lifecycle methods for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
+Only use this lifecycle method for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
 
 Browser launch settings such as the binary, proxy, and custom flags are chosen by the worker that starts the browser. Use consistent configuration for a key and close/restart the browser after changing those settings. Dimensions, JavaScript, command timeouts, and configured HTTP headers are applied per worker/page.
 
@@ -265,7 +256,6 @@ The published `config/screenshot.php` contains the executable path, browser opti
     'javascript' => false,
     'failOnTimeout' => false,
     'socket' => env('SCREENSHOT_SOCKET'),
-    'socketPath' => null,
 ],
 ```
 
@@ -320,7 +310,7 @@ Screenshot::assertCapturedCount(1);
 Storage::disk('screenshots')->assertExists('invoice.png');
 ```
 
-`Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. Socket selectors are recorded on `CaptureOptions`; the fake does not start browsers, write socket files, or perform shutdown. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
+`Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. Socket keys are recorded on `CaptureOptions`; the fake does not start browsers, write socket files, or perform shutdown. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
 
 The `DirectoryTree\Screenshot\Contracts\Driver` contract can also be replaced in Laravel's container or supplied to the standalone factory.
 

@@ -148,10 +148,6 @@ class ChromeDriver implements Driver, ManagesBrowserSockets
      */
     protected function socket(CaptureOptions $options): ?BrowserSocket
     {
-        if ($options->socketPath !== null) {
-            return new BrowserSocket($options->socketPath, $this->lockTimeout);
-        }
-
         return $options->socket !== null
             ? BrowserSocket::named($options->socket, $this->socketDirectory, $this->lockTimeout)
             : null;
@@ -163,14 +159,6 @@ class ChromeDriver implements Driver, ManagesBrowserSockets
     public function closeSocket(string $key): void
     {
         BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout)->close($this->browserOptions);
-    }
-
-    /**
-     * Wait for active captures and stop a file-backed shared browser.
-     */
-    public function closeSocketPath(string $path): void
-    {
-        (new BrowserSocket($path, $this->lockTimeout))->close($this->browserOptions);
     }
 
     /**

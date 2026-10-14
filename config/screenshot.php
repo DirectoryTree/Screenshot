@@ -56,7 +56,6 @@ return [
         'javascript' => false,
         'failOnTimeout' => false,
         'socket' => env('SCREENSHOT_SOCKET'),
-        'socketPath' => null,
     ],
 
 ];

@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Facade;
  * @method static PendingScreenshot url(string $url)
  * @method static PendingScreenshot view(string $view, array $data = [])
  * @method static void closeSocket(string $key)
- * @method static void closeSocketPath(string $path)
  * @method static void assertCaptured(?callable $callback = null)
  * @method static void assertCapturedCount(int $count)
  * @method static void assertNothingCaptured()

@@ -20,7 +20,7 @@ beforeEach(function () {
 
 afterEach(function () {
     foreach (glob($this->directory.'/*.socket') as $path) {
-        $this->factory->closeSocketPath($path);
+        (new BrowserSocket($path))->close();
     }
 
     // Chrome finishes flushing its profile asynchronously after Browser.close.
@@ -91,23 +91,23 @@ test('separate workers start one shared browser and capture concurrently with in
     }
 });
 
-test('explicit socket paths are reusable and dead browsers are replaced', function () {
-    $path = $this->directory.'/explicit.socket';
-    $this->factory->html('first')->socketPath($path)->capture();
+test('named sockets are reusable and dead browsers are replaced', function () {
+    $path = BrowserSocket::named('reusable', $this->directory)->path();
+    $this->factory->html('first')->socket('reusable')->capture();
     $first = file_get_contents($path);
-    $this->factory->html('second')->socketPath($path)->capture();
+    $this->factory->html('second')->socket('reusable')->capture();
     expect(file_get_contents($path))->toBe($first);
 
-    $this->factory->closeSocketPath($path);
+    $this->factory->closeSocket('reusable');
     file_put_contents($path, $first); // Simulate a saved endpoint left behind by a dead browser.
 
-    $this->factory->html('replacement')->socketPath($path)->timeout(10000)->capture();
+    $this->factory->html('replacement')->socket('reusable')->timeout(10000)->capture();
     expect(file_get_contents($path))->not->toBe($first);
 
-    $this->factory->closeSocketPath($path);
+    $this->factory->closeSocket('reusable');
     expect(file_exists($path))->toBeFalse();
 
-    $this->factory->html('after shutdown')->socketPath($path)->capture();
+    $this->factory->html('after shutdown')->socket('reusable')->capture();
     expect(file_get_contents($path))->not->toBe($first);
 });
 

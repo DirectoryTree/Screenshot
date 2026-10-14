@@ -56,7 +56,6 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
     Screenshot::closeSocket('emails');
-    Screenshot::closeSocketPath('/unused/socket');
 
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->socket === 'emails');
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);

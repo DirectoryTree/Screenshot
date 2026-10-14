@@ -59,19 +59,16 @@ test('unsafe capture options are rejected', function ($values) {
     [['quality' => -1]], [['quality' => 101]], [['timeout' => 0]], [['loadTimeout' => 0]],
 ]);
 
-test('socket selectors override one another and can be disabled', function () {
-    $fake = new ScreenshotFake;
-    $fake->html('named')->socketPath('/tmp/old.socket')->socket('emails')->capture();
-    $fake->html('path')->socket('old')->socketPath('/tmp/browser.socket')->capture();
-    $fake->html('dedicated')->socket('old')->withoutSocket()->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->socket === 'emails' && $options->socketPath === null);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'path' && $options->socket === null && $options->socketPath === '/tmp/browser.socket');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null && $options->socketPath === null);
+test('socket keys can be overridden and disabled without changing defaults', function () {
+    $fake = new ScreenshotFake(options: new CaptureOptions(socket: 'default'));
+    $fake->html('named')->socket('old')->socket('emails')->capture();
+    $fake->html('dedicated')->withoutSocket()->capture();
+    $fake->html('default')->capture();
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->socket === 'emails');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->socket === 'default');
 });
 
-test('invalid socket selectors fail before a capture starts', function ($options) {
-    expect(fn () => new CaptureOptions(...$options))->toThrow(InvalidArgumentException::class);
-})->with([
-    [['socket' => ' ']], [['socketPath' => '']], [['socketPath' => "bad\0path"]],
-    [['socketPath' => 'https://example.com/socket']], [['socket' => 'key', 'socketPath' => '/tmp/socket']],
-]);
+test('empty socket keys fail before a capture starts', function ($key) {
+    expect(fn () => new CaptureOptions(socket: $key))->toThrow(InvalidArgumentException::class);
+})->with(['', ' ']);

@@ -101,15 +101,7 @@ class PendingScreenshot
      */
     public function socket(string $key): static
     {
-        return $this->withOptions(['socket' => $key, 'socketPath' => null]);
-    }
-
-    /**
-     * Share a browser using a file containing its WebSocket address.
-     */
-    public function socketPath(string $path): static
-    {
-        return $this->withOptions(['socket' => null, 'socketPath' => $path]);
+        return $this->withOptions(['socket' => $key]);
     }
 
     /**
@@ -117,7 +109,7 @@ class PendingScreenshot
      */
     public function withoutSocket(): static
     {
-        return $this->withOptions(['socket' => null, 'socketPath' => null]);
+        return $this->withOptions(['socket' => null]);
     }
 
     /**

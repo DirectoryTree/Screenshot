@@ -22,7 +22,6 @@ class CaptureOptions
         public bool $javascript = false,
         public bool $failOnTimeout = false,
         public ?string $socket = null,
-        public ?string $socketPath = null,
     ) {
         $this->validate();
     }
@@ -34,14 +33,6 @@ class CaptureOptions
     {
         if ($this->socket !== null && trim($this->socket) === '') {
             throw new InvalidArgumentException('The socket key must not be empty.');
-        }
-
-        if ($this->socketPath !== null && (trim($this->socketPath) === '' || str_contains($this->socketPath, "\0") || str_contains($this->socketPath, '://'))) {
-            throw new InvalidArgumentException('The socket path must be a local filesystem path.');
-        }
-
-        if ($this->socket !== null && $this->socketPath !== null) {
-            throw new InvalidArgumentException('Specify a socket key or a socket path, not both.');
         }
 
         foreach ([[$this->width, $this->height], [$this->maxWidth, $this->maxHeight]] as [$width, $height]) {

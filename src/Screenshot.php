@@ -49,14 +49,6 @@ class Screenshot
     }
 
     /**
-     * Wait for active captures and stop a file-backed shared browser.
-     */
-    public function closeSocketPath(string $path): void
-    {
-        $this->socketManager()->closeSocketPath($path);
-    }
-
-    /**
      * Get a driver that supports shared browser lifecycle management.
      */
     protected function socketManager(): ManagesBrowserSockets

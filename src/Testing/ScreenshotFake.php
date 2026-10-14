@@ -33,11 +33,6 @@ class ScreenshotFake extends Screenshot implements Driver
     public function closeSocket(string $key): void {}
 
     /**
-     * Ignore file-backed browser shutdown while faking captures.
-     */
-    public function closeSocketPath(string $path): void {}
-
-    /**
      * Record a capture without starting Chrome.
      */
     public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult

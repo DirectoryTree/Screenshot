@@ -14,12 +14,12 @@ test('capture options override configured defaults without leaking into other ca
     $fake->url('https://example.com')->capture();
 
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
-        && $options->width === 640 && $options->height === 480
-        && $options->format === 'png' && $options->socket === null);
+        && $options->getWidth() === 640 && $options->getHeight() === 480
+        && $options->getFormat() === 'png' && $options->getSocket() === null);
     $fake->assertCaptured(fn ($source, $type, $options) => $type === 'url'
-        && $options->width === 1280 && $options->height === 720
-        && $options->format === 'jpeg' && $options->quality === 85 && $options->socket === 'emails'
-        && $options->fullPage && ! $options->javascript && $options->timeout === 60000);
+        && $options->getWidth() === 1280 && $options->getHeight() === 720
+        && $options->getFormat() === 'jpeg' && $options->getQuality() === 85 && $options->getSocket() === 'emails'
+        && $options->getFullPage() && ! $options->getJavascript() && $options->getTimeout() === 60000);
 });
 
 test('configuration runs once for each fresh pending screenshot without capturing', function () {
@@ -41,8 +41,8 @@ test('configuration runs once for each fresh pending screenshot without capturin
     $first->capture();
     $second->capture();
     expect($calls)->toBe(2);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->width === 800);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->width === 900);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900);
 });
 
 test('configuration can be replaced or cleared without changing existing pending screenshots', function () {
@@ -57,9 +57,9 @@ test('configuration can be replaced or cleared without changing existing pending
     $second->capture();
     $fake->html('third')->capture();
 
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->width === 800 && $options->format === 'jpeg');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->width === 900 && $options->format === 'png');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'third' && $options->width === 1024);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800 && $options->getFormat() === 'jpeg');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900 && $options->getFormat() === 'png');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'third' && $options->getWidth() === 1024);
 });
 
 test('failed configuration does not capture or contaminate subsequent screenshots', function () {
@@ -75,7 +75,7 @@ test('failed configuration does not capture or contaminate subsequent screenshot
     $fake->assertNothingCaptured();
     $fail = false;
     $fake->html('valid')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->width === 1024 && $options->format === 'png');
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === 'png');
 });
 
 test('factories have independent configuration and fakes preserve their baseline options', function () {
@@ -83,12 +83,12 @@ test('factories have independent configuration and fakes preserve their baseline
     $factory = new Screenshot(options: $options);
     $factory->configure(fn (PendingScreenshot $screenshot) => $screenshot->jpeg(85));
     $fake = ScreenshotFake::from($factory);
-    $options->width = 800;
+    $options->setSize(800, $options->getHeight());
     $factory->configure(null);
     $fake->html('configured')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->width === 900 && $options->format === 'jpeg');
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getFormat() === 'jpeg');
 
     $other = new ScreenshotFake;
     $other->html('default')->capture();
-    $other->assertCaptured(fn ($source, $type, $options) => $options->width === 1024 && $options->format === 'png');
+    $other->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024 && $options->getFormat() === 'png');
 });

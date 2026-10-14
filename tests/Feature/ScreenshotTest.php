@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 
 test('a service provider configures defaults with a replaceable driver', function () {
     $driver = Mockery::mock(Driver::class);
-    $driver->shouldReceive('capture')->once()->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->width === 900)
+    $driver->shouldReceive('capture')->once()->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->getWidth() === 900)
         ->andReturn(new ScreenshotResult(imageFixture()));
     app()->instance(Driver::class, $driver);
 
@@ -39,7 +39,7 @@ test('the facade fake replaces the container factory and renders escaped Blade v
     Screenshot::assertNothingCaptured();
     app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
     Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
-        && $type === 'html' && $options->format === 'jpeg' && $options->quality === 85);
+        && $type === 'html' && $options->getFormat() === 'jpeg' && $options->getQuality() === 85);
     Screenshot::assertCapturedCount(1);
     expect($calls)->toBe(1);
 });
@@ -77,15 +77,15 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::assertClosed(key: 'emails');
     Screenshot::assertNotClosed(key: 'invoices');
 
-    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->socket === 'emails');
-    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->getSocket() === 'emails');
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->getSocket() === null);
     Screenshot::assertCapturedCount(2);
 
     Screenshot::fake();
     Screenshot::assertNothingClosed();
     Screenshot::assertNothingCaptured();
     Screenshot::url('https://example.com')->capture();
-    Screenshot::assertCaptured(fn ($source, $type, $options) => $type === 'url' && $options->socket === 'emails');
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $type === 'url' && $options->getSocket() === 'emails');
 });
 
 test('the configured socket directory is used for lifecycle operations', function () {

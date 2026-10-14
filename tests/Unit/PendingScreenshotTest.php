@@ -15,11 +15,11 @@ test('pending captures do not start the driver until requested', function () {
     $fake->assertNothingCaptured();
     $pending->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === '<h1>Hello</h1>'
-        && $type === 'html' && $options->width === 800 && $options->height === 600
-        && $options->format === 'jpeg' && $options->quality === 90 && ! $options->fullPage
-        && $options->maxWidth === 1000 && $options->maxHeight === 2000
-        && $options->timeout === 2000 && $options->loadTimeout === 1000
-        && $options->javascript && $options->failOnTimeout);
+        && $type === 'html' && $options->getWidth() === 800 && $options->getHeight() === 600
+        && $options->getFormat() === 'jpeg' && $options->getQuality() === 90 && ! $options->getFullPage()
+        && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
+        && $options->getTimeout() === 2000 && $options->getLoadTimeout() === 1000
+        && $options->getJavascript() && $options->getFailOnTimeout());
 });
 
 test('options cannot leak between captures', function () {
@@ -27,7 +27,7 @@ test('options cannot leak between captures', function () {
     $fake->html('first')->size(500, 400)->javascript()->capture();
     $fake->html('second')->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second'
-        && $options->width === 1024 && ! $options->javascript);
+        && $options->getWidth() === 1024 && ! $options->getJavascript());
     $fake->assertCapturedCount(2);
 });
 
@@ -37,15 +37,15 @@ test('directly constructed pending screenshots own their options', function () {
     $first = new PendingScreenshot($fake, 'first', 'html', $options);
     $second = new PendingScreenshot($fake, 'second', 'html', $options);
 
-    $options->width = 1200;
+    $options->setSize(1200, $options->getHeight());
     $first->size(500, 400)->capture();
     $second->capture();
 
-    expect($options->width)->toBe(1200)->and($options->height)->toBe(768);
+    expect($options->getWidth())->toBe(1200)->and($options->getHeight())->toBe(768);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first'
-        && $options->width === 500 && $options->height === 400);
+        && $options->getWidth() === 500 && $options->getHeight() === 400);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second'
-        && $options->width === 900 && $options->height === 768);
+        && $options->getWidth() === 900 && $options->getHeight() === 768);
 });
 
 test('drivers receive independent options snapshots', function () {
@@ -59,11 +59,11 @@ test('drivers receive independent options snapshots', function () {
     $pending = new PendingScreenshot($driver, 'hello', 'html', new CaptureOptions);
     $pending->capture();
     $pending->size(640, 480);
-    expect($snapshots[0]->width)->toBe(1024)->and($snapshots[0]->height)->toBe(768);
+    expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);
 
-    $snapshots[0]->width = 1;
+    $snapshots[0]->setSize(1, $snapshots[0]->getHeight());
     $pending->capture();
-    expect($snapshots[1]->width)->toBe(640)->and($snapshots[1]->height)->toBe(480);
+    expect($snapshots[1]->getWidth())->toBe(640)->and($snapshots[1]->getHeight())->toBe(480);
 });
 
 test('invalid mutations leave all pending screenshot options unchanged', function ($method, $arguments) {
@@ -115,9 +115,9 @@ test('socket keys can be overridden and disabled without changing defaults', fun
     $fake->html('named')->socket('old')->socket('emails')->capture();
     $fake->html('dedicated')->withoutSocket()->capture();
     $fake->html('default')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->socket === 'emails');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->socket === 'default');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->getSocket() === 'emails');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->getSocket() === null);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->getSocket() === 'default');
 });
 
 test('empty socket keys fail before a capture starts', function ($key) {

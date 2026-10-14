@@ -360,13 +360,15 @@ Screenshot::html('<h1>Invoice</h1>')
     ->store(path: 'invoice.png', disk: 'screenshots');
 
 Screenshot::assertCaptured(fn (string $source, string $type, CaptureOptions $options) =>
-    $type === 'html' && $options->width === 800
+    $type === 'html' && $options->getWidth() === 800
 );
 Screenshot::assertCapturedCount(count: 1);
 Storage::disk('screenshots')->assertExists('invoice.png');
 ```
 
 `Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. Socket keys are recorded on `CaptureOptions`; the fake does not start browsers, write socket files, or perform shutdown. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
+
+`CaptureOptions` exposes getters such as `getWidth()`, `getFormat()`, and `getSocket()` for assertions and custom drivers. Its properties are protected; use validated setters such as `setSize()`, `setFormat()`, and `setSocket()` when working with options directly. Dimension pairs and format/quality changes are validated before either value changes. The fluent methods on `PendingScreenshot` delegate to these setters.
 
 Assert that a job selects the intended socket and leaves shared browsers running:
 
@@ -376,7 +378,7 @@ Screenshot::fake();
 Screenshot::html('<h1>Invoice</h1>')->socket(key: 'emails')->capture();
 
 Screenshot::assertCaptured(fn ($source, $type, CaptureOptions $options) =>
-    $options->socket === 'emails'
+    $options->getSocket() === 'emails'
 );
 Screenshot::assertNotClosed(key: 'emails');
 Screenshot::assertNothingClosed();

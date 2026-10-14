@@ -23,10 +23,7 @@ class PendingScreenshot
      */
     public function size(int $width, int $height): static
     {
-        CaptureOptions::validateDimensions($width, $height);
-
-        $this->options->width = $width;
-        $this->options->height = $height;
+        $this->options->setSize($width, $height);
 
         return $this;
     }
@@ -36,10 +33,7 @@ class PendingScreenshot
      */
     public function maxSize(int $width, int $height): static
     {
-        CaptureOptions::validateDimensions($width, $height);
-
-        $this->options->maxWidth = $width;
-        $this->options->maxHeight = $height;
+        $this->options->setMaxSize($width, $height);
 
         return $this;
     }
@@ -49,7 +43,7 @@ class PendingScreenshot
      */
     public function fullPage(bool $value = true): static
     {
-        $this->options->fullPage = $value;
+        $this->options->setFullPage($value);
 
         return $this;
     }
@@ -67,7 +61,7 @@ class PendingScreenshot
      */
     public function png(): static
     {
-        $this->options->format = 'png';
+        $this->options->setFormat('png');
 
         return $this;
     }
@@ -77,10 +71,7 @@ class PendingScreenshot
      */
     public function jpeg(int $quality = 80): static
     {
-        CaptureOptions::validateQuality($quality);
-
-        $this->options->format = 'jpeg';
-        $this->options->quality = $quality;
+        $this->options->setFormat('jpeg', $quality);
 
         return $this;
     }
@@ -90,9 +81,7 @@ class PendingScreenshot
      */
     public function timeout(int $milliseconds): static
     {
-        CaptureOptions::validateTimeout($milliseconds);
-
-        $this->options->timeout = $milliseconds;
+        $this->options->setTimeout($milliseconds);
 
         return $this;
     }
@@ -102,9 +91,7 @@ class PendingScreenshot
      */
     public function loadTimeout(int $milliseconds): static
     {
-        CaptureOptions::validateTimeout($milliseconds);
-
-        $this->options->loadTimeout = $milliseconds;
+        $this->options->setLoadTimeout($milliseconds);
 
         return $this;
     }
@@ -114,7 +101,7 @@ class PendingScreenshot
      */
     public function javascript(bool $value = true): static
     {
-        $this->options->javascript = $value;
+        $this->options->setJavascript($value);
 
         return $this;
     }
@@ -124,7 +111,7 @@ class PendingScreenshot
      */
     public function failOnTimeout(bool $value = true): static
     {
-        $this->options->failOnTimeout = $value;
+        $this->options->setFailOnTimeout($value);
 
         return $this;
     }
@@ -134,9 +121,7 @@ class PendingScreenshot
      */
     public function socket(string $key): static
     {
-        CaptureOptions::validateSocket($key);
-
-        $this->options->socket = $key;
+        $this->options->setSocket($key);
 
         return $this;
     }
@@ -146,7 +131,7 @@ class PendingScreenshot
      */
     public function withoutSocket(): static
     {
-        $this->options->socket = null;
+        $this->options->setSocket(null);
 
         return $this;
     }

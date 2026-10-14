@@ -44,7 +44,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
             return $socket->run(
                 fn () => $this->createBrowser($options),
                 fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
-                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->timeout]),
+                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->getTimeout()]),
             );
         }
 
@@ -67,12 +67,12 @@ class ChromeDriver implements Driver, ManagesBrowsers
             $page = $browser->createPage();
 
             if ($shared) {
-                $page->setViewport($options->width, $options->height)->await($options->timeout);
+                $page->setViewport($options->getWidth(), $options->getHeight())->await($options->getTimeout());
             }
 
             $response = $page->getSession()->sendMessageSync(
-                new Message('Emulation.setScriptExecutionDisabled', ['value' => ! $options->javascript]),
-                $options->timeout,
+                new Message('Emulation.setScriptExecutionDisabled', ['value' => ! $options->getJavascript()]),
+                $options->getTimeout(),
             );
 
             if (! $response->isSuccessful()) {
@@ -81,41 +81,41 @@ class ChromeDriver implements Driver, ManagesBrowsers
 
             try {
                 if ($type === 'html') {
-                    $page->setHtml($source, $options->loadTimeout);
+                    $page->setHtml($source, $options->getLoadTimeout());
                 } else {
-                    $page->navigate($source)->waitForNavigation(Page::LOAD, $options->loadTimeout);
+                    $page->navigate($source)->waitForNavigation(Page::LOAD, $options->getLoadTimeout());
                 }
             } catch (OperationTimedOut $e) {
-                if ($options->failOnTimeout) {
+                if ($options->getFailOnTimeout()) {
                     throw $e;
                 }
 
-                $response = $page->getSession()->sendMessageSync(new Message('Page.stopLoading'), $options->timeout);
+                $response = $page->getSession()->sendMessageSync(new Message('Page.stopLoading'), $options->getTimeout());
 
                 if (! $response->isSuccessful()) {
                     throw new RuntimeException('Unable to stop page loading: '.$response->getErrorMessage(), previous: $e);
                 }
             }
 
-            $clip = $options->fullPage
-                ? $page->getFullPageClip($options->timeout)
-                : new Clip(0, 0, $options->width, $options->height);
+            $clip = $options->getFullPage()
+                ? $page->getFullPageClip($options->getTimeout())
+                : new Clip(0, 0, $options->getWidth(), $options->getHeight());
 
             $parameters = [
-                'format' => $options->format,
+                'format' => $options->getFormat(),
                 'captureBeyondViewport' => true,
                 'clip' => new Clip(
                     0, 0,
-                    max(1, min($clip->getWidth(), $options->maxWidth)),
-                    max(1, min($clip->getHeight(), $options->maxHeight)),
+                    max(1, min($clip->getWidth(), $options->getMaxWidth())),
+                    max(1, min($clip->getHeight(), $options->getMaxHeight())),
                 ),
             ];
 
-            if ($options->format === 'jpeg') {
-                $parameters['quality'] = $options->quality;
+            if ($options->getFormat() === 'jpeg') {
+                $parameters['quality'] = $options->getQuality();
             }
 
-            $result = new ScreenshotResult($page->screenshot($parameters)->getBase64($options->timeout));
+            $result = new ScreenshotResult($page->screenshot($parameters)->getBase64($options->getTimeout()));
             $failed = false;
 
             return $result;
@@ -137,8 +137,8 @@ class ChromeDriver implements Driver, ManagesBrowsers
         }
 
         return (new BrowserFactory($this->binary))->createBrowser(array_merge($browserOptions, [
-            'windowSize' => [$options->width, $options->height],
-            'sendSyncDefaultTimeout' => $options->timeout,
+            'windowSize' => [$options->getWidth(), $options->getHeight()],
+            'sendSyncDefaultTimeout' => $options->getTimeout(),
             'keepAlive' => $socket !== null,
         ]));
     }
@@ -148,8 +148,8 @@ class ChromeDriver implements Driver, ManagesBrowsers
      */
     protected function socket(CaptureOptions $options): ?BrowserSocket
     {
-        return $options->socket !== null
-            ? BrowserSocket::named($options->socket, $this->socketDirectory, $this->lockTimeout)
+        return $options->getSocket() !== null
+            ? BrowserSocket::named($options->getSocket(), $this->socketDirectory, $this->lockTimeout)
             : null;
     }
 

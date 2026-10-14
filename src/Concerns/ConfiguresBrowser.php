@@ -2,6 +2,8 @@
 
 namespace DirectoryTree\Screenshot\Concerns;
 
+use DirectoryTree\Screenshot\ImageOptions;
+
 trait ConfiguresBrowser
 {
     /**
@@ -10,9 +12,7 @@ trait ConfiguresBrowser
      */
     public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->options->setTimeouts($load, $browser);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setTimeouts($load, $browser));
     }
 
     /**
@@ -20,9 +20,7 @@ trait ConfiguresBrowser
      */
     public function javascript(bool $value = true): static
     {
-        $this->options->setJavascript($value);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setJavascript($value));
     }
 
     /**
@@ -30,9 +28,7 @@ trait ConfiguresBrowser
      */
     public function failOnTimeout(bool $value = true): static
     {
-        $this->options->setFailOnTimeout($value);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setFailOnTimeout($value));
     }
 
     /**
@@ -40,9 +36,7 @@ trait ConfiguresBrowser
      */
     public function socket(string $key): static
     {
-        $this->options->setSocket($key);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setSocket($key));
     }
 
     /**
@@ -50,8 +44,6 @@ trait ConfiguresBrowser
      */
     public function withoutSocket(): static
     {
-        $this->options->setSocket(null);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setSocket(null));
     }
 }

@@ -6,6 +6,7 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
+use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
@@ -23,7 +24,7 @@ test('a service provider configures defaults with a replaceable driver', functio
     {
         public function boot(): void
         {
-            Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->size(900, 600));
+            Screenshot::configure(OutputFormat::Png, fn (PendingImage $screenshot) => $screenshot->size(900, 600));
         }
     });
 
@@ -32,14 +33,14 @@ test('a service provider configures defaults with a replaceable driver', functio
 
 test('the facade fake replaces the container factory and renders escaped Blade views', function () {
     $calls = 0;
-    Screenshot::configure(function (PendingImage $screenshot) use (&$calls) {
+    Screenshot::configure(OutputFormat::Jpeg, function (PendingImage $screenshot) use (&$calls) {
         $calls++;
         $screenshot->jpeg(85);
     });
     Screenshot::fake();
     expect($calls)->toBe(0);
     Screenshot::assertNothingCaptured();
-    app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->capture();
+    app()->make(Factory::class)->view('card', ['name' => '<Steve>'])->jpeg()->capture();
     Screenshot::assertCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
         && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 85);
     Screenshot::assertCapturedCount(1);
@@ -100,7 +101,7 @@ test('configuration has a publishable tag', function () {
 });
 
 test('the facade fake preserves configured socket defaults without starting a browser', function () {
-    Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->socket('emails'));
+    Screenshot::configure(OutputFormat::Png, fn (PendingImage $screenshot) => $screenshot->socket('emails'));
     Screenshot::fake();
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
@@ -174,7 +175,7 @@ test('the configured socket lock timeout bounds lifecycle operations', function 
 test('PDF fakes render views and store the supplied document with filesystem options', function () {
     Storage::fake('pdfs');
     $result = new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
-    Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->socket('invoices'));
+    Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->socket('invoices'));
     Screenshot::fake(pdfResult: $result);
     $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper('letter')
         ->store('invoice.pdf', 'pdfs', ['visibility' => 'private']);

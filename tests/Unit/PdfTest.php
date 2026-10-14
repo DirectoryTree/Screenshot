@@ -19,7 +19,7 @@ function pdfFixture(): string
 
 test('PDF conversion snapshots browser defaults without capturing or changing the source', function () {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingImage $screenshot) => $screenshot->socket('invoices')->timeouts(load: 5000, browser: 10000));
+    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $screenshot) => $screenshot->socket('invoices')->timeouts(load: 5000, browser: 10000));
     $image = $fake->html('invoice')->size(500, 300)->jpeg();
     $pdf = $image->pdf();
     $image->socket('images');

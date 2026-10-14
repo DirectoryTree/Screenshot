@@ -25,7 +25,7 @@ test('pending captures do not start the driver until requested', function () {
 
 test('omitted timeouts preserve configured values without changing other captures', function ($arguments, $load, $browser) {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingImage $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
+    $fake->configure(OutputFormat::Png, fn (PendingImage $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
 
     $fake->html('override')->timeouts(...$arguments)->capture();
     $fake->html('default')->capture();

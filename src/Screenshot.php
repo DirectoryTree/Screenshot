@@ -13,11 +13,11 @@ use LogicException;
 class Screenshot
 {
     /**
-     * The callback used to configure each new pending screenshot.
+     * The default configuration callbacks keyed by output format.
      *
-     * @var (Closure(PendingImage): mixed)|null
+     * @var array<string, Closure>
      */
-    protected ?Closure $configureUsing = null;
+    protected array $configureUsing = [];
 
     /**
      * Create a new screenshot factory.
@@ -29,13 +29,17 @@ class Screenshot
     ) {}
 
     /**
-     * Set or clear the default configuration callback for future screenshots.
+     * Set or clear the default configuration callback for an output format.
      *
-     * @param  (callable(PendingImage): mixed)|null  $callback
+     * @param  (callable(PendingImage|PendingPdf): mixed)|null  $callback
      */
-    public function configure(?callable $callback): static
+    public function configure(OutputFormat $format, ?callable $callback): static
     {
-        $this->configureUsing = $callback === null ? null : Closure::fromCallable($callback);
+        if ($callback === null) {
+            unset($this->configureUsing[$format->value]);
+        } else {
+            $this->configureUsing[$format->value] = Closure::fromCallable($callback);
+        }
 
         return $this;
     }
@@ -93,16 +97,10 @@ class Screenshot
     }
 
     /**
-     * Apply defaults to a fresh screenshot before caller-specific options.
+     * Prepare a capture with an independent snapshot of its format callbacks.
      */
     protected function newPendingImage(string $source, string $type): PendingImage
     {
-        $screenshot = new PendingImage($this->driver, $source, $type, $this->options);
-
-        if ($this->configureUsing) {
-            ($this->configureUsing)($screenshot);
-        }
-
-        return $screenshot;
+        return new PendingImage($this->driver, $source, $type, $this->options, $this->configureUsing);
     }
 }

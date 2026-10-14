@@ -2,13 +2,14 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Concerns\AppliesConfiguration;
 use DirectoryTree\Screenshot\Concerns\ConfiguresBrowser;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use LogicException;
 
 class PendingImage
 {
-    use ConfiguresBrowser;
+    use AppliesConfiguration, ConfiguresBrowser;
 
     /**
      * Create a new pending screenshot.
@@ -18,11 +19,13 @@ class PendingImage
         protected string $source,
         protected string $type,
         protected ImageOptions $options,
+        protected array $configureUsing = [],
     ) {
         if ($options->getFormat() === OutputFormat::Pdf) {
             throw new LogicException('Use pdf() to prepare a PDF capture.');
         }
 
+        $this->defaults = clone $options;
         $this->options = clone $options;
     }
 
@@ -31,9 +34,7 @@ class PendingImage
      */
     public function size(int $width, int $height): static
     {
-        $this->options->setSize($width, $height);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setSize($width, $height));
     }
 
     /**
@@ -41,9 +42,7 @@ class PendingImage
      */
     public function maxSize(int $width, int $height): static
     {
-        $this->options->setMaxSize($width, $height);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setMaxSize($width, $height));
     }
 
     /**
@@ -51,9 +50,7 @@ class PendingImage
      */
     public function fullPage(bool $value = true): static
     {
-        $this->options->setFullPage($value);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setFullPage($value));
     }
 
     /**
@@ -69,19 +66,15 @@ class PendingImage
      */
     public function png(): static
     {
-        $this->options->setFormat(OutputFormat::Png);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setFormat(OutputFormat::Png));
     }
 
     /**
-     * Capture a JPEG image with the given quality.
+     * Capture a JPEG image, using configured quality unless explicitly supplied.
      */
-    public function jpeg(int $quality = 80): static
+    public function jpeg(?int $quality = null): static
     {
-        $this->options->setFormat(OutputFormat::Jpeg, $quality);
-
-        return $this;
+        return $this->configureOptions(static fn (ImageOptions $options) => $options->setFormat(OutputFormat::Jpeg, $quality));
     }
 
     /**
@@ -89,7 +82,10 @@ class PendingImage
      */
     public function pdf(): PendingPdf
     {
-        return new PendingPdf($this->driver, $this->source, $this->type, $this->options);
+        return new PendingPdf(
+            $this->driver, $this->source, $this->type, $this->defaults,
+            configureUsing: $this->configureUsing, overrides: $this->overrides,
+        );
     }
 
     /**
@@ -113,8 +109,9 @@ class PendingImage
      */
     public function capture(): ImageResult
     {
-        $this->options->validate();
+        $capture = $this->configured();
+        $capture->options->validate();
 
-        return $this->driver->capture($this->source, $this->type, clone $this->options);
+        return $this->driver->capture($this->source, $this->type, clone $capture->options);
     }
 }

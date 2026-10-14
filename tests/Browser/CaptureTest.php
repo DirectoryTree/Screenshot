@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;
@@ -30,10 +31,10 @@ test('real Chromium renders a full page PNG from local HTML', function () {
 });
 
 test('real Chromium applies configured defaults and per-capture dimension limits', function () {
-    $factory = realScreenshot()->configure(fn (PendingImage $screenshot) => $screenshot
+    $factory = realScreenshot()->configure(OutputFormat::Jpeg, fn (PendingImage $screenshot) => $screenshot
         ->size(640, 480)->viewport()->jpeg(85));
     $result = $factory->html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
-        ->maxSize(500, 300)->capture();
+        ->maxSize(500, 300)->jpeg()->capture();
 
     expect($result->width())->toBe(500)
         ->and($result->height())->toBe(300)

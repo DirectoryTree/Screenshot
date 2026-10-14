@@ -52,12 +52,16 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public static function from(Screenshot $factory, ?ImageResult $result = null, ?PdfResult $pdfResult = null): static
     {
-        return (new static(
+        $fake = new static(
             result: $result,
             views: $factory->views,
             options: $factory->options,
             pdfResult: $pdfResult,
-        ))->configure($factory->configureUsing);
+        );
+
+        $fake->configureUsing = $factory->configureUsing;
+
+        return $fake;
     }
 
     /**

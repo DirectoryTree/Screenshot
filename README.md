@@ -226,34 +226,39 @@ Screenshot::html($html)->withoutSocket()->capture();
 
 ### Capture Defaults
 
-Configure default capture options in your `AppServiceProvider::boot()` method:
+Configure defaults for each output format in your `AppServiceProvider::boot()` method:
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\OutputFormat;
 use DirectoryTree\Screenshot\PendingImage;
+use DirectoryTree\Screenshot\PendingPdf;
 
 public function boot(): void
 {
-    Screenshot::configure(
-        fn (PendingImage $screenshot) => $screenshot
-            ->size(width: 1280, height: 720)
-            ->jpeg(quality: 85)
-            ->socket(key: 'invoices')
-    );
+    Screenshot::configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image
+        ->size(width: 1280, height: 720)
+        ->jpeg(quality: 85));
+
+    Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
+        ->paper('a4')
+        ->margins(top: 10, right: 10, bottom: 10, left: 10)
+        ->socket(key: 'invoices'));
 }
 ```
 
-The callback runs for each new screenshot. Use it to set options, then call `capture()`, `save()`, or `store()` outside the callback. Per-capture options override these defaults without affecting other screenshots:
+Only the selected format's callback runs, immediately before each capture. PNG and JPEG callbacks receive `PendingImage`; PDF callbacks receive `PendingPdf`. Use callbacks to set options, and call `capture()`, `save()`, or `store()` outside them. Registering defaults does not select an output format.
+
+Explicit options override these defaults, including options set before selecting the format:
 
 ```php
-Screenshot::html($html)
-    ->size(width: 800, height: 600)
-    ->png()
-    ->withoutSocket()
-    ->capture();
+Screenshot::html($html)->size(800, 600)->jpeg()->capture();
+Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper('letter')->capture();
 ```
 
-Calling `configure()` again replaces the callback; `configure(null)` clears it. In long-running workers, register application defaults during boot and use per-capture methods for job-specific settings.
+`jpeg()` uses the configured quality; `jpeg(quality: 90)` overrides it. Image defaults do not carry into PDFs. Explicit browser options, such as sockets and timeouts, do carry over when calling `pdf()`.
+
+Calling `configure()` again replaces that format's callback; `configure(OutputFormat::Pdf, null)` clears only PDF defaults. Existing pending captures and fakes keep their registered callbacks. In long-running workers, register defaults during boot and use per-capture methods for job-specific settings.
 
 ### Browser Settings
 

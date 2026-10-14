@@ -1,8 +1,9 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
-use DirectoryTree\Screenshot\PendingImage;
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;
 use Symfony\Component\Process\Process;
@@ -31,8 +32,11 @@ test('real Chromium renders a full page PNG from local HTML', function () {
 });
 
 test('real Chromium applies configured defaults and per-capture dimension limits', function () {
-    $factory = realScreenshot()->configure(OutputFormat::Jpeg, fn (PendingImage $screenshot) => $screenshot
-        ->size(640, 480)->viewport()->jpeg(85));
+    $factory = new Screenshot(
+        driver: new ChromeDriver(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1']),
+        browser: BrowserOptions::make()->setSize(640, 480),
+        image: ImageOptions::make()->setFullPage(false)->setFormat(OutputFormat::Jpeg, 85),
+    );
     $result = $factory->html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
         ->maxSize(500, 300)->jpeg()->capture();
 

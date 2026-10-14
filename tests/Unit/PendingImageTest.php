@@ -1,5 +1,7 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
@@ -17,24 +19,23 @@ test('pending captures do not start the driver until requested', function () {
     $fake->assertNothingCaptured();
     $pending->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === '<h1>Hello</h1>'
-        && $type === SourceType::Html && $options->getWidth() === 800 && $options->getHeight() === 600
-        && $options->getFormat() === OutputFormat::Jpeg && $options->getQuality() === 90 && ! $options->getFullPage()
-        && $options->getMaxWidth() === 1000 && $options->getMaxHeight() === 2000
-        && $options->getBrowserTimeout() === 2000 && $options->getLoadTimeout() === 1000
-        && $options->getJavascript() && $options->getFailOnTimeout());
+        && $type === SourceType::Html && $options->browser->getWidth() === 800 && $options->browser->getHeight() === 600
+        && $options->getFormat() === OutputFormat::Jpeg && $options->output->getQuality() === 90 && ! $options->output->getFullPage()
+        && $options->output->getMaxWidth() === 1000 && $options->output->getMaxHeight() === 2000
+        && $options->browser->getBrowserTimeout() === 2000 && $options->browser->getLoadTimeout() === 1000
+        && $options->browser->getJavascript() && $options->browser->getFailOnTimeout());
 });
 
 test('omitted timeouts preserve configured values without changing other captures', function ($arguments, $load, $browser) {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Png, fn (PendingImage $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
+    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setTimeouts(load: 20000, browser: 80000));
 
     $fake->html('override')->timeouts(...$arguments)->capture();
     $fake->html('default')->capture();
 
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
-        && $options->getLoadTimeout() === $load && $options->getBrowserTimeout() === $browser);
+        && $options->browser->getLoadTimeout() === $load && $options->browser->getBrowserTimeout() === $browser);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default'
-        && $options->getLoadTimeout() === 20000 && $options->getBrowserTimeout() === 80000);
+        && $options->browser->getLoadTimeout() === 20000 && $options->browser->getBrowserTimeout() === 80000);
 })->with([
     'load only' => [['load' => 30000], 30000, 80000],
     'browser only' => [['browser' => 90000], 20000, 90000],
@@ -45,8 +46,8 @@ test('successive timeout updates preserve the other current value', function () 
     $fake = new ScreenshotFake;
     $fake->html('hello')->timeouts(load: 30000)->timeouts(browser: 90000)->capture();
 
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getLoadTimeout() === 30000
-        && $options->getBrowserTimeout() === 90000);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getLoadTimeout() === 30000
+        && $options->browser->getBrowserTimeout() === 90000);
 });
 
 test('options cannot leak between captures', function () {
@@ -54,25 +55,27 @@ test('options cannot leak between captures', function () {
     $fake->html('first')->size(500, 400)->javascript()->capture();
     $fake->html('second')->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second'
-        && $options->getWidth() === 1024 && ! $options->getJavascript());
+        && $options->browser->getWidth() === 1024 && ! $options->browser->getJavascript());
     $fake->assertCapturedCount(2);
 });
 
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
-    $options = ImageOptions::make()->setSize(900, 768);
-    $first = new PendingImage($fake, 'first', SourceType::Html, $options);
-    $second = new PendingImage($fake, 'second', SourceType::Html, $options);
+    $settings = new CaptureOptions(BrowserOptions::make()->setSize(900, 768), ImageOptions::make());
+    $first = new PendingImage($fake, 'first', SourceType::Html, $settings);
+    $second = new PendingImage($fake, 'second', SourceType::Html, $settings);
 
-    $options->setSize(1200, $options->getHeight());
+    $settings->browser->setSize(1200, $settings->browser->getHeight());
+    $settings->output->setFormat(OutputFormat::Jpeg, 50);
     $first->size(500, 400)->capture();
     $second->capture();
 
-    expect($options->getWidth())->toBe(1200)->and($options->getHeight())->toBe(768);
+    expect($settings->browser->getWidth())->toBe(1200)->and($settings->browser->getHeight())->toBe(768);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first'
-        && $options->getWidth() === 500 && $options->getHeight() === 400);
+        && $options->browser->getWidth() === 500 && $options->browser->getHeight() === 400);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second'
-        && $options->getWidth() === 900 && $options->getHeight() === 768);
+        && $options->browser->getWidth() === 900 && $options->browser->getHeight() === 768
+        && $options->getFormat() === OutputFormat::Png && $options->output->getQuality() === 80);
 });
 
 test('drivers receive independent options snapshots', function () {
@@ -83,14 +86,16 @@ test('drivers receive independent options snapshots', function () {
 
         return new ImageResult(imageFixture());
     });
-    $pending = new PendingImage($driver, 'hello', SourceType::Html, ImageOptions::make());
-    $pending->capture();
+    $pending = new PendingImage($driver, 'hello', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
+    $pending->jpeg(95)->capture();
     $pending->size(640, 480);
-    expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);
+    expect($snapshots[0]->browser->getWidth())->toBe(1024)->and($snapshots[0]->browser->getHeight())->toBe(768);
 
-    $snapshots[0]->setSize(1, $snapshots[0]->getHeight());
+    $snapshots[0]->browser->setSize(1, $snapshots[0]->browser->getHeight());
+    $snapshots[0]->output->setFormat(OutputFormat::Png, 50);
     $pending->capture();
-    expect($snapshots[1]->getWidth())->toBe(640)->and($snapshots[1]->getHeight())->toBe(480);
+    expect($snapshots[1]->browser->getWidth())->toBe(640)->and($snapshots[1]->browser->getHeight())->toBe(480)
+        ->and($snapshots[1]->getFormat())->toBe(OutputFormat::Jpeg)->and($snapshots[1]->output->getQuality())->toBe(95);
 });
 
 test('invalid mutations leave all pending screenshot options unchanged', function ($method, $arguments) {
@@ -98,7 +103,7 @@ test('invalid mutations leave all pending screenshot options unchanged', functio
     $pending = $fake->html('hello');
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options == ImageOptions::make());
+    $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions(BrowserOptions::make(), ImageOptions::make()));
 })->with([
     'zero width' => ['size', [0, 768]],
     'invalid height' => ['size', [500, -1]],
@@ -132,34 +137,32 @@ test('standalone views require a view factory', function () {
     expect(fn () => (new Screenshot)->view('card'))->toThrow(LogicException::class);
 });
 
-test('unsafe capture options are rejected', function ($method, $arguments) {
+test('unsafe image options are rejected', function ($method, $arguments) {
     expect(fn () => ImageOptions::make()->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
 })->with([
-    ['setSize', [0, 768]], ['setSize', [1024, -1]], ['setSize', [16385, 768]],
-    ['setSize', [10000, 10000]], ['setMaxSize', [0, 10000]],
+    ['setMaxSize', [0, 10000]],
     ['setMaxSize', [10000, 10000]],
     ['setFormat', [OutputFormat::Jpeg, -1]], ['setFormat', [OutputFormat::Jpeg, 101]],
-    ['setBrowserTimeout', [0]], ['setLoadTimeout', [0]],
 ]);
 
 test('socket keys can be overridden and disabled without changing defaults', function () {
-    $fake = new ScreenshotFake(options: ImageOptions::make()->setSocket('default'));
+    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSocket('default'));
     $fake->html('named')->socket('old')->socket('emails')->capture();
     $fake->html('dedicated')->withoutSocket()->capture();
     $fake->html('default')->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->getSocket() === 'emails');
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->getSocket() === null);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->getSocket() === 'default');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'named' && $options->browser->getSocket() === 'emails');
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->browser->getSocket() === null);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->browser->getSocket() === 'default');
 });
 
 test('empty socket keys fail before a capture starts', function ($key) {
-    expect(fn () => ImageOptions::make()->setSocket($key))->toThrow(InvalidArgumentException::class);
+    expect(fn () => BrowserOptions::make()->setSocket($key))->toThrow(InvalidArgumentException::class);
 })->with(['', ' ']);
 
 test('image builders reject PDF defaults before calling the driver', function () {
     $driver = Mockery::mock(Driver::class);
     $driver->shouldNotReceive('capture');
 
-    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, ImageOptions::make()->setFormat(OutputFormat::Pdf)))
+    expect(fn () => new PendingImage($driver, 'invoice', SourceType::Html, new CaptureOptions(BrowserOptions::make(), ImageOptions::make()->setFormat(OutputFormat::Pdf))))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
 });

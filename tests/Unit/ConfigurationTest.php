@@ -1,235 +1,161 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
-use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\PendingImage;
-use DirectoryTree\Screenshot\PendingPdf;
+use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
-test('only the selected format callback runs with its matching builder', function () {
-    $fake = new ScreenshotFake;
-    $calls = [];
-    $fake->configure(OutputFormat::Png, function (PendingImage $image) use (&$calls) {
-        $calls[] = 'png';
-        $image->size(800, 600)->socket('images');
-    });
-    $fake->configure(OutputFormat::Jpeg, function (PendingImage $image) use (&$calls) {
-        $calls[] = 'jpeg';
-        $image->size(900, 600)->jpeg(85);
-    });
-    $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$calls) {
-        $calls[] = 'pdf';
-        $pdf->paper(PaperSize::Letter)->landscape()->socket('documents');
-    });
+test('configured defaults are available before selecting an output format', function () {
+    $fake = new ScreenshotFake(
+        browser: BrowserOptions::make()->setSize(900, 600)->setSocket('captures')->setTimeouts(2000, 90000),
+        image: ImageOptions::make()->setFormat(OutputFormat::Png, 85)->setFullPage(false),
+        pdf: PdfOptions::make()->setPaper(PaperSize::Letter)->setLandscape(true),
+    );
 
-    $image = $fake->html('source');
-    $pdf = $image->pdf();
-    expect($calls)->toBe([]);
-    $pdf->capture();
-    expect($calls)->toBe(['pdf']);
-    $image->jpeg()->capture();
-    $image->png()->capture();
-    expect($calls)->toBe(['pdf', 'jpeg', 'png']);
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Png
-        && $options->getWidth() === 800 && $options->getSocket() === 'images');
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Jpeg
-        && $options->getWidth() === 900 && $options->getQuality() === 85 && $options->getSocket() === null);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getSocket() === 'documents'
-        && $options->getWidth() === 1024 && $options->getPaperWidth() === 215.9 && $options->getLandscape());
+    $pending = $fake->html('source');
+    $fake->assertNothingCaptured();
+    $fake->assertNoPdfsCaptured();
+    $pending->capture();
+    $pending->jpeg()->capture();
+    $pending->pdf()->capture();
+
+    $fake->assertCaptured(fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Png
+        && $options->browser->getWidth() === 900 && $options->browser->getSocket() === 'captures'
+        && ! $options->output->getFullPage());
+    $fake->assertCaptured(fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Jpeg
+        && $options->browser->getLoadTimeout() === 2000 && $options->browser->getBrowserTimeout() === 90000
+        && $options->output->getQuality() === 85);
+    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 900
+        && $options->browser->getSocket() === 'captures' && $options->output->getPaperWidth() === 215.9
+        && $options->output->getLandscape());
 });
 
-test('explicit image options override format defaults before or after format selection', function ($before) {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image
-        ->size(1280, 720)->socket('defaults')->timeouts(load: 2000, browser: 90000)->jpeg(85));
-    $image = $fake->html('override');
-    if (! $before) {
-        $image->jpeg();
-    }
-    $image->size(1024, 768)->withoutSocket()->timeouts(load: 15000);
-    if ($before) {
-        $image->jpeg();
-    }
-    $image->capture();
-    $fake->url('https://example.com')->jpeg()->capture();
+test('fluent settings replace defaults including false null and package default values', function () {
+    $fake = new ScreenshotFake(
+        browser: BrowserOptions::make()->setSize(1280, 720)->setSocket('defaults')->setJavascript(true)
+            ->setFailOnTimeout(true)->setTimeouts(2000, 90000),
+        image: ImageOptions::make()->setFormat(OutputFormat::Jpeg, 95)->setFullPage(false),
+        pdf: PdfOptions::make()->setPaper(PaperSize::Letter)->setLandscape(true)->setMargins(20, 20, 20, 20)
+            ->setPreferCssPageSize(true),
+    );
+
+    $image = $fake->html('override')->size(1024, 768)->withoutSocket()->javascript(false)
+        ->failOnTimeout(false)->timeouts(load: 15000)->fullPage()->png();
+    $image->jpeg(80)->capture();
+    $image->pdf()->paper(PaperSize::A4)->landscape(false)->margins(1, 2, 3, 4)
+        ->background(false)->preferCssPageSize(false)->capture();
+    $fake->html('default')->capture();
 
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'override'
-        && $options->getWidth() === 1024 && $options->getHeight() === 768 && $options->getSocket() === null
-        && $options->getLoadTimeout() === 15000 && $options->getBrowserTimeout() === 90000 && $options->getQuality() === 85);
-    $fake->assertCaptured(fn ($source, $type, $options) => $type === SourceType::Url
-        && $options->getWidth() === 1280 && $options->getSocket() === 'defaults');
-})->with([true, false]);
-
-test('explicit JPEG quality wins while omitted quality uses format defaults', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image->jpeg(95));
-    $fake->html('default')->jpeg()->capture();
-    $fake->html('explicit')->jpeg(80)->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default' && $options->getQuality() === 95);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'explicit' && $options->getQuality() === 80);
+        && $options->browser->getWidth() === 1024 && $options->browser->getHeight() === 768
+        && $options->browser->getSocket() === null && ! $options->browser->getJavascript()
+        && ! $options->browser->getFailOnTimeout() && $options->browser->getLoadTimeout() === 15000
+        && $options->browser->getBrowserTimeout() === 90000
+        && $options->output->getQuality() === 80 && $options->output->getFullPage());
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->browser->getSocket() === null
+        && ! $options->browser->getJavascript() && $options->output->getPaperWidth() === 210.0
+        && ! $options->output->getLandscape() && ! $options->output->getBackground()
+        && ! $options->output->getPreferCssPageSize()
+        && $options->output->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default'
+        && $options->browser->getWidth() === 1280 && $options->browser->getSocket() === 'defaults'
+        && $options->output->getQuality() === 95 && ! $options->output->getFullPage());
 });
 
-test('PDF defaults respect explicit browser and print options without image default leakage', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Png, fn () => throw new RuntimeException('image callback must not run'));
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->paper(PaperSize::Letter)->landscape()->margins(20, 20, 20, 20)->socket('pdfs')->javascript()->timeouts(browser: 80000));
-    $image = $fake->html('invoice')->withoutSocket()->javascript(false)->timeouts(load: 3000);
-    $pdf = $image->pdf()->paper(PaperSize::A4)->landscape(false)->margins(10, 10, 10, 10);
-    $image->socket('later');
-    $pdf->capture();
-
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getSocket() === null
-        && ! $options->getJavascript() && $options->getLoadTimeout() === 3000 && $options->getBrowserTimeout() === 80000
-        && $options->getPaperWidth() === 210.0 && ! $options->getLandscape() && $options->getMargins()['top'] === 10.0);
-});
-
-test('callbacks run once per capture and do not mutate pending state', function () {
-    $fake = new ScreenshotFake;
-    $width = 800;
-    $calls = 0;
-    $fake->configure(OutputFormat::Png, function (PendingImage $image) use (&$width, &$calls) {
-        $calls++;
-        $image->size($width, 600);
-    });
-    $pending = $fake->html('image');
-    expect($calls)->toBe(0);
-    $pending->capture();
-    $width = 900;
-    $pending->capture();
-    expect($calls)->toBe(2);
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 800);
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900);
-});
-
-test('format callbacks can be replaced or cleared independently of existing pending captures', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Png, fn (PendingImage $image) => $image->size(800, 600));
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper(PaperSize::Letter));
-    $first = $fake->html('first');
-    $fake->configure(OutputFormat::Png, fn (PendingImage $image) => $image->size(900, 600));
-    $second = $fake->html('second');
-    $fake->configure(OutputFormat::Png, null);
-    $first->capture();
-    $second->capture();
-    $fake->html('third')->capture();
-    $fake->html('pdf')->pdf()->capture();
-    $fake->configure(OutputFormat::Pdf, null);
-    $first->pdf()->capture();
-    $fake->html('cleared')->pdf()->capture();
-
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900);
-    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'third' && $options->getWidth() === 1024);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'pdf' && $options->getPaperWidth() === 215.9);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getPaperWidth() === 215.9);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'cleared' && $options->getPaperWidth() === 210.0);
-});
-
-test('failed PDF configuration does not capture or contaminate a subsequent attempt', function () {
-    $fake = new ScreenshotFake;
-    $fail = true;
-    $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$fail) {
-        if ($fail) {
-            $pdf->paper(PaperSize::Letter)->margins(-1);
-        }
-    });
-    $pending = $fake->html('invoice')->pdf();
-    expect(fn () => $pending->capture())->toThrow(InvalidArgumentException::class);
-    $fake->assertNoPdfsCaptured();
-    $fail = false;
-    $pending->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 210.0);
-});
-
-test('fakes preserve all format callbacks and independent baseline options', function () {
-    $options = ImageOptions::make()->setSize(900, 768);
-    $factory = new Screenshot(options: $options);
-    $factory->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image->jpeg(85));
-    $factory->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->paper(PaperSize::Letter));
-    $fake = ScreenshotFake::from($factory);
-    $options->setSize(800, 600);
-    $factory->configure(OutputFormat::Jpeg, null)->configure(OutputFormat::Pdf, null);
-    $fake->html('image')->jpeg()->capture();
-    $fake->html('document')->pdf()->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getQuality() === 85);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getPaperWidth() === 215.9);
-    $other = new ScreenshotFake;
-    $other->html('default')->capture();
-    $other->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024);
-});
-
-test('explicit print layout replaces defaults atomically', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->margins(20, 20, 20, 20));
-    $fake->html('small')->pdf()->paperSize(30, 30)->margins(0, 0, 0, 0)->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 30.0
-        && $options->getPaperHeight() === 30.0 && $options->getMargins()['top'] === 0.0);
-});
-
-test('the latest explicit settings survive repeated format changes', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image
-        ->maxSize(2000, 2000)->fullPage()->jpeg(95)->timeouts(load: 900, browser: 3000));
+test('format changes preserve current browser settings image options and JPEG quality', function () {
+    $fake = new ScreenshotFake(
+        browser: BrowserOptions::make()->setTimeouts(900, 3000),
+        image: ImageOptions::make()->setFormat(OutputFormat::Png, 95)->setMaxSize(2000, 2000),
+    );
 
     $fake->html('latest')->jpeg(70)->png()->jpeg()
         ->size(800, 600)->size(640, 480)->maxSize(1200, 1600)->viewport()
         ->timeouts(load: 1000)->timeouts(browser: 2000)->timeouts()->capture();
+    $fake->html('default quality')->jpeg()->capture();
 
-    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $options->getFormat() === OutputFormat::Jpeg
-        && $options->getQuality() === 70 && $options->getWidth() === 640 && $options->getHeight() === 480
-        && $options->getMaxWidth() === 1200 && $options->getMaxHeight() === 1600 && ! $options->getFullPage()
-        && $options->getLoadTimeout() === 1000 && $options->getBrowserTimeout() === 2000);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'latest'
+        && $options->getFormat() === OutputFormat::Jpeg && $options->output->getQuality() === 70
+        && $options->browser->getWidth() === 640 && $options->browser->getHeight() === 480
+        && $options->output->getMaxWidth() === 1200 && $options->output->getMaxHeight() === 1600
+        && ! $options->output->getFullPage() && $options->browser->getLoadTimeout() === 1000
+        && $options->browser->getBrowserTimeout() === 2000);
+    $fake->assertCaptured(fn ($source, $type, $options) => $source === 'default quality'
+        && $options->output->getQuality() === 95);
 });
 
-test('invalid combined PDF defaults fail before capture and leave the pending capture reusable', function () {
-    $fake = new ScreenshotFake;
-    $largeMargins = true;
-    $fake->configure(OutputFormat::Pdf, function (PendingPdf $pdf) use (&$largeMargins) {
-        if ($largeMargins) {
-            $pdf->margins(20, 20, 20, 20);
-        }
-    });
-    $pending = $fake->html('small')->pdf()->paperSize(30, 30);
+test('PDF conversion copies inherited and overridden browser settings with independent print defaults', function () {
+    $fake = new ScreenshotFake(
+        browser: BrowserOptions::make()->setSize(900, 600)->setJavascript(true)->setSocket('shared')->setTimeouts(2000, 4000),
+        image: ImageOptions::make()->setFormat(OutputFormat::Jpeg, 95)->setMaxSize(100, 100)->setFullPage(false),
+        pdf: PdfOptions::make()->setPaper(PaperSize::Letter),
+    );
+    $image = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)->failOnTimeout();
+    $first = $image->pdf()->paper(PaperSize::A5);
+    $second = $image->pdf();
+    $image->size(320, 240)->withoutSocket()->javascript(false);
+    $first->capture();
+    $second->capture();
+    $image->capture();
 
-    expect(fn () => $pending->capture())->toThrow(InvalidArgumentException::class);
-    $fake->assertNoPdfsCaptured();
-
-    $largeMargins = false;
-    $pending->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 30.0
-        && $options->getMargins()['top'] === 10.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 640
+        && $options->browser->getHeight() === 480 && $options->browser->getJavascript()
+        && $options->browser->getSocket() === 'shared' && $options->browser->getLoadTimeout() === 1000
+        && $options->browser->getBrowserTimeout() === 4000 && $options->browser->getFailOnTimeout()
+        && $options->output->getPaperWidth() === 148.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 215.9);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 320
+        && $options->browser->getSocket() === null && ! $options->browser->getJavascript()
+        && $options->output->getMaxWidth() === 100 && $options->output->getQuality() === 95);
 });
 
-test('explicit PDF booleans and each margin win over defaults', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->background()->preferCssPageSize()->margins(20, 20, 20, 20));
-    $fake->html('document')->pdf()->background(false)->preferCssPageSize(false)
-        ->margins(top: 1, right: 2, bottom: 3, left: 4)->capture();
-
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => ! $options->getBackground()
-        && ! $options->getPreferCssPageSize()
-        && $options->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
-});
-
-test('format callbacks cannot change the selected image output', function ($format) {
-    $fake = new ScreenshotFake;
-    $fake->configure($format, function (PendingImage $image) use ($format) {
-        if ($format === OutputFormat::Png) {
-            $image->jpeg(95);
-        } else {
-            $image->png();
-        }
-    });
+test('factories and fakes snapshot each set of configured defaults', function () {
+    $browser = BrowserOptions::make()->setSize(900, 600);
+    $image = ImageOptions::make()->setFormat(OutputFormat::Jpeg, 85);
+    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter);
+    $factory = new Screenshot(browser: $browser, image: $image, pdf: $pdf);
+    $fake = ScreenshotFake::from($factory);
     $pending = $fake->html('image');
-    if ($format === OutputFormat::Jpeg) {
-        $pending->jpeg();
-    }
+    $browser->setSize(800, 600);
+    $image->setFormat(OutputFormat::Png, 50);
+    $pdf->setPaper(PaperSize::A5);
+    $pending->capture();
+    $pending->pdf()->capture();
+    $fake->html('next')->capture();
+
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 900
+        && $options->getFormat() === OutputFormat::Jpeg && $options->output->getQuality() === 85);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 900
+        && $options->output->getPaperWidth() === 215.9);
+    $fake->assertCapturedCount(2);
+    $other = new ScreenshotFake;
+    $other->html('default')->capture();
+    $other->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 1024
+        && $options->getFormat() === OutputFormat::Png);
+});
+
+test('repeated captures use current settings without applying configuration again', function () {
+    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSize(800, 600));
+    $pending = $fake->html('image');
+    $pending->capture();
+    $pending->size(900, 600)->capture();
     $pending->capture();
 
-    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $options->getFormat() === $format);
-})->with([OutputFormat::Png, OutputFormat::Jpeg]);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 800);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 900);
+    $fake->assertCapturedCount(3);
+});
+
+test('PDF layout overrides are validated against current defaults and can be corrected', function () {
+    $fake = new ScreenshotFake(pdf: PdfOptions::make()->setMargins(20, 20, 20, 20));
+    $pending = $fake->html('small')->pdf();
+
+    expect(fn () => $pending->paperSize(30, 30))->toThrow(InvalidArgumentException::class);
+    $fake->assertNoPdfsCaptured();
+    $pending->margins(0, 0, 0, 0)->paperSize(30, 30)->capture();
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 30.0
+        && $options->output->getMargins()['top'] === 0.0);
+});

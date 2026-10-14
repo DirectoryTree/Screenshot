@@ -1,5 +1,6 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Drivers\Chrome\JpegCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
@@ -17,7 +18,8 @@ use HeadlessChromium\PageUtils\PageScreenshot;
 test('image strategies capture bounded pages with the configured timeout and encoding', function ($class, $format, $fullPage) {
     $page = Mockery::mock(Page::class);
     $image = Mockery::mock(PageScreenshot::class);
-    $options = ImageOptions::make()->setSize(640, 480)->setMaxSize(500, 600)->setFormat($format, 92)->setTimeouts(load: 15000, browser: 1234)->setFullPage($fullPage);
+    $browser = BrowserOptions::make()->setSize(640, 480)->setTimeouts(load: 15000, browser: 1234);
+    $options = ImageOptions::make()->setMaxSize(500, 600)->setFormat($format, 92)->setFullPage($fullPage);
 
     if ($fullPage) {
         $page->shouldReceive('getFullPageClip')->once()->with(1234)->andReturn(new Clip(0, 0, 800, 2000));
@@ -42,7 +44,7 @@ test('image strategies capture bounded pages with the configured timeout and enc
     })->andReturn($image);
     $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
 
-    expect((new $class($options))->capture($page))->toBeInstanceOf(ImageResult::class);
+    expect((new $class($browser, $options))->capture($page))->toBeInstanceOf(ImageResult::class);
 })->with([
     'PNG' => [PngCapture::class, OutputFormat::Png],
     'JPEG' => [JpegCapture::class, OutputFormat::Jpeg],
@@ -51,7 +53,8 @@ test('image strategies capture bounded pages with the configured timeout and enc
 test('the PDF strategy prints its layout without screenshot clipping', function () {
     $page = Mockery::mock(Page::class);
     $document = Mockery::mock(PagePdf::class);
-    $options = (PdfOptions::make()->setTimeouts(load: 15000, browser: 4321))->setPaper(PaperSize::Letter)
+    $browser = BrowserOptions::make()->setTimeouts(load: 15000, browser: 4321);
+    $options = PdfOptions::make()->setPaper(PaperSize::Letter)
         ->setLandscape(true)->setMargins(25.4, 12.7, 25.4, 12.7)
         ->setBackground(false)->setPreferCssPageSize(true);
 
@@ -71,5 +74,5 @@ test('the PDF strategy prints its layout without screenshot clipping', function 
     $document->shouldReceive('getBase64')->once()->with(4321)
         ->andReturn(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
 
-    expect((new PdfCapture($options))->capture($page))->toBeInstanceOf(PdfResult::class);
+    expect((new PdfCapture($browser, $options))->capture($page))->toBeInstanceOf(PdfResult::class);
 });

@@ -1,9 +1,8 @@
 <?php
 
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
-use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
 
@@ -76,9 +75,9 @@ test('one capture history preserves mixed output order and filters assertion cal
     expect($fake->recordedSources())->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
     $fake->assertCapturedCount(2);
     $fake->assertPdfCapturedCount(2);
-    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $source === 'jpeg'
+    $fake->assertCaptured(fn ($source, $type, CaptureOptions $options) => $source === 'jpeg'
         && $options->getFormat() === OutputFormat::Jpeg);
-    $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'second pdf'
+    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $source === 'second pdf'
         && $options->getFormat() === OutputFormat::Pdf);
 });
 

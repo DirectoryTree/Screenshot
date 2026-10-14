@@ -2,6 +2,8 @@
 
 namespace DirectoryTree\Screenshot\Testing;
 
+use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
@@ -18,7 +20,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * The recorded image and PDF captures, in capture order.
      *
-     * @var list<array{string, SourceType, ImageOptions|PdfOptions}>
+     * @var list<array{string, SourceType, CaptureOptions}>
      */
     protected array $captures = [];
 
@@ -35,9 +37,11 @@ class ScreenshotFake extends Screenshot implements Driver
     public function __construct(
         protected ImageResult|PdfResult|null $result = null,
         ?ViewFactory $views = null,
-        ?ImageOptions $options = null,
+        ?BrowserOptions $browser = null,
+        ?ImageOptions $image = null,
+        ?PdfOptions $pdf = null,
     ) {
-        parent::__construct($this, $options ? clone $options : null, $views);
+        parent::__construct($this, $browser, $image, $pdf, $views);
     }
 
     /**
@@ -45,15 +49,13 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public static function from(Screenshot $factory, ImageResult|PdfResult|null $result = null): static
     {
-        $fake = new static(
+        return new static(
             result: $result,
             views: $factory->views,
-            options: $factory->options,
+            browser: $factory->browser,
+            image: $factory->image,
+            pdf: $factory->pdf,
         );
-
-        $fake->configureUsing = $factory->configureUsing;
-
-        return $fake;
     }
 
     /**
@@ -67,7 +69,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, SourceType $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
+    public function capture(string $source, SourceType $type, CaptureOptions $options): ImageResult|PdfResult
     {
         $this->captures[] = [$source, $type, clone $options];
 
@@ -180,13 +182,13 @@ class ScreenshotFake extends Screenshot implements Driver
      * Filter the shared capture history by its options type.
      *
      * @param  class-string<ImageOptions|PdfOptions>  $type
-     * @return list<array{string, SourceType, ImageOptions|PdfOptions}>
+     * @return list<array{string, SourceType, CaptureOptions}>
      */
     protected function capturesOfType(string $type): array
     {
         return array_values(array_filter(
             $this->captures,
-            static fn (array $capture) => $capture[2] instanceof $type,
+            static fn (array $capture) => $capture[2]->output instanceof $type,
         ));
     }
 }

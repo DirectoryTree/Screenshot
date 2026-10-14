@@ -24,34 +24,8 @@ test('changing format preserves quality unless explicitly supplied', function ()
 });
 
 test('dimension pairs can change together at the maximum allowed area', function () {
-    $options = ImageOptions::make()->setSize(10000, 4000)->setMaxSize(4000, 10000);
-    $options->setSize(4000, 10000)->setMaxSize(10000, 4000);
+    $options = ImageOptions::make()->setMaxSize(4000, 10000);
+    $options->setMaxSize(10000, 4000);
 
-    expect($options->getWidth())->toBe(4000)->and($options->getHeight())->toBe(10000)
-        ->and($options->getMaxWidth())->toBe(10000)->and($options->getMaxHeight())->toBe(4000);
+    expect($options->getMaxWidth())->toBe(10000)->and($options->getMaxHeight())->toBe(4000);
 });
-
-test('individual timeout setters preserve the other configured value', function ($method, $load, $browser) {
-    $options = ImageOptions::make()->setTimeouts(load: 20000, browser: 80000);
-
-    expect($options->{$method}(30000))->toBe($options)
-        ->and($options->getLoadTimeout())->toBe($load)
-        ->and($options->getBrowserTimeout())->toBe($browser);
-})->with([
-    'load' => ['setLoadTimeout', 30000, 80000],
-    'browser' => ['setBrowserTimeout', 20000, 30000],
-]);
-
-test('invalid individual timeout updates leave both configured values unchanged', function ($method, $value) {
-    $options = ImageOptions::make()->setTimeouts(load: 20000, browser: 80000);
-
-    expect(fn () => $options->{$method}($value))->toThrow(InvalidArgumentException::class);
-
-    expect($options->getLoadTimeout())->toBe(20000)
-        ->and($options->getBrowserTimeout())->toBe(80000);
-})->with([
-    'zero load' => ['setLoadTimeout', 0],
-    'negative load' => ['setLoadTimeout', -1],
-    'zero browser' => ['setBrowserTimeout', 0],
-    'negative browser' => ['setBrowserTimeout', -1],
-]);

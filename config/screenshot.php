@@ -42,4 +42,67 @@ return [
         'lock_timeout' => 60000,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Capture Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Browser settings are shared by images and PDFs. Each pending capture
+    | receives its own copy of these defaults. Fluent options override them.
+    | Dimensions are in pixels and timeouts are in milliseconds.
+    |
+    */
+
+    'capture' => [
+        'width' => 1024,
+        'height' => 768,
+        'browser_timeout' => 60000,
+        'load_timeout' => 15000,
+        'javascript' => false,
+        'fail_on_timeout' => false,
+        'socket' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Images may use PNG or JPEG output. Quality applies to JPEG images only.
+    | Maximum dimensions are in pixels and crop the image without scaling.
+    |
+    */
+
+    'image' => [
+        'format' => 'png',
+        'quality' => 80,
+        'max_width' => 2048,
+        'max_height' => 10000,
+        'full_page' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | PDF Defaults
+    |--------------------------------------------------------------------------
+    |
+    | Paper sizes are a3, a4, a5, letter, or legal. Margins are in millimeters.
+    | Converting an image to PDF preserves its current browser settings and
+    | uses these print defaults independently of its image settings.
+    |
+    */
+
+    'pdf' => [
+        'paper' => 'a4',
+        'landscape' => false,
+        'margins' => [
+            'top' => 10,
+            'right' => 10,
+            'bottom' => 10,
+            'left' => 10,
+        ],
+        'background' => true,
+        'prefer_css_page_size' => false,
+    ],
+
 ];

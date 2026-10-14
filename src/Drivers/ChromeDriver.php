@@ -3,6 +3,7 @@
 namespace DirectoryTree\Screenshot\Drivers;
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
@@ -11,9 +12,7 @@ use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PngCapture;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
-use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Generator;
@@ -41,12 +40,12 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture an image or PDF using a dedicated or shared browser process.
      */
-    public function capture(string $source, SourceType $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
+    public function capture(string $source, SourceType $type, CaptureOptions $options): ImageResult|PdfResult
     {
         $options->validate();
 
         return $this->withBrowser(
-            $options,
+            $options->browser,
             fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared),
         );
     }
@@ -70,10 +69,10 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture the selected output format from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, SourceType $type, ImageOptions|PdfOptions $options, bool $shared = false): ImageResult|PdfResult
+    protected function capturePage(Browser $browser, string $source, SourceType $type, CaptureOptions $options, bool $shared = false): ImageResult|PdfResult
     {
         return $this->withPage(
-            $browser, $source, $type, $options, $shared,
+            $browser, $source, $type, $options->browser, $shared,
             fn (Page $page) => $this->resolveCapture($options)->capture($page),
         );
     }
@@ -81,12 +80,12 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Resolve the capture implementation for the selected output format.
      */
-    protected function resolveCapture(ImageOptions|PdfOptions $options): CapturesPage
+    protected function resolveCapture(CaptureOptions $options): CapturesPage
     {
         return match ($options->getFormat()) {
-            OutputFormat::Png => new PngCapture($options),
-            OutputFormat::Jpeg => new JpegCapture($options),
-            OutputFormat::Pdf => new PdfCapture($options),
+            OutputFormat::Png => new PngCapture($options->browser, $options->output),
+            OutputFormat::Jpeg => new JpegCapture($options->browser, $options->output),
+            OutputFormat::Pdf => new PdfCapture($options->browser, $options->output),
         };
     }
 

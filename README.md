@@ -228,48 +228,66 @@ Screenshot::html($html)->withoutSocket()->capture();
 
 ### Capture Defaults
 
-Configure defaults for each output format in your `AppServiceProvider::boot()` method:
-
-```php
-use DirectoryTree\Screenshot\Facades\Screenshot;
-use DirectoryTree\Screenshot\Enums\OutputFormat;
-use DirectoryTree\Screenshot\Enums\PaperSize;
-use DirectoryTree\Screenshot\PendingImage;
-use DirectoryTree\Screenshot\PendingPdf;
-
-public function boot(): void
-{
-    Screenshot::configure(OutputFormat::Jpeg, fn (PendingImage $image) => $image
-        ->size(width: 1280, height: 720)
-        ->jpeg(quality: 85));
-
-    Screenshot::configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf
-        ->paper(PaperSize::A4)
-        ->margins(top: 10, right: 10, bottom: 10, left: 10)
-        ->socket(key: 'invoices'));
-}
-```
-
-Only the selected format's callback runs, immediately before each capture. PNG and JPEG callbacks receive `PendingImage`; PDF callbacks receive `PendingPdf`. Use callbacks to set options, and call `capture()`, `save()`, or `store()` outside them. Registering defaults does not select an output format.
-
-Explicit options override these defaults, including options set before selecting the format:
-
-```php
-Screenshot::html($html)->size(800, 600)->jpeg()->capture();
-Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(PaperSize::Letter)->capture();
-```
-
-`jpeg()` uses the configured quality; `jpeg(quality: 90)` overrides it. Image defaults do not carry into PDFs. Explicit browser options, such as sockets and timeouts, do carry over when calling `pdf()`.
-
-Calling `configure()` again replaces that format's callback; `configure(OutputFormat::Pdf, null)` clears only PDF defaults. Existing pending captures and fakes keep their registered callbacks. In long-running workers, register defaults during boot and use per-capture methods for job-specific settings.
-
-### Browser Settings
-
-Publish the [configuration file](config/screenshot.php) to customize browser installation, launch options, and socket storage:
+Publish the [configuration file](config/screenshot.php) to set application defaults:
 
 ```bash
 php artisan vendor:publish --tag=screenshot-config
 ```
+
+The `capture` settings apply to both images and PDFs. The `image` and `pdf` settings control their respective outputs. For example, these entries configure a shared viewport, JPEG quality, and PDF paper size:
+
+```php
+// config/screenshot.php
+
+return [
+    'capture' => [
+        'width' => 1280,
+        'height' => 720,
+        'socket' => 'captures',
+    ],
+
+    'image' => [
+        'quality' => 85,
+    ],
+
+    'pdf' => [
+        'paper' => 'letter',
+    ],
+];
+```
+
+Omitted entries use the package defaults. The available settings are:
+
+| Group | Settings |
+| --- | --- |
+| `capture` | `width`, `height`, `load_timeout`, `browser_timeout`, `javascript`, `fail_on_timeout`, `socket` |
+| `image` | `format` (`png` or `jpeg`), `quality`, `max_width`, `max_height`, `full_page` |
+| `pdf` | `paper` (`a3`, `a4`, `a5`, `letter`, or `legal`), `landscape`, `margins` (`top`, `right`, `bottom`, `left`), `background`, `prefer_css_page_size` |
+
+Capture dimensions are in pixels, timeouts are in milliseconds, and PDF margins are in millimeters. Use `socket => null` for dedicated browsers.
+
+Each pending capture gets an independent copy of the factory's defaults. Fluent options update that copy directly:
+
+```php
+use DirectoryTree\Screenshot\Enums\PaperSize;
+
+Screenshot::html($html)->size(800, 600)->jpeg()->capture();
+Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(PaperSize::A4)->capture();
+```
+
+`jpeg()` uses the current quality; `jpeg(quality: 90)` changes it. Switching between PNG and JPEG preserves browser and image settings. Calling `pdf()` copies all current browser settings, including inherited defaults, and starts with the configured PDF settings. Image quality, crop limits, and full-page mode do not carry into PDFs.
+
+Defaults are loaded when the screenshot factory is resolved. Pending captures retain their settings, including their PDF defaults, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
+
+### Updating From Format Callbacks
+
+Replace `Screenshot::configure($format, $callback)` registrations with entries in `config/screenshot.php`, or constructor options when using plain PHP. Browser defaults now apply to every output; PNG and JPEG share image defaults. Use the fluent API for settings specific to an individual capture.
+
+Custom drivers and fake assertion callbacks now receive `CaptureOptions`. Read browser settings through `$options->browser` and image or PDF settings through `$options->output`. `getFormat()` remains available on `CaptureOptions`.
+
+### Browser Settings
+
+The same configuration file controls browser installation, launch options, and socket storage:
 
 - `browser.binary`: an explicit Chrome executable, usually set through `SCREENSHOT_CHROME_PATH`.
 - `browser.directory`: where the installer stores Chrome.
@@ -277,33 +295,48 @@ php artisan vendor:publish --tag=screenshot-config
 - `sockets.directory`: the private directory shared by workers, defaulting to `storage/framework/cache/screenshots`.
 - `sockets.lock_timeout`: how long to wait for locks or shared browser shutdown, in milliseconds; defaults to `60000` per wait.
 
-Set dimensions and operation timeouts through the fluent API. Screenshot manages browser lifetime automatically. Keep Chrome's sandbox enabled in production.
+Set default dimensions and operation timeouts under `capture`, or override them through the fluent API. Screenshot manages browser lifetime automatically. Keep Chrome's sandbox enabled in production.
 
 ### Using PHP Without Laravel
 
 HTML and URL capture work without a booted Laravel application:
 
 ```php
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\PaperSize;
+use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Screenshot;
 
-$screenshot = new Screenshot(new ChromeDriver(
-    binary: '/usr/bin/chromium',
-    socketDirectory: __DIR__.'/storage/screenshots',
-));
+$screenshot = new Screenshot(
+    driver: new ChromeDriver(
+        binary: '/usr/bin/chromium',
+        socketDirectory: __DIR__.'/storage/screenshots',
+    ),
+    browser: BrowserOptions::make()->setSize(1280, 720),
+    image: ImageOptions::make()->setFormat(OutputFormat::Png, 85),
+    pdf: PdfOptions::make()->setPaper(PaperSize::Letter),
+);
 
 $screenshot->html('<h1>Hello, world!</h1>')
     ->size(width: 800, height: 600)
     ->save(__DIR__.'/preview.png');
 ```
 
-The same fluent options and `configure()` callback are available. `view()` requires an injected Laravel view factory; `store()` requires a booted Laravel filesystem.
+Pass browser, image, and PDF defaults through the constructor, then use the same fluent API. The factory copies the supplied option objects so later changes to them do not affect captures. `view()` requires an injected Laravel view factory; `store()` requires a booted Laravel filesystem.
 
 ### Custom Drivers
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture()`. Blade views are rendered to HTML first. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs. Create option objects with `ImageOptions::make()` or `PdfOptions::make()` and configure them through their setters.
+Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture(string $source, SourceType $type, CaptureOptions $options)`. Blade views are rendered to HTML first. `CaptureOptions` combines two independent objects:
+
+- `$options->browser` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
+- `$options->output` is an `ImageOptions` or `PdfOptions` object containing output settings.
+
+Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects. Create standalone options with `BrowserOptions::make()`, `ImageOptions::make()`, or `PdfOptions::make()` and configure them through their setters.
 
 ## Testing
 
@@ -311,7 +344,7 @@ Use the facade fake to test your application without starting Chrome:
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
-use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use Illuminate\Support\Facades\Storage;
 
@@ -323,10 +356,10 @@ Screenshot::html('<h1>Invoice</h1>')
     ->socket(key: 'invoices')
     ->store(path: 'invoice.png', disk: 'screenshots');
 
-Screenshot::assertCaptured(fn (string $source, SourceType $type, ImageOptions $options) =>
+Screenshot::assertCaptured(fn (string $source, SourceType $type, CaptureOptions $options) =>
     $type === SourceType::Html
-    && $options->getWidth() === 800
-    && $options->getSocket() === 'invoices'
+    && $options->browser->getWidth() === 800
+    && $options->browser->getSocket() === 'invoices'
 );
 Screenshot::assertCapturedCount(count: 1);
 Screenshot::assertNothingClosed();
@@ -352,7 +385,7 @@ Screenshot::fake();
 Screenshot::html('<h1>Invoice</h1>')->socket('invoices')->pdf()->landscape()->capture();
 
 Screenshot::assertPdfCaptured(fn ($source, $type, $options) =>
-    $options->getSocket() === 'invoices' && $options->getLandscape()
+    $options->browser->getSocket() === 'invoices' && $options->output->getLandscape()
 );
 Screenshot::assertPdfCapturedCount(1);
 Screenshot::assertNothingCaptured(); // No image captures.

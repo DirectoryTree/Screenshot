@@ -2,7 +2,9 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\SourceType;
 
 /**
  * @extends PendingCapture<ImageOptions, ImageResult>
@@ -10,11 +12,33 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 class PendingImage extends PendingCapture
 {
     /**
+     * The print defaults for captures converted to PDF.
+     */
+    protected PdfOptions $pdf;
+
+    /**
+     * Create an image capture with a snapshot of the PDF defaults.
+     *
+     * @param  CaptureOptions<ImageOptions>  $options
+     */
+    public function __construct(
+        Driver $driver,
+        string $source,
+        SourceType $type,
+        CaptureOptions $options,
+        ?PdfOptions $pdf = null,
+    ) {
+        parent::__construct($driver, $source, $type, $options);
+
+        $this->pdf = $pdf ? clone $pdf : PdfOptions::make();
+    }
+
+    /**
      * Limit the captured dimensions in pixels.
      */
     public function maxSize(int $width, int $height): static
     {
-        $this->options->setMaxSize($width, $height);
+        $this->options->output->setMaxSize($width, $height);
 
         return $this;
     }
@@ -24,7 +48,7 @@ class PendingImage extends PendingCapture
      */
     public function fullPage(bool $value = true): static
     {
-        $this->options->setFullPage($value);
+        $this->options->output->setFullPage($value);
 
         return $this;
     }
@@ -42,7 +66,7 @@ class PendingImage extends PendingCapture
      */
     public function png(): static
     {
-        $this->options->setFormat(OutputFormat::Png);
+        $this->options->output->setFormat(OutputFormat::Png);
 
         return $this;
     }
@@ -52,7 +76,7 @@ class PendingImage extends PendingCapture
      */
     public function jpeg(?int $quality = null): static
     {
-        $this->options->setFormat(OutputFormat::Jpeg, $quality);
+        $this->options->output->setFormat(OutputFormat::Jpeg, $quality);
 
         return $this;
     }
@@ -64,8 +88,7 @@ class PendingImage extends PendingCapture
     {
         return new PendingPdf(
             $this->driver, $this->source, $this->type,
-            PdfOptions::fromBrowserOptions($this->options),
-            $this->configureUsing, PdfOptions::fromBrowserOptions($this->defaults),
+            new CaptureOptions($this->options->browser, $this->pdf),
         );
     }
 }

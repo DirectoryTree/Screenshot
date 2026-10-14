@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use HeadlessChromium\Clip;
@@ -13,6 +14,7 @@ abstract class ImageCapture implements CapturesPage
      * Create an image capture strategy.
      */
     public function __construct(
+        protected BrowserOptions $browser,
         protected ImageOptions $options
     ) {}
 
@@ -22,8 +24,8 @@ abstract class ImageCapture implements CapturesPage
     public function capture(Page $page): ImageResult
     {
         $clip = $this->options->getFullPage()
-            ? $page->getFullPageClip($this->options->getBrowserTimeout())
-            : new Clip(0, 0, $this->options->getWidth(), $this->options->getHeight());
+            ? $page->getFullPageClip($this->browser->getBrowserTimeout())
+            : new Clip(0, 0, $this->browser->getWidth(), $this->browser->getHeight());
 
         $parameters = array_merge($this->parameters(), [
             'captureBeyondViewport' => true,
@@ -36,7 +38,7 @@ abstract class ImageCapture implements CapturesPage
 
         return new ImageResult(
             $page->screenshot($parameters)->getBase64(
-                $this->options->getBrowserTimeout()
+                $this->browser->getBrowserTimeout()
             )
         );
     }

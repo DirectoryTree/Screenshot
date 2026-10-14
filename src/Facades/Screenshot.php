@@ -2,7 +2,6 @@
 
 namespace DirectoryTree\Screenshot\Facades;
 
-use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingImage;
@@ -11,7 +10,6 @@ use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static Factory configure(OutputFormat $format, ?callable $callback)
  * @method static PendingImage html(string $html)
  * @method static PendingImage url(string $url)
  * @method static PendingImage view(string $view, array $data = [])

@@ -2,10 +2,9 @@
 
 namespace DirectoryTree\Screenshot\Contracts;
 
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\SourceType;
-use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 
 interface Driver
@@ -13,5 +12,5 @@ interface Driver
     /**
      * Capture the given HTML or URL in the selected output format.
      */
-    public function capture(string $source, SourceType $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult;
+    public function capture(string $source, SourceType $type, CaptureOptions $options): ImageResult|PdfResult;
 }

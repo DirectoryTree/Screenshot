@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Page;
@@ -12,6 +13,7 @@ class PdfCapture implements CapturesPage
      * Create a PDF capture strategy.
      */
     public function __construct(
+        protected BrowserOptions $browser,
         protected PdfOptions $options
     ) {}
 
@@ -24,7 +26,7 @@ class PdfCapture implements CapturesPage
             $page->pdf(
                 $this->options->toArray()
             )->getBase64(
-                $this->options->getBrowserTimeout()
+                $this->browser->getBrowserTimeout()
             )
         );
     }

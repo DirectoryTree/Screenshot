@@ -1,10 +1,11 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Enums\SourceType;
-use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
@@ -20,8 +21,7 @@ function pdfFixture(): string
 }
 
 test('PDF conversion snapshots browser defaults without capturing or changing the source', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(OutputFormat::Pdf, fn (PendingPdf $screenshot) => $screenshot->socket('invoices')->timeouts(load: 5000, browser: 10000));
+    $fake = new ScreenshotFake(browser: BrowserOptions::make()->setSocket('invoices')->setTimeouts(load: 5000, browser: 10000));
     $image = $fake->html('invoice')->size(500, 300)->jpeg();
     $pdf = $image->pdf();
     $image->socket('images');
@@ -29,16 +29,16 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
     $fake->assertNothingCaptured();
 
     $pdf->paper(PaperSize::Letter)->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
-        && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
-        && $options->getBrowserTimeout() === 10000 && $options->getPaperWidth() === 215.9 && $options->getLandscape()
-        && $options->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
-        && ! $options->getBackground() && $options->getPreferCssPageSize());
+    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
+        && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->browser->getSocket() === 'invoices' && $options->browser->getLoadTimeout() === 5000
+        && $options->browser->getBrowserTimeout() === 10000 && $options->output->getPaperWidth() === 215.9 && $options->output->getLandscape()
+        && $options->output->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
+        && ! $options->output->getBackground() && $options->output->getPreferCssPageSize());
     $fake->assertPdfCapturedCount(1);
     $fake->assertNothingCaptured();
 
     $image->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getSocket() === 'images' && $options->getFormat() === OutputFormat::Jpeg);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getSocket() === 'images' && $options->getFormat() === OutputFormat::Jpeg);
 });
 
 test('PDF requests and recorded assertion options are independent snapshots', function () {
@@ -51,16 +51,16 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
     $second->capture();
 
     $fake->assertPdfCaptured(function ($source, $type, $options) {
-        $options->setPaper(PaperSize::Legal);
-        $options->setSocket('mutated');
+        $options->output->setPaper(PaperSize::Legal);
+        $options->browser->setSocket('mutated');
 
         return true;
     });
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 100.0
-        && $options->getSocket() === null && $options->getJavascript() && $options->getFailOnTimeout()
-        && $options->getBrowserTimeout() === 2000);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 210.0
-        && $options->getSocket() === 'shared' && ! $options->getJavascript());
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 100.0
+        && $options->browser->getSocket() === null && $options->browser->getJavascript() && $options->browser->getFailOnTimeout()
+        && $options->browser->getBrowserTimeout() === 2000);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 210.0
+        && $options->browser->getSocket() === 'shared' && ! $options->browser->getJavascript());
 });
 
 test('one driver contract handles images and PDFs with the requested enum format', function () {
@@ -68,11 +68,11 @@ test('one driver contract handles images and PDFs with the requested enum format
     $image = new ImageResult(imageFixture());
     $pdf = new PdfResult(pdfFixture());
     $driver->shouldReceive('capture')->once()
-        ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === SourceType::Html && $options->getFormat() === OutputFormat::Jpeg)
+        ->withArgs(fn ($source, $type, CaptureOptions $options) => $source === 'invoice' && $type === SourceType::Html && $options->getFormat() === OutputFormat::Jpeg)
         ->andReturn($image);
     $driver->shouldReceive('capture')->once()
-        ->withArgs(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
-            && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->getLandscape())
+        ->withArgs(fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
+            && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->output->getLandscape())
         ->andReturn($pdf);
     $pending = (new Screenshot($driver))->html('invoice')->jpeg();
 
@@ -103,8 +103,8 @@ test('PDF fake assertions fail when no matching document was captured', function
 });
 
 test('paper dimensions and margins are converted from millimeters to inches', function () {
-    $options = PdfOptions::make()->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
-    $parameters = $options->toArray();
+    $pdf = PdfOptions::make()->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
+    $parameters = $pdf->toArray();
 
     expect($parameters['paperWidth'])->toEqualWithDelta(8.5, 0.00001)
         ->and($parameters['paperHeight'])->toEqualWithDelta(11, 0.00001)
@@ -113,9 +113,9 @@ test('paper dimensions and margins are converted from millimeters to inches', fu
 });
 
 test('invalid print settings leave the entire PDF configuration unchanged', function ($method, $arguments) {
-    $options = PdfOptions::make();
-    expect(fn () => $options->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
-    expect($options)->toEqual(PdfOptions::make());
+    $pdf = PdfOptions::make();
+    expect(fn () => $pdf->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
+    expect($pdf)->toEqual(PdfOptions::make());
 })->with([
     ['setPaperSize', [0, 297]],
     ['setPaperSize', [210, INF]],
@@ -127,10 +127,10 @@ test('invalid print settings leave the entire PDF configuration unchanged', func
 ]);
 
 test('orientation changes cannot invalidate the printable area', function () {
-    $options = PdfOptions::make()->setMargins(120, 10, 120, 10);
+    $pdf = PdfOptions::make()->setMargins(120, 10, 120, 10);
 
-    expect(fn () => $options->setLandscape(true))->toThrow(InvalidArgumentException::class);
-    expect($options->getLandscape())->toBeFalse();
+    expect(fn () => $pdf->setLandscape(true))->toThrow(InvalidArgumentException::class);
+    expect($pdf->getLandscape())->toBeFalse();
 });
 
 test('image and PDF builders save their own result types without changing each other', function () {
@@ -159,15 +159,14 @@ test('image and PDF builders save their own result types without changing each o
 });
 
 test('combined layout changes validate the final paper and margins atomically', function () {
-    $options = PdfOptions::make()->setMargins(20, 20, 20, 20)->setSocket('invoices');
+    $pdf = PdfOptions::make()->setMargins(20, 20, 20, 20);
 
-    expect($options->setLayout(width: 30, height: 30, top: 0, right: 0, bottom: 0, left: 0))->toBe($options)
-        ->and($options->getPaperWidth())->toBe(30.0)
-        ->and($options->getMargins())->toBe(['top' => 0.0, 'right' => 0.0, 'bottom' => 0.0, 'left' => 0.0])
-        ->and($options->getSocket())->toBe('invoices');
-    $before = clone $options;
+    expect($pdf->setLayout(width: 30, height: 30, top: 0, right: 0, bottom: 0, left: 0))->toBe($pdf)
+        ->and($pdf->getPaperWidth())->toBe(30.0)
+        ->and($pdf->getMargins())->toBe(['top' => 0.0, 'right' => 0.0, 'bottom' => 0.0, 'left' => 0.0]);
+    $before = clone $pdf;
 
-    expect(fn () => $options->setLayout(width: 10, height: 10, landscape: true, top: 10))
+    expect(fn () => $pdf->setLayout(width: 10, height: 10, landscape: true, top: 10))
         ->toThrow(InvalidArgumentException::class);
-    expect($options)->toEqual($before);
+    expect($pdf)->toEqual($before);
 });

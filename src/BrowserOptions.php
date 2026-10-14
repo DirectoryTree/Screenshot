@@ -2,18 +2,10 @@
 
 namespace DirectoryTree\Screenshot;
 
-use DirectoryTree\Screenshot\Enums\OutputFormat;
 use InvalidArgumentException;
 
-abstract class BrowserOptions
+class BrowserOptions
 {
-    /**
-     * Settings explicitly assigned through the validated setters.
-     *
-     * @var array<string, true>
-     */
-    protected array $specified = [];
-
     /**
      * The browser viewport width in pixels.
      */
@@ -66,11 +58,6 @@ abstract class BrowserOptions
     }
 
     /**
-     * Get the output format.
-     */
-    abstract public function getFormat(): OutputFormat;
-
-    /**
      * Get the viewport width in pixels.
      */
     public function getWidth(): int
@@ -95,7 +82,6 @@ abstract class BrowserOptions
 
         $this->width = $width;
         $this->height = $height;
-        $this->specified['size'] = true;
 
         return $this;
     }
@@ -142,12 +128,10 @@ abstract class BrowserOptions
 
         if ($load !== null) {
             $this->loadTimeout = $load;
-            $this->specified['loadTimeout'] = true;
         }
 
         if ($browser !== null) {
             $this->browserTimeout = $browser;
-            $this->specified['browserTimeout'] = true;
         }
 
         return $this;
@@ -167,7 +151,6 @@ abstract class BrowserOptions
     public function setJavascript(bool $value): static
     {
         $this->javascript = $value;
-        $this->specified['javascript'] = true;
 
         return $this;
     }
@@ -186,7 +169,6 @@ abstract class BrowserOptions
     public function setFailOnTimeout(bool $value): static
     {
         $this->failOnTimeout = $value;
-        $this->specified['failOnTimeout'] = true;
 
         return $this;
     }
@@ -207,54 +189,8 @@ abstract class BrowserOptions
         $this->validateSocket($key);
 
         $this->socket = $key;
-        $this->specified['socket'] = true;
 
         return $this;
-    }
-
-    /**
-     * Treat the current values as defaults for a new capture.
-     */
-    public function asDefaults(): static
-    {
-        $options = clone $this;
-        $options->specified = [];
-
-        return $options;
-    }
-
-    /**
-     * Fill unspecified settings from defaults while preserving the output format.
-     * Validate the complete result before returning it.
-     */
-    public function withDefaults(self $defaults): static
-    {
-        if (! $defaults instanceof static) {
-            throw new InvalidArgumentException('Defaults must use the same options type.');
-        }
-
-        $options = clone $this;
-        $options->mergeDefaults($defaults);
-        $options->validate();
-
-        return $options;
-    }
-
-    /**
-     * Merge shared browser defaults without replacing explicit values.
-     */
-    protected function mergeDefaults(self $defaults): void
-    {
-        if (! isset($this->specified['size'])) {
-            $this->width = $defaults->width;
-            $this->height = $defaults->height;
-        }
-
-        $this->browserTimeout = isset($this->specified['browserTimeout']) ? $this->browserTimeout : $defaults->browserTimeout;
-        $this->loadTimeout = isset($this->specified['loadTimeout']) ? $this->loadTimeout : $defaults->loadTimeout;
-        $this->javascript = isset($this->specified['javascript']) ? $this->javascript : $defaults->javascript;
-        $this->failOnTimeout = isset($this->specified['failOnTimeout']) ? $this->failOnTimeout : $defaults->failOnTimeout;
-        $this->socket = isset($this->specified['socket']) ? $this->socket : $defaults->socket;
     }
 
     /**
@@ -263,9 +199,9 @@ abstract class BrowserOptions
     public function validate(): void
     {
         $this->validateSocket($this->socket);
-        $this->validateDimensions($this->width, $this->height);
-        $this->validateTimeout($this->browserTimeout);
         $this->validateTimeout($this->loadTimeout);
+        $this->validateTimeout($this->browserTimeout);
+        $this->validateDimensions($this->width, $this->height);
     }
 
     /**

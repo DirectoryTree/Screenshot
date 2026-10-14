@@ -1,5 +1,6 @@
 <?php
 
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -8,7 +9,7 @@ test('standard paper sizes reach the driver with their dimensions in millimeters
     $fake = new ScreenshotFake;
     $fake->html('invoice')->pdf()->paperSize(100, 150)->paper($size)->capture();
 
-    $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $options->getPaperWidth() === $width && $options->getPaperHeight() === $height
+    $fake->assertPdfCaptured(fn ($source, $type, CaptureOptions $options) => $options->output->getPaperWidth() === $width && $options->output->getPaperHeight() === $height
     );
 })->with([
     'A3' => [PaperSize::A3, 297.0, 420.0],
@@ -19,11 +20,11 @@ test('standard paper sizes reach the driver with their dimensions in millimeters
 ]);
 
 test('selecting a smaller paper cannot invalidate the printable area', function () {
-    $options = PdfOptions::make()->setMargins(10, 80, 10, 80);
-    $original = clone $options;
+    $pdf = PdfOptions::make()->setMargins(10, 80, 10, 80);
+    $original = clone $pdf;
 
-    expect(fn () => $options->setPaper(PaperSize::A5))->toThrow(InvalidArgumentException::class);
-    expect($options)->toEqual($original);
+    expect(fn () => $pdf->setPaper(PaperSize::A5))->toThrow(InvalidArgumentException::class);
+    expect($pdf)->toEqual($original);
 });
 
 test('paper requires an enum before invoking the driver', function () {

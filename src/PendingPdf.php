@@ -14,7 +14,7 @@ class PendingPdf extends PendingCapture
      */
     public function paper(PaperSize $size): static
     {
-        $this->options->setPaper($size);
+        $this->options->output->setPaper($size);
 
         return $this;
     }
@@ -24,7 +24,7 @@ class PendingPdf extends PendingCapture
      */
     public function paperSize(float $width, float $height): static
     {
-        $this->options->setPaperSize($width, $height);
+        $this->options->output->setPaperSize($width, $height);
 
         return $this;
     }
@@ -34,7 +34,7 @@ class PendingPdf extends PendingCapture
      */
     public function landscape(bool $value = true): static
     {
-        $this->options->setLandscape($value);
+        $this->options->output->setLandscape($value);
 
         return $this;
     }
@@ -44,7 +44,7 @@ class PendingPdf extends PendingCapture
      */
     public function margins(float $top = 10, float $right = 10, float $bottom = 10, float $left = 10): static
     {
-        $this->options->setMargins($top, $right, $bottom, $left);
+        $this->options->output->setMargins($top, $right, $bottom, $left);
 
         return $this;
     }
@@ -54,7 +54,7 @@ class PendingPdf extends PendingCapture
      */
     public function background(bool $value = true): static
     {
-        $this->options->setBackground($value);
+        $this->options->output->setBackground($value);
 
         return $this;
     }
@@ -64,7 +64,7 @@ class PendingPdf extends PendingCapture
      */
     public function preferCssPageSize(bool $value = true): static
     {
-        $this->options->setPreferCssPageSize($value);
+        $this->options->output->setPreferCssPageSize($value);
 
         return $this;
     }

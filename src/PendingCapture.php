@@ -2,7 +2,6 @@
 
 namespace DirectoryTree\Screenshot;
 
-use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\SourceType;
 
@@ -13,29 +12,17 @@ use DirectoryTree\Screenshot\Enums\SourceType;
 abstract class PendingCapture
 {
     /**
-     * The options before per-capture settings are applied.
+     * Create a capture with an independent snapshot of its settings.
      *
-     * @var TOptions
-     */
-    protected BrowserOptions $defaults;
-
-    /**
-     * Create an independent capture with its format configuration callbacks.
-     *
-     * @param  TOptions  $options
-     * @param  array<string, Closure>  $configureUsing
-     * @param  TOptions|null  $defaults
+     * @param  CaptureOptions<TOptions>  $options
      */
     public function __construct(
         protected Driver $driver,
         protected string $source,
         protected SourceType $type,
-        protected BrowserOptions $options,
-        protected array $configureUsing = [],
-        ?BrowserOptions $defaults = null,
+        protected CaptureOptions $options,
     ) {
-        $this->defaults = ($defaults ?? $options)->asDefaults();
-        $this->options = $defaults ? clone $options : $options->asDefaults();
+        $this->options = clone $options;
     }
 
     /**
@@ -43,7 +30,7 @@ abstract class PendingCapture
      */
     public function size(int $width, int $height): static
     {
-        $this->options->setSize($width, $height);
+        $this->options->browser->setSize($width, $height);
 
         return $this;
     }
@@ -54,7 +41,7 @@ abstract class PendingCapture
      */
     public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->options->setTimeouts($load, $browser);
+        $this->options->browser->setTimeouts($load, $browser);
 
         return $this;
     }
@@ -64,7 +51,7 @@ abstract class PendingCapture
      */
     public function javascript(bool $value = true): static
     {
-        $this->options->setJavascript($value);
+        $this->options->browser->setJavascript($value);
 
         return $this;
     }
@@ -74,7 +61,7 @@ abstract class PendingCapture
      */
     public function failOnTimeout(bool $value = true): static
     {
-        $this->options->setFailOnTimeout($value);
+        $this->options->browser->setFailOnTimeout($value);
 
         return $this;
     }
@@ -84,7 +71,7 @@ abstract class PendingCapture
      */
     public function socket(string $key): static
     {
-        $this->options->setSocket($key);
+        $this->options->browser->setSocket($key);
 
         return $this;
     }
@@ -94,7 +81,7 @@ abstract class PendingCapture
      */
     public function withoutSocket(): static
     {
-        $this->options->setSocket(null);
+        $this->options->browser->setSocket(null);
 
         return $this;
     }
@@ -120,23 +107,15 @@ abstract class PendingCapture
     }
 
     /**
-     * Capture using format defaults followed by explicit settings.
+     * Capture an independent snapshot of the current settings.
      *
      * @return TResult
      */
     public function capture(): ImageResult|PdfResult
     {
-        $capture = clone $this;
-        $capture->options = $this->options->asDefaults()->withDefaults($this->defaults);
-        $capture->configureUsing = [];
-        $format = $this->options->getFormat();
+        $options = clone $this->options;
+        $options->validate();
 
-        if ($callback = $this->configureUsing[$format->value] ?? null) {
-            $callback($capture);
-        }
-
-        $options = $this->options->withDefaults($capture->options);
-
-        return $this->driver->capture($this->source, $this->type, $options->asDefaults());
+        return $this->driver->capture($this->source, $this->type, $options);
     }
 }

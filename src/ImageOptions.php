@@ -5,7 +5,7 @@ namespace DirectoryTree\Screenshot;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use InvalidArgumentException;
 
-class ImageOptions extends BrowserOptions
+class ImageOptions
 {
     /**
      * The maximum captured width in pixels.
@@ -33,6 +33,22 @@ class ImageOptions extends BrowserOptions
     protected bool $fullPage = true;
 
     /**
+     * Create options using the declared defaults.
+     */
+    protected function __construct()
+    {
+        $this->validate();
+    }
+
+    /**
+     * Create a fresh set of options.
+     */
+    public static function make(): static
+    {
+        return new static;
+    }
+
+    /**
      * Get the maximum captured width in pixels.
      */
     public function getMaxWidth(): int
@@ -57,7 +73,6 @@ class ImageOptions extends BrowserOptions
 
         $this->maxWidth = $width;
         $this->maxHeight = $height;
-        $this->specified['maxSize'] = true;
 
         return $this;
     }
@@ -93,7 +108,6 @@ class ImageOptions extends BrowserOptions
 
         if ($quality !== null) {
             $this->quality = $quality;
-            $this->specified['quality'] = true;
         }
 
         return $this;
@@ -113,7 +127,6 @@ class ImageOptions extends BrowserOptions
     public function setFullPage(bool $value): static
     {
         $this->fullPage = $value;
-        $this->specified['fullPage'] = true;
 
         return $this;
     }
@@ -123,29 +136,19 @@ class ImageOptions extends BrowserOptions
      */
     public function validate(): void
     {
-        parent::validate();
-
         $this->validateFormat($this->format);
         $this->validateDimensions($this->maxWidth, $this->maxHeight);
         $this->validateQuality($this->quality);
     }
 
     /**
-     * Merge image defaults without changing the selected format or explicit values.
-     *
-     * @param  ImageOptions  $defaults
+     * Validate capture limits before applying either dimension.
      */
-    protected function mergeDefaults(BrowserOptions $defaults): void
+    protected function validateDimensions(int $width, int $height): void
     {
-        parent::mergeDefaults($defaults);
-
-        if (! isset($this->specified['maxSize'])) {
-            $this->maxWidth = $defaults->maxWidth;
-            $this->maxHeight = $defaults->maxHeight;
+        if ($width < 1 || $height < 1 || $width > 16384 || $height > 16384 || $width * $height > 40000000) {
+            throw new InvalidArgumentException('Dimensions must be between 1 and 16384 pixels and no more than 40 million pixels in total.');
         }
-
-        $this->quality = isset($this->specified['quality']) ? $this->quality : $defaults->quality;
-        $this->fullPage = isset($this->specified['fullPage']) ? $this->fullPage : $defaults->fullPage;
     }
 
     /**

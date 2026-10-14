@@ -6,7 +6,7 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use InvalidArgumentException;
 
-class PdfOptions extends BrowserOptions
+class PdfOptions
 {
     /**
      * The paper width in millimeters, before orientation.
@@ -54,24 +54,19 @@ class PdfOptions extends BrowserOptions
     protected bool $preferCssPageSize = false;
 
     /**
-     * Create PDF options from shared browser settings.
+     * Create options using the declared defaults.
      */
-    public static function fromBrowserOptions(BrowserOptions $options): static
+    protected function __construct()
     {
-        $pdf = static::make();
+        $this->validate();
+    }
 
-        $pdf->width = $options->width;
-        $pdf->height = $options->height;
-        $pdf->loadTimeout = $options->loadTimeout;
-        $pdf->browserTimeout = $options->browserTimeout;
-        $pdf->javascript = $options->javascript;
-        $pdf->failOnTimeout = $options->failOnTimeout;
-        $pdf->socket = $options->socket;
-        $pdf->specified = array_intersect_key($options->specified, array_flip([
-            'size', 'loadTimeout', 'browserTimeout', 'javascript', 'failOnTimeout', 'socket',
-        ]));
-
-        return $pdf;
+    /**
+     * Create a fresh set of options.
+     */
+    public static function make(): static
+    {
+        return new static;
     }
 
     /**
@@ -182,15 +177,6 @@ class PdfOptions extends BrowserOptions
         $this->marginRight = $right ?? $this->marginRight;
         $this->marginBottom = $bottom ?? $this->marginBottom;
         $this->marginLeft = $left ?? $this->marginLeft;
-        $this->specified += array_filter([
-            'paperWidth' => $width !== null,
-            'paperHeight' => $height !== null,
-            'landscape' => $landscape !== null,
-            'marginTop' => $top !== null,
-            'marginRight' => $right !== null,
-            'marginBottom' => $bottom !== null,
-            'marginLeft' => $left !== null,
-        ]);
 
         return $this;
     }
@@ -209,7 +195,6 @@ class PdfOptions extends BrowserOptions
     public function setBackground(bool $value): static
     {
         $this->background = $value;
-        $this->specified['background'] = true;
 
         return $this;
     }
@@ -228,7 +213,6 @@ class PdfOptions extends BrowserOptions
     public function setPreferCssPageSize(bool $value): static
     {
         $this->preferCssPageSize = $value;
-        $this->specified['preferCssPageSize'] = true;
 
         return $this;
     }
@@ -238,8 +222,6 @@ class PdfOptions extends BrowserOptions
      */
     public function validate(): void
     {
-        parent::validate();
-
         $this->validateLayout($this->paperWidth, $this->paperHeight, $this->landscape, $this->marginTop, $this->marginRight, $this->marginBottom, $this->marginLeft);
     }
 
@@ -259,26 +241,6 @@ class PdfOptions extends BrowserOptions
             'printBackground' => $this->background,
             'preferCSSPageSize' => $this->preferCssPageSize,
         ];
-    }
-
-    /**
-     * Merge print defaults before validating the complete layout.
-     *
-     * @param  PdfOptions  $defaults
-     */
-    protected function mergeDefaults(BrowserOptions $defaults): void
-    {
-        parent::mergeDefaults($defaults);
-
-        $this->paperWidth = isset($this->specified['paperWidth']) ? $this->paperWidth : $defaults->paperWidth;
-        $this->paperHeight = isset($this->specified['paperHeight']) ? $this->paperHeight : $defaults->paperHeight;
-        $this->landscape = isset($this->specified['landscape']) ? $this->landscape : $defaults->landscape;
-        $this->marginTop = isset($this->specified['marginTop']) ? $this->marginTop : $defaults->marginTop;
-        $this->marginRight = isset($this->specified['marginRight']) ? $this->marginRight : $defaults->marginRight;
-        $this->marginBottom = isset($this->specified['marginBottom']) ? $this->marginBottom : $defaults->marginBottom;
-        $this->marginLeft = isset($this->specified['marginLeft']) ? $this->marginLeft : $defaults->marginLeft;
-        $this->background = isset($this->specified['background']) ? $this->background : $defaults->background;
-        $this->preferCssPageSize = isset($this->specified['preferCssPageSize']) ? $this->preferCssPageSize : $defaults->preferCssPageSize;
     }
 
     /**

@@ -1,9 +1,8 @@
 <?php
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
-use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
-use DirectoryTree\Screenshot\PendingPdf;
+use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;
 use Symfony\Component\Process\Process;
@@ -87,9 +86,11 @@ test('image and PDF builders capture independently using the same terminal metho
     expect($width)->toEqualWithDelta(612, 1)->and($height)->toEqualWithDelta(792, 1);
 });
 
-test('real PDFs use format defaults and explicit paper overrides', function () {
-    $factory = pdfScreenshot()->configure(OutputFormat::Pdf,
-        fn (PendingPdf $pdf) => $pdf->paperSize(100, 150)->landscape());
+test('real PDFs use configured defaults and explicit paper overrides', function () {
+    $factory = new Screenshot(
+        driver: new ChromeDriver(getenv('CHROME_PATH') ?: null, ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1']),
+        pdf: PdfOptions::make()->setPaperSize(100, 150)->setLandscape(true),
+    );
     $default = $factory->html('<h1>Defaults</h1>')->pdf()->capture();
     [$width, $height] = pdfPageSize($default->contents());
     expect($width)->toEqualWithDelta(150 / 25.4 * 72, 1)->and($height)->toEqualWithDelta(100 / 25.4 * 72, 1);

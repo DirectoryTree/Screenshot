@@ -4,7 +4,8 @@ use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
+use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -15,48 +16,33 @@ function pdfFixture(): string
     return base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf'));
 }
 
-test('PDF selection uses the same builder and preserves browser defaults', function () {
+test('PDF conversion snapshots browser defaults without capturing or changing the source', function () {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->socket('invoices')->timeouts(load: 5000, browser: 10000));
-    $pending = $fake->html('invoice')->size(500, 300)->jpeg();
-
-    expect($pending->pdf())->toBe($pending);
+    $fake->configure(fn (PendingImage $screenshot) => $screenshot->socket('invoices')->timeouts(load: 5000, browser: 10000));
+    $image = $fake->html('invoice')->size(500, 300)->jpeg();
+    $pdf = $image->pdf();
+    $image->socket('images');
     $fake->assertNoPdfsCaptured();
     $fake->assertNothingCaptured();
 
-    $result = $pending->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
-    expect($result)->toBeInstanceOf(PdfResult::class);
+    $pdf->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
     $fake->assertPdfCaptured(fn ($source, $type, ImageOptions $options, PdfOptions $pdf) => $source === 'invoice'
-        && $type === 'html' && $options->getFormat() === 'pdf' && $options->getSocket() === 'invoices'
-        && $options->getLoadTimeout() === 5000 && $options->getBrowserTimeout() === 10000
-        && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape()
+        && $type === 'html' && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
+        && $options->getBrowserTimeout() === 10000 && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape()
         && $pdf->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
         && ! $pdf->getBackground() && $pdf->getPreferCssPageSize());
     $fake->assertPdfCapturedCount(1);
     $fake->assertNothingCaptured();
+
+    $image->capture();
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getSocket() === 'images' && $options->getFormat() === 'jpeg');
 });
 
-test('the last format selection controls capture without losing print settings', function () {
+test('PDF requests and recorded assertion options are independent snapshots', function () {
     $fake = new ScreenshotFake;
-    $pending = $fake->html('invoice')->paper('letter')->pdf();
-
-    expect($pending->png())->toBe($pending)
-        ->and($pending->capture())->toBeInstanceOf(ScreenshotResult::class);
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === 'png');
-    expect($pending->pdf()->jpeg(90))->toBe($pending);
-    $pending->capture();
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === 'jpeg' && $options->getQuality() === 90);
-    $pending->pdf()->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 215.9);
-    $fake->assertCapturedCount(2);
-    $fake->assertPdfCapturedCount(1);
-});
-
-test('global configuration applies print defaults without sharing mutable options', function () {
-    $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->pdf()->paper('letter')->landscape());
-    $first = $fake->html('first')->paperSize(100, 150)->withoutSocket()->javascript()->failOnTimeout()->timeouts(browser: 2000);
-    $second = $fake->html('second');
+    $source = $fake->html('invoice')->socket('shared');
+    $first = $source->pdf()->paperSize(100, 150)->withoutSocket()->javascript()->failOnTimeout()->timeouts(browser: 2000);
+    $second = $source->pdf();
     $first->capture();
     $first->paper('a3');
     $second->capture();
@@ -67,29 +53,18 @@ test('global configuration applies print defaults without sharing mutable option
 
         return true;
     });
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $source === 'first'
-        && $pdf->getPaperWidth() === 100.0 && $options->getSocket() === null
-        && $options->getJavascript() && $options->getFailOnTimeout() && $options->getBrowserTimeout() === 2000);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $source === 'second'
-        && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape() && ! $options->getJavascript());
-});
-
-test('PDF print settings supplied to the constructor are cloned', function () {
-    $fake = new ScreenshotFake;
-    $options = new ImageOptions(format: 'pdf');
-    $pdf = new PdfOptions;
-    $pending = new PendingScreenshot($fake, 'invoice', 'html', $options, $pdf);
-    $options->setFormat('jpeg');
-    $pdf->setPaper('letter');
-    $pending->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $options->getFormat() === 'pdf' && $pdf->getPaperWidth() === 210.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 100.0
+        && $options->getSocket() === null && $options->getJavascript() && $options->getFailOnTimeout()
+        && $options->getBrowserTimeout() === 2000);
+    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 210.0
+        && $options->getSocket() === 'shared' && ! $options->getJavascript());
 });
 
 test('image-only custom drivers still work and reject PDF conversion clearly', function () {
     $driver = Mockery::mock(Driver::class);
     $factory = new Screenshot($driver);
 
-    expect(fn () => $factory->html('invoice')->pdf()->capture())->toThrow(LogicException::class, 'does not support PDF generation');
+    expect(fn () => $factory->html('invoice')->pdf())->toThrow(LogicException::class, 'does not support PDF generation');
     $driver->shouldNotReceive('capture');
 });
 
@@ -145,4 +120,29 @@ test('orientation changes cannot invalidate the printable area', function () {
 
     expect(fn () => $options->setLandscape(true))->toThrow(InvalidArgumentException::class);
     expect($options->getLandscape())->toBeFalse();
+});
+
+test('image and PDF builders save their own result types without changing each other', function () {
+    $fake = new ScreenshotFake;
+    $image = $fake->html('invoice');
+    $pdf = $image->pdf();
+    $imagePath = tempnam(sys_get_temp_dir(), 'screenshot-image-');
+    $pdfPath = tempnam(sys_get_temp_dir(), 'screenshot-pdf-');
+
+    try {
+        $imageResult = $image->save($imagePath);
+        $pdfResult = $pdf->save($pdfPath);
+
+        expect($image)->toBeInstanceOf(PendingImage::class)
+            ->and($pdf)->toBeInstanceOf(PendingPdf::class)
+            ->and($imageResult)->toBeInstanceOf(ScreenshotResult::class)
+            ->and($pdfResult)->toBeInstanceOf(PdfResult::class)
+            ->and(file_get_contents($imagePath))->toBe($imageResult->contents())
+            ->and(file_get_contents($pdfPath))->toBe($pdfResult->contents());
+        $fake->assertCapturedCount(1);
+        $fake->assertPdfCapturedCount(1);
+    } finally {
+        unlink($imagePath);
+        unlink($pdfPath);
+    }
 });

@@ -38,9 +38,6 @@
         "ext-zip": "Required to download Chrome using screenshot:install."
     },
     "autoload": {
-        "files": [
-            "src/CaptureOptions.php"
-        ],
         "psr-4": {
             "DirectoryTree\\Screenshot\\": "src/"
         }

@@ -2,7 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -24,7 +24,7 @@ test('pending captures do not start the driver until requested', function () {
 
 test('omitted timeouts preserve configured values without changing other captures', function ($arguments, $load, $browser) {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
+    $fake->configure(fn (PendingImage $screenshot) => $screenshot->timeouts(load: 20000, browser: 80000));
 
     $fake->html('override')->timeouts(...$arguments)->capture();
     $fake->html('default')->capture();
@@ -59,8 +59,8 @@ test('options cannot leak between captures', function () {
 test('directly constructed pending screenshots own their options', function () {
     $fake = new ScreenshotFake;
     $options = new ImageOptions(width: 900);
-    $first = new PendingScreenshot($fake, 'first', 'html', $options);
-    $second = new PendingScreenshot($fake, 'second', 'html', $options);
+    $first = new PendingImage($fake, 'first', 'html', $options);
+    $second = new PendingImage($fake, 'second', 'html', $options);
 
     $options->setSize(1200, $options->getHeight());
     $first->size(500, 400)->capture();
@@ -81,7 +81,7 @@ test('drivers receive independent options snapshots', function () {
 
         return new ScreenshotResult(imageFixture());
     });
-    $pending = new PendingScreenshot($driver, 'hello', 'html', new ImageOptions);
+    $pending = new PendingImage($driver, 'hello', 'html', new ImageOptions);
     $pending->capture();
     $pending->size(640, 480);
     expect($snapshots[0]->getWidth())->toBe(1024)->and($snapshots[0]->getHeight())->toBe(768);

@@ -15,7 +15,7 @@ class Screenshot
     /**
      * The callback used to configure each new pending screenshot.
      *
-     * @var (Closure(PendingScreenshot): mixed)|null
+     * @var (Closure(PendingImage): mixed)|null
      */
     protected ?Closure $configureUsing = null;
 
@@ -31,7 +31,7 @@ class Screenshot
     /**
      * Set or clear the default configuration callback for future screenshots.
      *
-     * @param  (callable(PendingScreenshot): mixed)|null  $callback
+     * @param  (callable(PendingImage): mixed)|null  $callback
      */
     public function configure(?callable $callback): static
     {
@@ -43,27 +43,27 @@ class Screenshot
     /**
      * Prepare a screenshot of an HTML document.
      */
-    public function html(string $html): PendingScreenshot
+    public function html(string $html): PendingImage
     {
-        return $this->newPendingScreenshot($html, 'html');
+        return $this->newPendingImage($html, 'html');
     }
 
     /**
      * Prepare a screenshot of an HTTP or HTTPS URL.
      */
-    public function url(string $url): PendingScreenshot
+    public function url(string $url): PendingImage
     {
         if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true)) {
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 
-        return $this->newPendingScreenshot($url, 'url');
+        return $this->newPendingImage($url, 'url');
     }
 
     /**
      * Render a Laravel view and prepare its screenshot.
      */
-    public function view(string $view, array $data = []): PendingScreenshot
+    public function view(string $view, array $data = []): PendingImage
     {
         if (! $this->views) {
             throw new LogicException('A view factory is required to capture Laravel views.');
@@ -95,9 +95,9 @@ class Screenshot
     /**
      * Apply defaults to a fresh screenshot before caller-specific options.
      */
-    protected function newPendingScreenshot(string $source, string $type): PendingScreenshot
+    protected function newPendingImage(string $source, string $type): PendingImage
     {
-        $screenshot = new PendingScreenshot($this->driver, $source, $type, $this->options);
+        $screenshot = new PendingImage($this->driver, $source, $type, $this->options);
 
         if ($this->configureUsing) {
             ($this->configureUsing)($screenshot);

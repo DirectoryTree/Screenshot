@@ -3,7 +3,7 @@
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\PdfResult;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
@@ -22,7 +22,7 @@ test('a service provider configures defaults with a replaceable driver', functio
     {
         public function boot(): void
         {
-            Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->size(900, 600));
+            Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->size(900, 600));
         }
     });
 
@@ -31,7 +31,7 @@ test('a service provider configures defaults with a replaceable driver', functio
 
 test('the facade fake replaces the container factory and renders escaped Blade views', function () {
     $calls = 0;
-    Screenshot::configure(function (PendingScreenshot $screenshot) use (&$calls) {
+    Screenshot::configure(function (PendingImage $screenshot) use (&$calls) {
         $calls++;
         $screenshot->jpeg(85);
     });
@@ -99,7 +99,7 @@ test('configuration has a publishable tag', function () {
 });
 
 test('the facade fake preserves configured socket defaults without starting a browser', function () {
-    Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->socket('emails'));
+    Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->socket('emails'));
     Screenshot::fake();
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
@@ -173,7 +173,7 @@ test('the configured socket lock timeout bounds lifecycle operations', function 
 test('PDF fakes render views and store the supplied document with filesystem options', function () {
     Storage::fake('pdfs');
     $result = new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
-    Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->socket('invoices'));
+    Screenshot::configure(fn (PendingImage $screenshot) => $screenshot->socket('invoices'));
     Screenshot::fake(pdfResult: $result);
     $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper('letter')
         ->store('invoice.pdf', 'pdfs', ['visibility' => 'private']);

@@ -1,10 +1,6 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureOptions;
-use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\Screenshot;
-use DirectoryTree\Screenshot\ScreenshotResult;
 
 test('format and quality updates reject invalid input without changing either value', function () {
     $options = new ImageOptions(quality: 85);
@@ -58,19 +54,3 @@ test('invalid individual timeout updates leave both configured values unchanged'
     'zero browser' => ['setBrowserTimeout', 0],
     'negative browser' => ['setBrowserTimeout', -1],
 ]);
-
-test('existing drivers and assertions can still type hint CaptureOptions', function () {
-    $driver = new class implements Driver
-    {
-        public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult
-        {
-            expect($options)->toBeInstanceOf(ImageOptions::class)
-                ->and($options->getWidth())->toBe(900);
-
-            return new ScreenshotResult(imageFixture());
-        }
-    };
-
-    $factory = new Screenshot($driver, new CaptureOptions(width: 900));
-    expect($factory->html('hello')->capture())->toBeInstanceOf(ScreenshotResult::class);
-});

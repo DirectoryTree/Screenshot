@@ -173,9 +173,9 @@ PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` a
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 
-`pdf()`, `png()`, and `jpeg()` select the output format on the same fluent builder; the last selection wins. Browser and print settings can be configured in any order, including through the global `configure()` callback. Print settings only apply to PDFs. Images and PDFs can share the same named browser.
+`html()`, `view()`, and `url()` return a `PendingImage`. Calling `pdf()` creates an independent `PendingPdf` with a snapshot of its browser settings. Both builders support `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Configure image options on `PendingImage` and print options on `PendingPdf`; images and PDFs can share the same named browser.
 
-`capture()`, `save()`, and `store()` return a `ScreenshotResult` for images or a `PdfResult` for PDFs. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns a `ScreenshotResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
 
 ### Timeouts
 
@@ -230,12 +230,12 @@ Configure default capture options in your `AppServiceProvider::boot()` method:
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
 
 public function boot(): void
 {
     Screenshot::configure(
-        fn (PendingScreenshot $screenshot) => $screenshot
+        fn (PendingImage $screenshot) => $screenshot
             ->size(width: 1280, height: 720)
             ->jpeg(quality: 85)
             ->socket(key: 'invoices')

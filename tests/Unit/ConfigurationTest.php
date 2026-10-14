@@ -1,13 +1,13 @@
 <?php
 
 use DirectoryTree\Screenshot\ImageOptions;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 
 test('capture options override configured defaults without leaking into other captures', function () {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot
+    $fake->configure(fn (PendingImage $screenshot) => $screenshot
         ->size(1280, 720)->jpeg(85)->socket('emails'));
 
     $fake->html('override')->size(640, 480)->png()->withoutSocket()->capture();
@@ -26,7 +26,7 @@ test('configuration runs once for each fresh pending screenshot without capturin
     $fake = new ScreenshotFake;
     $width = 800;
     $calls = 0;
-    $fake->configure(function (PendingScreenshot $screenshot) use (&$width, &$calls): void {
+    $fake->configure(function (PendingImage $screenshot) use (&$width, &$calls): void {
         $calls++;
         $screenshot->size($width, 600);
     });
@@ -47,9 +47,9 @@ test('configuration runs once for each fresh pending screenshot without capturin
 
 test('configuration can be replaced or cleared without changing existing pending screenshots', function () {
     $fake = new ScreenshotFake;
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->size(800, 600)->jpeg());
+    $fake->configure(fn (PendingImage $screenshot) => $screenshot->size(800, 600)->jpeg());
     $first = $fake->html('first');
-    $fake->configure(fn (PendingScreenshot $screenshot) => $screenshot->size(900, 600));
+    $fake->configure(fn (PendingImage $screenshot) => $screenshot->size(900, 600));
     $second = $fake->html('second');
     $fake->configure(null);
 
@@ -65,7 +65,7 @@ test('configuration can be replaced or cleared without changing existing pending
 test('failed configuration does not capture or contaminate subsequent screenshots', function () {
     $fake = new ScreenshotFake;
     $fail = true;
-    $fake->configure(function (PendingScreenshot $screenshot) use (&$fail): void {
+    $fake->configure(function (PendingImage $screenshot) use (&$fail): void {
         if ($fail) {
             $screenshot->jpeg()->size(0, 600);
         }
@@ -81,7 +81,7 @@ test('failed configuration does not capture or contaminate subsequent screenshot
 test('factories have independent configuration and fakes preserve their baseline options', function () {
     $options = new ImageOptions(width: 900);
     $factory = new Screenshot(options: $options);
-    $factory->configure(fn (PendingScreenshot $screenshot) => $screenshot->jpeg(85));
+    $factory->configure(fn (PendingImage $screenshot) => $screenshot->jpeg(85));
     $fake = ScreenshotFake::from($factory);
     $options->setSize(800, $options->getHeight());
     $factory->configure(null);

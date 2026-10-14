@@ -71,14 +71,15 @@ test('PDF URL captures honor strict and partial page load timeouts', function ()
     }
 });
 
-test('one builder can switch between PDF PNG and JPEG output', function () {
-    $pending = pdfScreenshot()->html('<h1>Any format</h1>')->paper('letter')->size(320, 240)->viewport();
+test('image and PDF builders capture independently using the same terminal methods', function () {
+    $image = pdfScreenshot()->html('<h1>Any format</h1>')->size(320, 240)->viewport();
+    $pdf = $image->pdf()->paper('letter');
 
-    expect($pending->pdf()->capture()->mimeType())->toBe('application/pdf')
-        ->and($pending->png()->capture()->mimeType())->toBe('image/png')
-        ->and($pending->jpeg()->capture()->mimeType())->toBe('image/jpeg');
+    expect($pdf->capture()->mimeType())->toBe('application/pdf')
+        ->and($image->png()->capture()->mimeType())->toBe('image/png')
+        ->and($image->jpeg()->capture()->mimeType())->toBe('image/jpeg');
 
-    $result = $pending->pdf()->capture();
+    $result = $pdf->capture();
     [$width, $height] = pdfPageSize($result->contents());
     expect($width)->toEqualWithDelta(612, 1)->and($height)->toEqualWithDelta(792, 1);
 });

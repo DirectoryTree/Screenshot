@@ -1,7 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
-use DirectoryTree\Screenshot\PendingScreenshot;
+use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
 use HeadlessChromium\Exception\OperationTimedOut;
 use Symfony\Component\Process\Process;
@@ -30,7 +30,7 @@ test('real Chromium renders a full page PNG from local HTML', function () {
 });
 
 test('real Chromium applies configured defaults and per-capture dimension limits', function () {
-    $factory = realScreenshot()->configure(fn (PendingScreenshot $screenshot) => $screenshot
+    $factory = realScreenshot()->configure(fn (PendingImage $screenshot) => $screenshot
         ->size(640, 480)->viewport()->jpeg(85));
     $result = $factory->html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
         ->maxSize(500, 300)->capture();

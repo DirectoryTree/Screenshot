@@ -7,5 +7,5 @@ interface ManagesBrowserSockets
     /**
      * Wait for active captures and close a named shared browser.
      */
-    public function closeSocket(string $key): void;
+    public function close(string $key): void;
 }

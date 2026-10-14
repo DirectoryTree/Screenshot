@@ -43,9 +43,9 @@ class Screenshot
     /**
      * Wait for active captures and stop a named shared browser.
      */
-    public function closeSocket(string $key): void
+    public function close(string $key): void
     {
-        $this->socketManager()->closeSocket($key);
+        $this->socketManager()->close($key);
     }
 
     /**

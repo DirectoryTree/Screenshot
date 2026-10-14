@@ -30,7 +30,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Ignore named browser shutdown while faking captures.
      */
-    public function closeSocket(string $key): void {}
+    public function close(string $key): void {}
 
     /**
      * Record a capture without starting Chrome.

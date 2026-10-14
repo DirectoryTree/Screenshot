@@ -98,13 +98,13 @@ test('named sockets are reusable and dead browsers are replaced', function () {
     $this->factory->html('second')->socket('reusable')->capture();
     expect(file_get_contents($path))->toBe($first);
 
-    $this->factory->closeSocket('reusable');
+    $this->factory->close('reusable');
     file_put_contents($path, $first); // Simulate a saved endpoint left behind by a dead browser.
 
     $this->factory->html('replacement')->socket('reusable')->timeout(10000)->capture();
     expect(file_get_contents($path))->not->toBe($first);
 
-    $this->factory->closeSocket('reusable');
+    $this->factory->close('reusable');
     expect(file_exists($path))->toBeFalse();
 
     $this->factory->html('after shutdown')->socket('reusable')->capture();
@@ -118,6 +118,6 @@ test('different keys select different browsers', function () {
     $second = BrowserSocket::named('second', $this->directory)->path();
 
     expect(file_get_contents($first))->not->toBe(file_get_contents($second));
-    $this->factory->closeSocket('first');
+    $this->factory->close('first');
     expect(file_exists($first))->toBeFalse()->and(file_exists($second))->toBeTrue();
 });

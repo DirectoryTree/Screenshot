@@ -120,7 +120,7 @@ class ChromeDriver implements Driver, ManagesBrowserSockets
 
             return $result;
         } finally {
-            $this->close($browser, $page, $failed, $shared);
+            $this->cleanup($browser, $page, $failed, $shared);
         }
     }
 
@@ -156,7 +156,7 @@ class ChromeDriver implements Driver, ManagesBrowserSockets
     /**
      * Wait for active captures and stop a named shared browser.
      */
-    public function closeSocket(string $key): void
+    public function close(string $key): void
     {
         BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout)->close($this->browserOptions);
     }
@@ -164,7 +164,7 @@ class ChromeDriver implements Driver, ManagesBrowserSockets
     /**
      * Release the page and browser without replacing a capture exception.
      */
-    protected function close(Browser $browser, ?Page $page, bool $failed, bool $shared = false): void
+    protected function cleanup(Browser $browser, ?Page $page, bool $failed, bool $shared = false): void
     {
         if ($page) {
             try {

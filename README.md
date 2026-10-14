@@ -218,7 +218,7 @@ The API is synchronous within each PHP process. Run captures in separate Laravel
 Shared browsers outlive individual captures and worker exits. Close a shared browser explicitly when it is no longer needed:
 
 ```php
-Screenshot::closeSocket(key: 'emails');
+Screenshot::close(key: 'emails');
 ```
 
 Closing waits for cooperating active captures to finish, requests graceful browser shutdown, waits for its endpoint to stop accepting connections, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock and shutdown waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per wait); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.

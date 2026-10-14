@@ -55,7 +55,7 @@ test('the facade fake preserves configured socket defaults without starting a br
     Screenshot::fake();
     Screenshot::html('shared')->capture();
     Screenshot::html('dedicated')->withoutSocket()->capture();
-    Screenshot::closeSocket('emails');
+    Screenshot::close('emails');
 
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->socket === 'emails');
     Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
@@ -67,7 +67,7 @@ test('the configured socket directory is used for lifecycle operations', functio
     config(['screenshot.socket_directory' => $directory]);
 
     try {
-        Screenshot::closeSocket('emails');
+        Screenshot::close('emails');
         $path = BrowserSocket::named('emails', $directory)->path();
         expect(file_exists($path.'.lock'))->toBeTrue();
     } finally {

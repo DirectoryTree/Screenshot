@@ -40,8 +40,8 @@ class InstallCommand extends Command
         $this->components->info('Chrome is ready.');
         $this->line($path);
 
-        if (config('screenshot.binary')) {
-            $this->components->warn('Your configured screenshot.binary still takes precedence over this installation.');
+        if (config('screenshot.browser.binary')) {
+            $this->components->warn('Your configured screenshot.browser.binary still takes precedence over this installation.');
         }
 
         $this->components->info('Restart long-running queue workers to use this installation. Close shared browsers before switching versions.');

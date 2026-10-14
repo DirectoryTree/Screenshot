@@ -10,9 +10,9 @@ uses(TestCase::class)->group('browser');
 test('the install command downloads a browser that the application can capture with', function () {
     $directory = sys_get_temp_dir().'/screenshot-install-browser-'.bin2hex(random_bytes(8));
     config([
-        'screenshot.binary' => null,
-        'screenshot.browser_directory' => $directory,
-        'screenshot.browser_options' => ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'],
+        'screenshot.browser.binary' => null,
+        'screenshot.browser.directory' => $directory,
+        'screenshot.browser.options' => ['noSandbox' => getenv('SCREENSHOT_NO_SANDBOX') === '1'],
     ]);
 
     try {

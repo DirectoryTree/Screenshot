@@ -67,7 +67,7 @@ php artisan screenshot:install
 
 The command downloads the latest stable [Chrome for Testing](https://github.com/GoogleChromeLabs/chrome-for-testing) directly from Google, extracts it, and checks that its executable can run. It requires PHP's `zip` extension and HTTPS access to `googlechromelabs.github.io` and `storage.googleapis.com`. Node.js and npm are not required.
 
-Chrome is installed under `storage/app/private/screenshot/browsers`, configurable through `screenshot.browser_directory`. Screenshot automatically discovers the selected installation when the application boots. Install during deployment, using a directory readable and executable by your application workers; downloads never happen during a capture or Composer install.
+Chrome is installed under `storage/app/private/screenshot/browsers`, configurable through `screenshot.browser.directory`. Screenshot automatically discovers the selected installation when the application boots. Install during deployment, using a directory readable and executable by your application workers; downloads never happen during a capture or Composer install.
 
 To pin a complete browser version for reproducible deployments:
 
@@ -255,19 +255,19 @@ Only use this lifecycle method for browsers managed by this application. If a wo
 
 Browser launch settings such as the binary, proxy, and custom flags are chosen by the worker that starts the browser. Use consistent configuration for a key and close/restart the browser after changing those settings. Dimensions, JavaScript, command timeouts, and configured HTTP headers are applied per worker/page.
 
-**A shared browser also shares cookies and browser storage.** Use dedicated mode or separate keys for workloads requiring separate browser state. By default, a shared browser uses a profile directory beside its socket (`<socket>.profile`). Explicit shutdown retains this profile and the stable `.lock` / `.usage` files, so saved browser state may survive a restart. Remove them only after all workers have stopped and the browser is closed. A configured `browser_options.userDataDir` overrides this profile path; never point different browser keys at the same profile directory.
+**A shared browser also shares cookies and browser storage.** Use dedicated mode or separate keys for workloads requiring separate browser state. By default, a shared browser uses a profile directory beside its socket (`<socket>.profile`). Explicit shutdown retains this profile and the stable `.lock` / `.usage` files, so saved browser state may survive a restart. Remove them only after all workers have stopped and the browser is closed. A configured `screenshot.browser.options.userDataDir` overrides this profile path; never point different browser keys at the same profile directory.
 
 ## Configuration
 
 The published `config/screenshot.php` contains browser infrastructure settings: the executable path, launch options, socket directory, and lock timeout:
 
 ```php
-'binary' => env('SCREENSHOT_CHROME_PATH'),
-
-'browser_directory' => storage_path('app/private/screenshot/browsers'),
-
-'browser_options' => [
-    'startupTimeout' => 30,
+'browser' => [
+    'binary' => env('SCREENSHOT_CHROME_PATH'),
+    'directory' => storage_path('app/private/screenshot/browsers'),
+    'options' => [
+        'startupTimeout' => 30,
+    ],
 ],
 
 'sockets' => [

@@ -13,11 +13,11 @@ return [
     |
     */
 
-    'binary' => env('SCREENSHOT_CHROME_PATH'),
-
-    'browser_directory' => storage_path('app/private/screenshot/browsers'),
-
-    'browser_options' => [],
+    'browser' => [
+        'binary' => env('SCREENSHOT_CHROME_PATH'),
+        'directory' => storage_path('app/private/screenshot/browsers'),
+        'options' => [],
+    ],
 
     /*
     |--------------------------------------------------------------------------

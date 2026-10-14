@@ -12,7 +12,7 @@ test('the install command downloads stable Chrome by default', function () {
 });
 
 test('the install command accepts a version and explains explicit binary precedence', function () {
-    config(['screenshot.binary' => '/system/chrome']);
+    config(['screenshot.browser.binary' => '/system/chrome']);
     $installer = Mockery::mock(ChromeInstaller::class);
     $installer->shouldReceive('install')->once()->with('155.0.8059.79')->andReturn('/browsers/chrome');
     $this->app->instance(ChromeInstaller::class, $installer);
@@ -30,7 +30,7 @@ test('the install command reports installation failures', function () {
 });
 
 test('the driver uses installed Chrome unless the application explicitly configured a binary', function ($configured, $expected) {
-    config(['screenshot.binary' => $configured]);
+    config(['screenshot.browser.binary' => $configured]);
     $installer = Mockery::mock(ChromeInstaller::class);
     $installer->shouldReceive('path')->times($configured === null ? 1 : 0)->andReturn('/installed/chrome');
     $this->app->instance(ChromeInstaller::class, $installer);

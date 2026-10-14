@@ -18,13 +18,13 @@ class ScreenshotServiceProvider extends ServiceProvider
         $this->replaceConfigRecursivelyFrom(__DIR__.'/../config/screenshot.php', 'screenshot');
 
         $this->app->singleton(ChromeInstaller::class, fn ($app) => new ChromeInstaller(
-            $app['config']->get('screenshot.browser_directory'),
+            $app['config']->get('screenshot.browser.directory'),
         ));
 
         $this->app->singleton(Driver::class, function ($app) {
             return new ChromeDriver(
-                $app['config']->get('screenshot.binary') ?? $app->make(ChromeInstaller::class)->path(),
-                $app['config']->get('screenshot.browser_options', []),
+                $app['config']->get('screenshot.browser.binary') ?? $app->make(ChromeInstaller::class)->path(),
+                $app['config']->get('screenshot.browser.options', []),
                 $app['config']->get('screenshot.sockets.directory'),
                 $app['config']->get('screenshot.sockets.lock_timeout', 60000),
             );

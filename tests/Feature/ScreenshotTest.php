@@ -108,7 +108,17 @@ test('partial socket configuration preserves the remaining package defaults', fu
 
     expect(config('screenshot.sockets.directory'))->toBe(storage_path('framework/cache/screenshots'))
         ->and(config('screenshot.sockets.lock_timeout'))->toBe(250)
-        ->and(config('screenshot.browser_options'))->toBe([]);
+        ->and(config('screenshot.browser.options'))->toBe([]);
+});
+
+test('partial browser configuration preserves installation and socket defaults', function () {
+    config(['screenshot' => ['browser' => ['options' => ['startupTimeout' => 15]]]]);
+
+    (new ScreenshotServiceProvider($this->app))->register();
+
+    expect(config('screenshot.browser.directory'))->toBe(storage_path('app/private/screenshot/browsers'))
+        ->and(config('screenshot.browser.options'))->toBe(['startupTimeout' => 15])
+        ->and(config('screenshot.sockets.lock_timeout'))->toBe(60000);
 });
 
 test('the configured socket lock timeout bounds lifecycle operations', function () {

@@ -96,7 +96,10 @@ class PendingSource
      */
     public function png(): PendingImage
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->png();
+        return (new PendingImage(
+            $this->capture,
+            $this->newCaptureOptions($this->image),
+        ))->png();
     }
 
     /**
@@ -104,7 +107,10 @@ class PendingSource
      */
     public function jpeg(?int $quality = null): PendingImage
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->jpeg($quality);
+        return (new PendingImage(
+            $this->capture,
+            $this->newCaptureOptions($this->image),
+        ))->jpeg($quality);
     }
 
     /**
@@ -112,7 +118,10 @@ class PendingSource
      */
     public function pdf(): PendingPdf
     {
-        return new PendingPdf($this->capture, new CaptureOptions($this->browser, $this->pdf, $this->element));
+        return new PendingPdf(
+            $this->capture,
+            $this->newCaptureOptions($this->pdf),
+        );
     }
 
     /**
@@ -136,6 +145,22 @@ class PendingSource
      */
     public function capture(): ImageResult
     {
-        return (new PendingImage($this->capture, new CaptureOptions($this->browser, $this->image, $this->element)))->capture();
+        return (new PendingImage(
+            $this->capture,
+            $this->newCaptureOptions($this->image),
+        ))->capture();
+    }
+
+    /**
+     * Combine the source's browser settings and selector with the output options.
+     *
+     * @template TOutput of ImageOptions|PdfOptions
+     *
+     * @param  TOutput  $output
+     * @return CaptureOptions<TOutput>
+     */
+    protected function newCaptureOptions(ImageOptions|PdfOptions $output): CaptureOptions
+    {
+        return new CaptureOptions($this->browser, $output, $this->element);
     }
 }

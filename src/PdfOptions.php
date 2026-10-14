@@ -152,7 +152,12 @@ class PdfOptions extends BrowserOptions
      */
     public function getMargins(): array
     {
-        return ['top' => $this->marginTop, 'right' => $this->marginRight, 'bottom' => $this->marginBottom, 'left' => $this->marginLeft];
+        return [
+            'top' => $this->marginTop,
+            'right' => $this->marginRight,
+            'bottom' => $this->marginBottom,
+            'left' => $this->marginLeft,
+        ];
     }
 
     /**

@@ -19,7 +19,11 @@ test('the install command downloads a browser that the application can capture w
 
     try {
         artisan('screenshot:install')->assertSuccessful();
-        expect(app()->make(ChromeInstaller::class)->path())->not->toBeNull();
+        $installer = app()->make(ChromeInstaller::class);
+        $path = $installer->path();
+        expect($path)->not->toBeNull();
+        $installed = json_decode(file_get_contents($directory.'/installed.json'), true);
+        expect($installer->install($installed['version']))->toBe($path);
 
         $result = Screenshot::html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
             ->size(width: 640, height: 480)->capture();
@@ -27,6 +31,11 @@ test('the install command downloads a browser that the application can capture w
         expect($result->width())->toBe(640)
             ->and($result->height())->toBe(960)
             ->and($result->mimeType())->toBe('image/png');
+
+        $jpeg = Screenshot::html('<h1>Installed Chrome</h1>')->size(320, 240)->viewport()->jpeg()->capture();
+        expect($jpeg->width())->toBe(320)
+            ->and($jpeg->height())->toBe(240)
+            ->and($jpeg->mimeType())->toBe('image/jpeg');
     } finally {
         (new Filesystem)->remove($directory);
     }

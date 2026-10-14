@@ -4,6 +4,8 @@ use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\BrowserFactory;
+use HeadlessChromium\Communication\Message;
+use HeadlessChromium\Exception\CommunicationException;
 use Illuminate\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 
@@ -128,4 +130,36 @@ test('different keys select different browsers', function () {
     expect(file_get_contents($first))->not->toBe(file_get_contents($second));
     $factory->close('first');
     expect(file_exists($first))->toBeFalse()->and(file_exists($second))->toBeTrue();
+});
+
+test('failed page initialization does not leak tabs or close another workers page', function () {
+    $factory = sharedScreenshot();
+    $factory->html('warmup')->socket('cleanup')->capture();
+    $uri = file_get_contents(BrowserSocket::named('cleanup', temporaryDirectory())->path());
+    $browser = BrowserFactory::connectToBrowser($uri);
+    $page = $browser->createPage();
+
+    try {
+        $page->setHtml('<h1>Another worker</h1>');
+        $targets = fn () => array_column(array_filter($browser->getConnection()
+            ->sendMessageSync(new Message('Target.getTargets'))['result']['targetInfos'],
+            fn ($target) => $target['type'] === 'page'), 'targetId');
+        $original = $targets();
+        $broken = new Screenshot(new ChromeDriver(getenv('CHROME_PATH') ?: null, [
+            'headers' => ['X-Test' => ['invalid']],
+        ], temporaryDirectory()));
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            expect(fn () => $broken->html('failure')->socket('cleanup')->capture())
+                ->toThrow(CommunicationException::class, 'Invalid header value');
+            expect($targets())->toEqualCanonicalizing($original);
+        }
+
+        expect($page->getHtml())->toContain('Another worker');
+        expect($factory->html('recovered')->socket('cleanup')->capture()->mimeType())->toBe('image/png');
+        expect(file_get_contents(BrowserSocket::named('cleanup', temporaryDirectory())->path()))->toBe($uri);
+    } finally {
+        $page->close();
+        $browser->getConnection()->disconnect();
+    }
 });

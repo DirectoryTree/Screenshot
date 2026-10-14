@@ -50,6 +50,44 @@ jobs:
       - run: composer test
       - run: composer lint
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite, zip
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - run: composer audit
+
+  installer:
+    name: Chrome installer / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, pdo_sqlite, zip
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - name: Install Chrome and capture local HTML
+        env:
+          SCREENSHOT_TEST_INSTALL: '1'
+        run: vendor/bin/pest tests/Browser/InstallTest.php
+
   browser:
     name: Chromium
     runs-on: ubuntu-latest

@@ -27,7 +27,7 @@ Screenshot::view('invoices.preview', data: ['invoice' => $invoice])
     ->store(path: 'invoices/preview.jpg', disk: 's3');
 ```
 
-The package is currently private and unreleased. License selection is pending review; no open-source license has been granted.
+Screenshot is licensed under the [MIT license](LICENSE.md). The repository remains private while v1.0 is prepared for release.
 
 ## Requirements
 
@@ -58,6 +58,14 @@ Then install the review branch:
 ```bash
 composer require directorytree/screenshot:dev-master
 ```
+
+Once a 1.x release is tagged, select the stable version constraint instead:
+
+```bash
+composer require directorytree/screenshot:^1.0
+```
+
+Keep the VCS repository configured until the package is available on Packagist. No stable release or Packagist publication is available during private review.
 
 The service provider is registered automatically. Download Chrome for your operating system and architecture:
 
@@ -202,7 +210,7 @@ Screenshot::url('https://example.com')
     ->capture();
 ```
 
-Use an appropriate job timeout when capturing inside a queue worker. By default, each capture starts its own browser and closes the page and browser in a `finally` block. A failed page close falls back to closing the target. Shared browser mode keeps the browser running and closes only the capture’s page.
+Use an appropriate job timeout when capturing inside a queue worker. By default, each capture starts its own browser and closes the page and browser in a `finally` block. A failed page close falls back to closing the target. Shared browser mode keeps the browser running and closes only the capture’s page, including its target if page initialization fails.
 
 ## Shared Browsers and Parallel Workers
 
@@ -411,4 +419,4 @@ Installer tests require PHP's `zip` extension. They cover platform detection, ar
 
 The unit and Laravel tests cover validation, capture isolation, facade fakes, view rendering, storage failures, page-load timeouts, cleanup on failures, socket publication, and lock contention. Browser tests exercise separate concurrent PHP workers sharing one browser, independent page settings, reuse after worker exit, dead socket recovery, and shutdown. They use local fixtures and require a working Chrome executable. In a disposable test container that cannot enable the sandbox, opt in with `SCREENSHOT_NO_SANDBOX=1`.
 
-CI runs PHP 8.2 / Laravel 12, PHP 8.3 / Laravel 13, and PHP 8.4 / Laravel 12 and 13. A separate job exercises real Chromium captures. No Packagist publication or release workflow is configured.
+CI runs PHP 8.2 / Laravel 12, PHP 8.3 / Laravel 13, and PHP 8.4 / Laravel 12 and 13. A separate Linux job exercises real Chromium captures and parallel workers. macOS and Windows jobs download Chrome and capture local HTML through the Laravel integration. Platform detection also recognizes Linux ARM64 and Windows x86; those architectures are not separately exercised in CI. A dependency audit must pass before changes are considered release-ready. No Packagist publication or release workflow is configured.

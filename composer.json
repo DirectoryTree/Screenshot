@@ -10,7 +10,7 @@
         "chromium"
     ],
     "homepage": "https://github.com/DirectoryTree/Screenshot",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "Steve Bauman",

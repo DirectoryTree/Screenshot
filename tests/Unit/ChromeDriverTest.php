@@ -26,12 +26,21 @@ function chromeDriver(Browser $browser): ChromeDriver
     };
 }
 
-function chromePage(): array
+function chromePage(bool $shared = false): array
 {
     $browser = Mockery::mock(Browser::class);
     $page = Mockery::mock(Page::class);
     $session = Mockery::mock(Session::class);
-    $browser->shouldReceive('createPage')->once()->andReturn($page);
+    if ($shared) {
+        $connection = Mockery::mock(Connection::class);
+        $browser->shouldReceive('getConnection')->once()->andReturn($connection);
+        $connection->shouldReceive('sendMessageSync')->once()
+            ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')
+            ->andReturn(new Response(['result' => ['targetId' => 'owned-target']], new Message('test')));
+        $browser->shouldReceive('getPage')->once()->with('owned-target')->andReturn($page);
+    } else {
+        $browser->shouldReceive('createPage')->once()->andReturn($page);
+    }
     $page->shouldReceive('getSession')->andReturn($session);
     $session->shouldReceive('sendMessageSync')->withArgs(fn ($message) => $message->getMethod() === 'Emulation.setScriptExecutionDisabled')
         ->once()->andReturn(new Response([], new Message('test')));
@@ -101,7 +110,7 @@ test('capture failures still close the page and browser', function () {
 });
 
 test('a shared capture failure closes its page without closing other workers browsers', function () {
-    [$browser, $page] = chromePage();
+    [$browser, $page] = chromePage(shared: true);
     $viewport = Mockery::mock(ResponseWaiter::class);
     $page->shouldReceive('setViewport')->once()->with(1024, 768)->andReturn($viewport);
     $viewport->shouldReceive('await')->once()->with(60000);
@@ -118,3 +127,32 @@ test('a shared capture failure closes its page without closing other workers bro
 
     expect(fn () => $driver->shared($browser))->toThrow(RuntimeException::class, 'capture failure');
 });
+
+test('shared page initialization failures close only the owned target and preserve the original error', function ($cleanupFails) {
+    $browser = Mockery::mock(Browser::class);
+    $connection = Mockery::mock(Connection::class);
+    $browser->shouldReceive('getConnection')->once()->andReturn($connection);
+    $browser->shouldNotReceive('close');
+    $connection->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')
+        ->andReturn(new Response(['result' => ['targetId' => 'owned-target']], new Message('test')));
+    $browser->shouldReceive('getPage')->once()->with('owned-target')->andThrow(new OperationTimedOut('initialization failure'));
+    $cleanup = $connection->shouldReceive('sendMessageSync')->once()
+        ->withArgs(fn ($message) => $message->getMethod() === 'Target.closeTarget' && $message->getParams() === ['targetId' => 'owned-target']);
+
+    if ($cleanupFails) {
+        $cleanup->andThrow(new RuntimeException('cleanup failure'));
+    } else {
+        $cleanup->andReturn(new Response([], new Message('test')));
+    }
+
+    $driver = new class extends ChromeDriver
+    {
+        public function shared(Browser $browser): void
+        {
+            $this->capturePage($browser, 'hello', 'html', new CaptureOptions, shared: true);
+        }
+    };
+
+    expect(fn () => $driver->shared($browser))->toThrow(OperationTimedOut::class, 'initialization failure');
+})->with([false, true]);

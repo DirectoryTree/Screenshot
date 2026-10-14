@@ -64,7 +64,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 $browser->getConnection()->setConnectionHttpHeaders($this->browserOptions['headers']);
             }
 
-            $page = $browser->createPage();
+            $page = $shared ? $this->createSharedPage($browser) : $browser->createPage();
 
             if ($shared) {
                 $page->setViewport($options->getWidth(), $options->getHeight())->await($options->getTimeout());
@@ -121,6 +121,31 @@ class ChromeDriver implements Driver, ManagesBrowsers
             return $result;
         } finally {
             $this->cleanup($browser, $page, $failed, $shared);
+        }
+    }
+
+    /**
+     * Retain ownership of a shared target until its page is fully initialized.
+     */
+    protected function createSharedPage(Browser $browser): Page
+    {
+        $connection = $browser->getConnection();
+        $response = $connection->sendMessageSync(new Message('Target.createTarget', ['url' => 'about:blank']));
+
+        if (! $response->isSuccessful() || ! is_string($target = $response['result']['targetId'] ?? null)) {
+            throw new RuntimeException('Unable to create the screenshot page.');
+        }
+
+        try {
+            return $browser->getPage($target) ?? throw new RuntimeException('Unable to initialize the screenshot page.');
+        } catch (Throwable $e) {
+            try {
+                $connection->sendMessageSync(new Message('Target.closeTarget', ['targetId' => $target]));
+            } catch (Throwable) {
+                // Preserve the initialization failure without closing other workers' pages.
+            }
+
+            throw $e;
         }
     }
 

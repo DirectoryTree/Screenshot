@@ -27,11 +27,11 @@ test('PDF conversion snapshots browser defaults without capturing or changing th
     $fake->assertNothingCaptured();
 
     $pdf->paper('letter')->landscape()->margins(5, 6, 7, 8)->background(false)->preferCssPageSize()->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, ImageOptions $options, PdfOptions $pdf) => $source === 'invoice'
+    $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
         && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getSocket() === 'invoices' && $options->getLoadTimeout() === 5000
-        && $options->getBrowserTimeout() === 10000 && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape()
-        && $pdf->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
-        && ! $pdf->getBackground() && $pdf->getPreferCssPageSize());
+        && $options->getBrowserTimeout() === 10000 && $options->getPaperWidth() === 215.9 && $options->getLandscape()
+        && $options->getMargins() === ['top' => 5.0, 'right' => 6.0, 'bottom' => 7.0, 'left' => 8.0]
+        && ! $options->getBackground() && $options->getPreferCssPageSize());
     $fake->assertPdfCapturedCount(1);
     $fake->assertNothingCaptured();
 
@@ -48,16 +48,16 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
     $first->paper('a3');
     $second->capture();
 
-    $fake->assertPdfCaptured(function ($source, $type, $options, $pdf) {
-        $pdf->setPaper('legal');
+    $fake->assertPdfCaptured(function ($source, $type, $options) {
+        $options->setPaper('legal');
         $options->setSocket('mutated');
 
         return true;
     });
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 100.0
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 100.0
         && $options->getSocket() === null && $options->getJavascript() && $options->getFailOnTimeout()
         && $options->getBrowserTimeout() === 2000);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 210.0
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 210.0
         && $options->getSocket() === 'shared' && ! $options->getJavascript());
 });
 
@@ -69,8 +69,8 @@ test('one driver contract handles images and PDFs with the requested enum format
         ->withArgs(fn ($source, $type, ImageOptions $options) => $source === 'invoice' && $type === 'html' && $options->getFormat() === OutputFormat::Jpeg)
         ->andReturn($image);
     $driver->shouldReceive('capture')->once()
-        ->withArgs(fn ($source, $type, ImageOptions $options, PdfOptions $print) => $source === 'invoice'
-            && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $print->getLandscape())
+        ->withArgs(fn ($source, $type, PdfOptions $options) => $source === 'invoice'
+            && $type === 'html' && $options->getFormat() === OutputFormat::Pdf && $options->getLandscape())
         ->andReturn($pdf);
     $pending = (new Screenshot($driver))->html('invoice')->jpeg();
 

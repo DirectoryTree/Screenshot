@@ -183,8 +183,8 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     expect($stored)->toBe($result)
         ->and(Storage::disk('pdfs')->get('invoice.pdf'))->toBe($result->contents())
         ->and(Storage::disk('pdfs')->getVisibility('invoice.pdf'))->toBe('private');
-    Screenshot::assertPdfCaptured(fn ($source, $type, $options, $pdf) => str_contains($source, '&lt;Steve&gt;')
-        && $options->getSocket() === 'invoices' && $pdf->getPaperWidth() === 215.9);
+    Screenshot::assertPdfCaptured(fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
+        && $options->getSocket() === 'invoices' && $options->getPaperWidth() === 215.9);
     Screenshot::assertPdfCapturedCount(1);
     Screenshot::assertNothingCaptured();
     Screenshot::fake();

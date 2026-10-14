@@ -4,7 +4,7 @@ namespace DirectoryTree\Screenshot;
 
 use InvalidArgumentException;
 
-class PdfOptions
+class PdfOptions extends BrowserOptions
 {
     /**
      * Create print options. Paper dimensions and margins are in millimeters.
@@ -19,8 +19,36 @@ class PdfOptions
         protected bool $landscape = false,
         protected bool $background = true,
         protected bool $preferCssPageSize = false,
+        int $width = 1024,
+        int $height = 768,
+        int $browserTimeout = 60000,
+        int $loadTimeout = 15000,
+        bool $javascript = false,
+        bool $failOnTimeout = false,
+        ?string $socket = null,
     ) {
-        $this->validate();
+        parent::__construct($width, $height, $browserTimeout, $loadTimeout, $javascript, $failOnTimeout, $socket);
+    }
+
+    /**
+     * Create PDF options from shared browser settings.
+     */
+    public static function fromBrowserOptions(BrowserOptions $options): static
+    {
+        return new static(
+            width: $options->getWidth(), height: $options->getHeight(),
+            browserTimeout: $options->getBrowserTimeout(), loadTimeout: $options->getLoadTimeout(),
+            javascript: $options->getJavascript(), failOnTimeout: $options->getFailOnTimeout(),
+            socket: $options->getSocket(),
+        );
+    }
+
+    /**
+     * Get the output format.
+     */
+    public function getFormat(): OutputFormat
+    {
+        return OutputFormat::Pdf;
     }
 
     /**
@@ -155,6 +183,8 @@ class PdfOptions
      */
     public function validate(): void
     {
+        parent::validate();
+
         $this->validateLayout($this->paperWidth, $this->paperHeight, $this->landscape, $this->marginTop, $this->marginRight, $this->marginBottom, $this->marginLeft);
     }
 

@@ -24,7 +24,7 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * The recorded PDF captures.
      *
-     * @var list<array{string, string, ImageOptions, PdfOptions}>
+     * @var list<array{string, string, PdfOptions}>
      */
     protected array $pdfCaptures = [];
 
@@ -75,10 +75,10 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Record a capture without starting Chrome.
      */
-    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
+    public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
     {
         if ($options->getFormat() === OutputFormat::Pdf) {
-            $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
+            $this->pdfCaptures[] = [$source, $type, clone $options];
 
             return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
         }
@@ -95,8 +95,8 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertPdfCaptured(?callable $callback = null): void
     {
-        foreach ($this->pdfCaptures as [$source, $type, $options, $pdf]) {
-            if (! $callback || $callback($source, $type, clone $options, clone $pdf)) {
+        foreach ($this->pdfCaptures as [$source, $type, $options]) {
+            if (! $callback || $callback($source, $type, clone $options)) {
                 Assert::assertTrue(true);
 
                 return;

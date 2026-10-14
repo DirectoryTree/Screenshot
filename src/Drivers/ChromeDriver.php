@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers;
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\ImageOptions;
@@ -37,13 +38,9 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture an image or PDF using a dedicated or shared browser process.
      */
-    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
+    public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
     {
         $options->validate();
-
-        if ($options->getFormat() === OutputFormat::Pdf) {
-            $pdf->validate();
-        }
 
         if (! in_array($type, ['html', 'url'], true)) {
             throw new InvalidArgumentException('The source type must be html or url.');
@@ -51,14 +48,14 @@ class ChromeDriver implements Driver, ManagesBrowsers
 
         return $this->withBrowser(
             $options,
-            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared, $pdf),
+            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared),
         );
     }
 
     /**
      * Run a capture in a dedicated browser or under a shared socket lease.
      */
-    protected function withBrowser(ImageOptions $options, callable $callback): mixed
+    protected function withBrowser(BrowserOptions $options, callable $callback): mixed
     {
         if ($socket = $this->socket($options)) {
             return $socket->run(
@@ -74,11 +71,11 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Capture the selected output format from a prepared page.
      */
-    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared = false, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult
+    protected function capturePage(Browser $browser, string $source, string $type, ImageOptions|PdfOptions $options, bool $shared = false): ImageResult|PdfResult
     {
-        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options, $pdf) {
+        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options) {
             if ($options->getFormat() === OutputFormat::Pdf) {
-                return new PdfResult($page->pdf($pdf->toArray())->getBase64($options->getBrowserTimeout()));
+                return new PdfResult($page->pdf($options->toArray())->getBase64($options->getBrowserTimeout()));
             }
 
             $clip = $options->getFullPage()
@@ -106,7 +103,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Load a page and release its resources after rendering either format.
      */
-    protected function withPage(Browser $browser, string $source, string $type, ImageOptions $options, bool $shared, callable $render): mixed
+    protected function withPage(Browser $browser, string $source, string $type, BrowserOptions $options, bool $shared, callable $render): mixed
     {
         $page = null;
         $failed = true;
@@ -204,7 +201,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Start a dedicated browser or a persistent shared browser.
      */
-    protected function createBrowser(ImageOptions $options): Browser
+    protected function createBrowser(BrowserOptions $options): Browser
     {
         $socket = $this->socket($options);
         $browserOptions = $this->browserOptions;
@@ -223,7 +220,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     /**
      * Resolve the shared socket selected for this capture.
      */
-    protected function socket(ImageOptions $options): ?BrowserSocket
+    protected function socket(BrowserOptions $options): ?BrowserSocket
     {
         return $options->getSocket() !== null
             ? BrowserSocket::named($options->getSocket(), $this->socketDirectory, $this->lockTimeout)

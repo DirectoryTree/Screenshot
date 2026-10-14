@@ -2,17 +2,25 @@
 
 namespace DirectoryTree\Screenshot\Concerns;
 
-use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\BrowserOptions;
 
 trait ConfiguresBrowser
 {
+    /**
+     * Set the viewport dimensions after validating both values.
+     */
+    public function size(int $width, int $height): static
+    {
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setSize($width, $height));
+    }
+
     /**
      * Set page-load and individual browser-command timeouts in milliseconds.
      * Omitted values retain their current settings.
      */
     public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        return $this->configureOptions(static fn (ImageOptions $options) => $options->setTimeouts($load, $browser));
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setTimeouts($load, $browser));
     }
 
     /**
@@ -20,7 +28,7 @@ trait ConfiguresBrowser
      */
     public function javascript(bool $value = true): static
     {
-        return $this->configureOptions(static fn (ImageOptions $options) => $options->setJavascript($value));
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setJavascript($value));
     }
 
     /**
@@ -28,7 +36,7 @@ trait ConfiguresBrowser
      */
     public function failOnTimeout(bool $value = true): static
     {
-        return $this->configureOptions(static fn (ImageOptions $options) => $options->setFailOnTimeout($value));
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setFailOnTimeout($value));
     }
 
     /**
@@ -36,7 +44,7 @@ trait ConfiguresBrowser
      */
     public function socket(string $key): static
     {
-        return $this->configureOptions(static fn (ImageOptions $options) => $options->setSocket($key));
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setSocket($key));
     }
 
     /**
@@ -44,6 +52,6 @@ trait ConfiguresBrowser
      */
     public function withoutSocket(): static
     {
-        return $this->configureOptions(static fn (ImageOptions $options) => $options->setSocket(null));
+        return $this->configureOptions(static fn (BrowserOptions $options) => $options->setSocket(null));
     }
 }

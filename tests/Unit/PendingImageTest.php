@@ -159,5 +159,5 @@ test('image builders reject PDF defaults before calling the driver', function ()
     $driver->shouldNotReceive('capture');
 
     expect(fn () => new PendingImage($driver, 'invoice', 'html', new ImageOptions(format: OutputFormat::Pdf)))
-        ->toThrow(LogicException::class, 'Use pdf()');
+        ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
 });

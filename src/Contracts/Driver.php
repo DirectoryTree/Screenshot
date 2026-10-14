@@ -12,5 +12,5 @@ interface Driver
     /**
      * Capture the given HTML or URL in the selected output format.
      */
-    public function capture(string $source, string $type, ImageOptions $options, PdfOptions $pdf = new PdfOptions): ImageResult|PdfResult;
+    public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult;
 }

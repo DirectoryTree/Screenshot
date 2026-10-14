@@ -300,7 +300,7 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
-Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, and use the supplied `PdfOptions` for PDF print settings. Return a `ImageResult` for images or a `PdfResult` for PDFs.
+Drivers handle every output through `capture()`. Read `$options->getFormat()` to select `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`, with a single `ImageOptions` or `PdfOptions` object containing all browser and output settings. Return an `ImageResult` for images or a `PdfResult` for PDFs.
 
 ## Testing
 
@@ -347,8 +347,8 @@ Screenshot::fake();
 
 Screenshot::html('<h1>Invoice</h1>')->socket('invoices')->pdf()->landscape()->capture();
 
-Screenshot::assertPdfCaptured(fn ($source, $type, $options, $pdf) =>
-    $options->getSocket() === 'invoices' && $pdf->getLandscape()
+Screenshot::assertPdfCaptured(fn ($source, $type, $options) =>
+    $options->getSocket() === 'invoices' && $options->getLandscape()
 );
 Screenshot::assertPdfCapturedCount(1);
 Screenshot::assertNothingCaptured(); // No image captures.

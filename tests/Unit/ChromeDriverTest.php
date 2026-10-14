@@ -1,5 +1,6 @@
 <?php
 
+use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
@@ -24,7 +25,7 @@ function chromeDriver(Browser $browser): ChromeDriver
     {
         public function __construct(protected Browser $browser) {}
 
-        protected function createBrowser(ImageOptions $options): Browser
+        protected function createBrowser(BrowserOptions $options): Browser
         {
             return $this->browser;
         }
@@ -176,7 +177,7 @@ test('PDF rendering receives print options and timeout and closes the dedicated 
     $page->shouldReceive('close')->once();
     $browser->shouldReceive('close')->once();
 
-    $result = chromeDriver($browser)->capture('invoice', 'html', new ImageOptions(format: OutputFormat::Pdf, browserTimeout: 12345), new PdfOptions(landscape: true));
+    $result = chromeDriver($browser)->capture('invoice', 'html', new PdfOptions(landscape: true, browserTimeout: 12345));
     expect($result->mimeType())->toBe('application/pdf');
 });
 
@@ -188,7 +189,7 @@ test('PDF printing failures preserve the error and close browser resources', fun
     $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
     $browser->shouldReceive('close')->once();
 
-    expect(fn () => chromeDriver($browser)->capture('invoice', 'html', new ImageOptions(format: OutputFormat::Pdf), new PdfOptions))
+    expect(fn () => chromeDriver($browser)->capture('invoice', 'html', new PdfOptions))
         ->toThrow(RuntimeException::class, 'print failure');
 });
 

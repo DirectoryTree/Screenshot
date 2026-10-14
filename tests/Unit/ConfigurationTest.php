@@ -35,8 +35,8 @@ test('only the selected format callback runs with its matching builder', functio
         && $options->getWidth() === 800 && $options->getSocket() === 'images');
     $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Jpeg
         && $options->getWidth() === 900 && $options->getQuality() === 85 && $options->getSocket() === null);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $options->getSocket() === 'documents'
-        && $options->getWidth() === 1024 && $pdf->getPaperWidth() === 215.9 && $pdf->getLandscape());
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getSocket() === 'documents'
+        && $options->getWidth() === 1024 && $options->getPaperWidth() === 215.9 && $options->getLandscape());
 });
 
 test('explicit image options override format defaults before or after format selection', function ($before) {
@@ -80,9 +80,9 @@ test('PDF defaults respect explicit browser and print options without image defa
     $image->socket('later');
     $pdf->capture();
 
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $options->getSocket() === null
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getSocket() === null
         && ! $options->getJavascript() && $options->getLoadTimeout() === 3000 && $options->getBrowserTimeout() === 80000
-        && $pdf->getPaperWidth() === 210.0 && ! $pdf->getLandscape() && $pdf->getMargins()['top'] === 10.0);
+        && $options->getPaperWidth() === 210.0 && ! $options->getLandscape() && $options->getMargins()['top'] === 10.0);
 });
 
 test('callbacks run once per capture and do not mutate pending state', function () {
@@ -122,9 +122,9 @@ test('format callbacks can be replaced or cleared independently of existing pend
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getWidth() === 800);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'second' && $options->getWidth() === 900);
     $fake->assertCaptured(fn ($source, $type, $options) => $source === 'third' && $options->getWidth() === 1024);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $source === 'pdf' && $pdf->getPaperWidth() === 215.9);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $source === 'first' && $pdf->getPaperWidth() === 215.9);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $source === 'cleared' && $pdf->getPaperWidth() === 210.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'pdf' && $options->getPaperWidth() === 215.9);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'first' && $options->getPaperWidth() === 215.9);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $source === 'cleared' && $options->getPaperWidth() === 210.0);
 });
 
 test('failed PDF configuration does not capture or contaminate a subsequent attempt', function () {
@@ -140,7 +140,7 @@ test('failed PDF configuration does not capture or contaminate a subsequent atte
     $fake->assertNoPdfsCaptured();
     $fail = false;
     $pending->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 210.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 210.0);
 });
 
 test('fakes preserve all format callbacks and independent baseline options', function () {
@@ -154,7 +154,7 @@ test('fakes preserve all format callbacks and independent baseline options', fun
     $fake->html('image')->jpeg()->capture();
     $fake->html('document')->pdf()->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getQuality() === 85);
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $options->getWidth() === 900 && $pdf->getPaperWidth() === 215.9);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getWidth() === 900 && $options->getPaperWidth() === 215.9);
     $other = new ScreenshotFake;
     $other->html('default')->capture();
     $other->assertCaptured(fn ($source, $type, $options) => $options->getWidth() === 1024);
@@ -164,6 +164,6 @@ test('explicit print layout replaces defaults atomically', function () {
     $fake = new ScreenshotFake;
     $fake->configure(OutputFormat::Pdf, fn (PendingPdf $pdf) => $pdf->margins(20, 20, 20, 20));
     $fake->html('small')->pdf()->paperSize(30, 30)->margins(0, 0, 0, 0)->capture();
-    $fake->assertPdfCaptured(fn ($source, $type, $options, $pdf) => $pdf->getPaperWidth() === 30.0
-        && $pdf->getPaperHeight() === 30.0 && $pdf->getMargins()['top'] === 0.0);
+    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->getPaperWidth() === 30.0
+        && $options->getPaperHeight() === 30.0 && $options->getMargins()['top'] === 0.0);
 });

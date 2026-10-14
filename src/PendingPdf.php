@@ -11,11 +11,6 @@ class PendingPdf
     use AppliesConfiguration, ConfiguresBrowser;
 
     /**
-     * The print options before caller-specific changes.
-     */
-    protected PdfOptions $pdfDefaults;
-
-    /**
      * Explicit print settings, applied together after format defaults.
      *
      * @var array{float, float}|null
@@ -45,28 +40,23 @@ class PendingPdf
     protected ?bool $preferCssPageSizeOverride = null;
 
     /**
-     * Create a pending PDF with independent browser and print options.
+     * Create a pending PDF with a single set of browser and print options.
      */
     public function __construct(
         protected Driver $driver,
         protected string $source,
         protected string $type,
-        protected ImageOptions $options,
-        protected PdfOptions $pdfOptions = new PdfOptions,
+        protected PdfOptions $options = new PdfOptions,
         protected array $configureUsing = [],
         array $overrides = [],
     ) {
         $this->defaults = clone $options;
-        $this->pdfDefaults = clone $pdfOptions;
         $this->options = clone $options;
-        $this->pdfOptions = clone $pdfOptions;
         $this->overrides = $overrides;
 
         foreach ($overrides as $override) {
             $override($this->options);
         }
-
-        $this->options->setFormat(OutputFormat::Pdf);
     }
 
     /**
@@ -74,8 +64,8 @@ class PendingPdf
      */
     public function paper(string $format): static
     {
-        $this->pdfOptions->setPaper($format);
-        $this->paperOverride = [$this->pdfOptions->getPaperWidth(), $this->pdfOptions->getPaperHeight()];
+        $this->options->setPaper($format);
+        $this->paperOverride = [$this->options->getPaperWidth(), $this->options->getPaperHeight()];
 
         return $this;
     }
@@ -85,7 +75,7 @@ class PendingPdf
      */
     public function paperSize(float $width, float $height): static
     {
-        $this->pdfOptions->setPaperSize($width, $height);
+        $this->options->setPaperSize($width, $height);
         $this->paperOverride = [$width, $height];
 
         return $this;
@@ -96,7 +86,7 @@ class PendingPdf
      */
     public function landscape(bool $value = true): static
     {
-        $this->pdfOptions->setLandscape($value);
+        $this->options->setLandscape($value);
         $this->landscapeOverride = $value;
 
         return $this;
@@ -107,7 +97,7 @@ class PendingPdf
      */
     public function margins(float $top = 10, float $right = 10, float $bottom = 10, float $left = 10): static
     {
-        $this->pdfOptions->setMargins($top, $right, $bottom, $left);
+        $this->options->setMargins($top, $right, $bottom, $left);
         $this->marginsOverride = [$top, $right, $bottom, $left];
 
         return $this;
@@ -118,7 +108,7 @@ class PendingPdf
      */
     public function background(bool $value = true): static
     {
-        $this->pdfOptions->setBackground($value);
+        $this->options->setBackground($value);
         $this->backgroundOverride = $value;
 
         return $this;
@@ -129,7 +119,7 @@ class PendingPdf
      */
     public function preferCssPageSize(bool $value = true): static
     {
-        $this->pdfOptions->setPreferCssPageSize($value);
+        $this->options->setPreferCssPageSize($value);
         $this->preferCssPageSizeOverride = $value;
 
         return $this;
@@ -158,20 +148,23 @@ class PendingPdf
     {
         $capture = $this->configured();
         $capture->options->validate();
-        $capture->pdfOptions->validate();
 
-        return $this->driver->capture($this->source, $this->type, clone $capture->options, clone $capture->pdfOptions);
+        return $this->driver->capture($this->source, $this->type, clone $capture->options);
     }
 
     /**
      * Merge explicit print settings and validate the complete final layout.
      */
-    protected function configuredPrintOptions(PdfOptions $defaults): PdfOptions
+    protected function configuredOutputOptions(PdfOptions $defaults): PdfOptions
     {
         [$width, $height] = $this->paperOverride ?? [$defaults->getPaperWidth(), $defaults->getPaperHeight()];
         [$top, $right, $bottom, $left] = $this->marginsOverride ?? array_values($defaults->getMargins());
 
         return new PdfOptions(
+            width: $defaults->getWidth(), height: $defaults->getHeight(),
+            browserTimeout: $defaults->getBrowserTimeout(), loadTimeout: $defaults->getLoadTimeout(),
+            javascript: $defaults->getJavascript(), failOnTimeout: $defaults->getFailOnTimeout(),
+            socket: $defaults->getSocket(),
             paperWidth: $width, paperHeight: $height,
             marginTop: $top, marginRight: $right, marginBottom: $bottom, marginLeft: $left,
             landscape: $this->landscapeOverride ?? $defaults->getLandscape(),

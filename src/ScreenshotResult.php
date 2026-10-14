@@ -8,8 +8,18 @@ use RuntimeException;
 
 class ScreenshotResult
 {
+    /**
+     * The decoded image bytes.
+     *
+     * @var string Binary PNG or JPEG data.
+     */
     protected string $contents;
 
+    /**
+     * The image dimensions and metadata returned by getimagesizefromstring.
+     *
+     * @var array{0: int, 1: int, 2: int, 3: string, bits?: int, channels?: int, mime: string}
+     */
     protected array $dimensions;
 
     /**

@@ -224,6 +224,11 @@ test('shutdown retains the socket when a disconnected browser is still reachable
 test('shutdown waits for the listening endpoint to disappear', function () {
     $socket = new class($this->path, 100) extends BrowserSocket
     {
+        /**
+         * The number of browser endpoint checks performed during shutdown.
+         *
+         * @var int Starts at zero before the first probe.
+         */
         public int $checks = 0;
 
         public function wait(): void

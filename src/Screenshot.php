@@ -14,6 +14,8 @@ class Screenshot
 {
     /**
      * The callback used to configure each new pending screenshot.
+     *
+     * @var (Closure(PendingScreenshot): mixed)|null
      */
     protected ?Closure $configureUsing = null;
 

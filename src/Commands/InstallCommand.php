@@ -8,8 +8,18 @@ use Throwable;
 
 class InstallCommand extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'screenshot:install {--browser-version= : Install a complete Chrome version instead of the latest stable release}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Download and install Chrome for Screenshot';
 
     /**

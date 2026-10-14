@@ -13,6 +13,11 @@ use ZipArchive;
 
 class ChromeInstaller
 {
+    /**
+     * The base URL for the official Chrome for Testing release manifests.
+     *
+     * @var string
+     */
     protected const MANIFEST_URL = 'https://googlechromelabs.github.io/chrome-for-testing/';
 
     /**

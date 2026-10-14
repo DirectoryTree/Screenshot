@@ -13,11 +13,15 @@ class ScreenshotFake extends Screenshot implements Driver
 {
     /**
      * The recorded captures.
+     *
+     * @var list<array{string, string, CaptureOptions}>
      */
     protected array $captures = [];
 
     /**
      * The recorded browser shutdown requests.
+     *
+     * @var list<string>
      */
     protected array $closed = [];
 

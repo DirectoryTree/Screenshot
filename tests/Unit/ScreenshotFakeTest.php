@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
@@ -66,14 +67,9 @@ test('assertNothingClosed fails when any shutdown was requested', function () {
         ->toThrow(AssertionFailedError::class, 'Unexpected browser shutdowns were requested.');
 });
 
-test('one capture history preserves mixed output order and filters assertion callbacks', function () {
-    $fake = new class extends ScreenshotFake
-    {
-        public function recordedSources(): array
-        {
-            return array_column($this->captures, 0);
-        }
-    };
+test('capture assertions inspect mixed outputs in capture order', function () {
+    $fake = new ScreenshotFake;
+    $sources = [];
 
     $fake->html('png')->capture();
     $fake->html('first pdf')
@@ -86,41 +82,112 @@ test('one capture history preserves mixed output order and filters assertion cal
         ->pdf()
         ->capture();
 
-    expect($fake->recordedSources())->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
-    $fake->assertCapturedCount(2);
-    $fake->assertPdfCapturedCount(2);
+    $fake->assertCapturedCount(4);
+    $fake->assertCaptured(function ($source, $type, CaptureOptions $options) use (&$sources) {
+        $sources[] = $source;
+
+        return $source === 'second pdf' && $options->getFormat() === OutputFormat::Pdf;
+    });
+
+    expect($sources)->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
+
     $fake->assertCaptured(
         fn ($source, $type, CaptureOptions $options) => $source === 'jpeg'
             && $options->getFormat() === OutputFormat::Jpeg,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, CaptureOptions $options) => $source === 'second pdf'
-            && $options->getFormat() === OutputFormat::Pdf,
-    );
 });
 
-test('PDF records cannot satisfy image assertions', function () {
+test('capture assertions support every output format', function (OutputFormat $format) {
     $fake = new ScreenshotFake;
 
-    $fake->html('pdf')
-        ->pdf()
-        ->capture();
+    $source = $fake->html('invoice');
+
+    (match ($format) {
+        OutputFormat::Png => $source->png(),
+        OutputFormat::Jpeg => $source->jpeg(),
+        OutputFormat::Pdf => $source->pdf(),
+    })->capture();
+
+    $fake->assertCaptured();
+    $fake->assertCapturedCount(1);
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
+            && $type === SourceType::Html
+            && $options->getFormat() === $format,
+    );
+
+    expect(fn () => $fake->assertNothingCaptured())->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCapturedCount(0))->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCapturedCount(2))->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCaptured(fn () => false))->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->getFormat() !== $format,
+    ))->toThrow(AssertionFailedError::class);
+})->with(OutputFormat::cases());
+
+test('an empty fake has no captures and cannot satisfy a capture assertion', function () {
+    $fake = new ScreenshotFake;
+    $calls = 0;
 
     $fake->assertNothingCaptured();
-    $fake->assertPdfCapturedCount(1);
-    expect(fn () => $fake->assertCaptured())->toThrow(AssertionFailedError::class);
-    expect(fn () => $fake->assertCapturedCount(1))->toThrow(AssertionFailedError::class);
+    $fake->assertCapturedCount(0);
+
+    expect(fn () => $fake->assertCaptured())
+        ->toThrow(AssertionFailedError::class, 'The expected capture was not recorded.');
+    expect(fn () => $fake->assertCaptured(function () use (&$calls) {
+        $calls++;
+
+        return true;
+    }))->toThrow(AssertionFailedError::class);
+    expect($calls)->toBe(0);
 });
 
-test('image records cannot satisfy PDF assertions', function () {
+test('assertion callbacks cannot mutate recorded browser or output settings', function (OutputFormat $format) {
+    $fake = new ScreenshotFake;
+    $source = $fake->html('invoice');
+
+    (match ($format) {
+        OutputFormat::Png => $source->png(),
+        OutputFormat::Jpeg => $source->jpeg(),
+        OutputFormat::Pdf => $source->pdf(),
+    })->capture();
+
+    $fake->assertCaptured(function ($source, $type, CaptureOptions $options) {
+        $options->browser->setSize(320, 240);
+
+        if ($options->getFormat() === OutputFormat::Pdf) {
+            $options->output->setLandscape(true);
+        } else {
+            $options->output->setFormat(OutputFormat::Jpeg, 20);
+        }
+
+        return true;
+    });
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 1024
+            && $options->getFormat() === $format
+            && ($format === OutputFormat::Pdf
+                ? ! $options->output->getLandscape()
+                : $options->output->getQuality() === 80),
+    );
+})->with(OutputFormat::cases());
+
+test('failed matches cannot mutate records before a later assertion', function () {
     $fake = new ScreenshotFake;
 
-    $fake->html('image')->capture();
+    $fake->html('invoice')->capture();
 
-    $fake->assertNoPdfsCaptured();
-    $fake->assertCapturedCount(1);
-    expect(fn () => $fake->assertPdfCaptured())->toThrow(AssertionFailedError::class);
-    expect(fn () => $fake->assertPdfCapturedCount(1))->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCaptured(function ($source, $type, CaptureOptions $options) {
+        $options->browser->setSize(320, 240);
+        $options->output->setFormat(OutputFormat::Jpeg, 20);
+
+        return false;
+    }))->toThrow(AssertionFailedError::class);
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 1024
+            && $options->getFormat() === OutputFormat::Png
+            && $options->output->getQuality() === 80,
+    );
 });
 
 test('a fresh fake clears both kinds of records without changing the original history', function () {
@@ -134,7 +201,5 @@ test('a fresh fake clears both kinds of records without changing the original hi
     $fake = ScreenshotFake::from($original);
 
     $fake->assertNothingCaptured();
-    $fake->assertNoPdfsCaptured();
-    $original->assertCapturedCount(1);
-    $original->assertPdfCapturedCount(1);
+    $original->assertCapturedCount(2);
 });

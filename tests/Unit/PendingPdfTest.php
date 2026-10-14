@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\PdfOptions;
@@ -34,8 +35,9 @@ test('directly constructed PDF builders own their browser and print settings', f
         ->capture();
     $second->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 800
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 800
             && $options->browser->getHeight() === 600
             && $options->browser->getLoadTimeout() === 1000
             && $options->browser->getBrowserTimeout() === 2000
@@ -44,18 +46,20 @@ test('directly constructed PDF builders own their browser and print settings', f
             && $options->browser->getSocket() === 'documents'
             && $options->output->getPaperWidth() === 215.9,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 800
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 800
             && ! $options->browser->getJavascript()
             && ! $options->browser->getFailOnTimeout()
             && $options->browser->getSocket() === null,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 1024
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 1024
             && $options->browser->getSocket() === 'default'
             && $options->output->getPaperWidth() === 210.0,
     );
-    $fake->assertPdfCapturedCount(3);
+    $fake->assertCapturedCount(3);
 });
 
 test('invalid PDF browser changes leave current settings intact', function ($method, $arguments) {
@@ -67,12 +71,13 @@ test('invalid PDF browser changes leave current settings intact', function ($met
         ->socket('documents');
 
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
-    $fake->assertNoPdfsCaptured();
+    $fake->assertNothingCaptured();
 
     $pending->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 800
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 800
             && $options->browser->getHeight() === 600
             && $options->browser->getLoadTimeout() === 1000
             && $options->browser->getBrowserTimeout() === 2000

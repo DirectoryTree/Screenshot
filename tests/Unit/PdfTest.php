@@ -13,7 +13,6 @@ use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\PendingPdf;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
-use PHPUnit\Framework\AssertionFailedError;
 
 function pdfFixture(): string
 {
@@ -30,7 +29,6 @@ test('PDF selection snapshots browser defaults without capturing or changing the
 
     $image->socket('images');
 
-    $fake->assertNoPdfsCaptured();
     $fake->assertNothingCaptured();
 
     $pdf->paper(PaperSize::Letter)
@@ -40,10 +38,10 @@ test('PDF selection snapshots browser defaults without capturing or changing the
         ->preferCssPageSize()
         ->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
+            && $source === 'invoice'
             && $type === SourceType::Html
-            && $options->getFormat() === OutputFormat::Pdf
             && $options->browser->getSocket() === 'invoices'
             && $options->browser->getLoadTimeout() === 5000
             && $options->browser->getBrowserTimeout() === 10000
@@ -53,8 +51,7 @@ test('PDF selection snapshots browser defaults without capturing or changing the
             && ! $options->output->getBackground()
             && $options->output->getPreferCssPageSize(),
     );
-    $fake->assertPdfCapturedCount(1);
-    $fake->assertNothingCaptured();
+    $fake->assertCapturedCount(1);
 
     $image->capture();
 
@@ -79,21 +76,27 @@ test('PDF requests and recorded assertion options are independent snapshots', fu
     $first->paper(PaperSize::A3);
     $second->capture();
 
-    $fake->assertPdfCaptured(function ($source, $type, $options) {
+    $fake->assertCaptured(function ($source, $type, $options) {
+        if ($options->getFormat() !== OutputFormat::Pdf) {
+            return false;
+        }
+
         $options->output->setPaper(PaperSize::Legal);
         $options->browser->setSocket('mutated');
 
         return true;
     });
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->output->getPaperWidth() === 100.0
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === 100.0
             && $options->browser->getSocket() === null
             && $options->browser->getJavascript()
             && $options->browser->getFailOnTimeout()
             && $options->browser->getBrowserTimeout() === 2000,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->output->getPaperWidth() === 210.0
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === 210.0
             && $options->browser->getSocket() === 'shared'
             && ! $options->browser->getJavascript(),
     );
@@ -147,19 +150,6 @@ test('PDF results reject image bytes and invalid base64', function ($input) {
     expect(fn () => new PdfResult($input))->toThrow(InvalidArgumentException::class);
 })->with(['', 'invalid base64!', imageFixture(), base64_encode('%PDF-1.4 truncated')]);
 
-test('PDF fake assertions fail when no matching document was captured', function () {
-    $fake = new ScreenshotFake;
-
-    expect(fn () => $fake->assertPdfCaptured())->toThrow(AssertionFailedError::class);
-
-    $fake->html('hello')
-        ->pdf()
-        ->capture();
-
-    expect(fn () => $fake->assertNoPdfsCaptured())->toThrow(AssertionFailedError::class);
-    expect(fn () => $fake->assertPdfCaptured(fn () => false))->toThrow(AssertionFailedError::class);
-});
-
 test('paper dimensions and margins are converted from millimeters to inches', function () {
     $pdf = (new PdfOptions)->setPaper(PaperSize::Letter)->setMargins(25.4, 12.7, 25.4, 12.7);
     $parameters = $pdf->toArray();
@@ -210,8 +200,7 @@ test('image and PDF builders save their own result types without changing each o
         expect($pdfResult)->toBeInstanceOf(PdfResult::class);
         expect(file_get_contents($imagePath))->toBe($imageResult->contents());
         expect(file_get_contents($pdfPath))->toBe($pdfResult->contents());
-        $fake->assertCapturedCount(1);
-        $fake->assertPdfCapturedCount(1);
+        $fake->assertCapturedCount(2);
     } finally {
         unlink($imagePath);
         unlink($pdfPath);

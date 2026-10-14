@@ -21,7 +21,6 @@ test('configured defaults are available before selecting an output format', func
     $pending = $fake->html('source');
 
     $fake->assertNothingCaptured();
-    $fake->assertNoPdfsCaptured();
 
     $pending->capture();
     $pending->jpeg()->capture();
@@ -39,8 +38,9 @@ test('configured defaults are available before selecting an output format', func
             && $options->browser->getBrowserTimeout() === 90000
             && $options->output->getQuality() === 85,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->browser->getWidth() === 900
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 900
             && $options->browser->getSocket() === 'captures'
             && $options->output->getPaperWidth() === 215.9
             && $options->output->getLandscape(),
@@ -93,8 +93,9 @@ test('fluent settings replace defaults including false null and package default 
             && $options->output->getQuality() === 80
             && $options->output->getFullPage(),
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getSocket() === null
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getSocket() === null
             && ! $options->browser->getJavascript()
             && $options->output->getPaperWidth() === 210.0
             && ! $options->output->getLandscape()
@@ -176,8 +177,9 @@ test('PDF selection copies source browser settings with independent print defaul
     $second->capture();
     $source->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 640
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 640
             && $options->browser->getHeight() === 480
             && $options->browser->getJavascript()
             && $options->browser->getSocket() === 'shared'
@@ -186,7 +188,8 @@ test('PDF selection copies source browser settings with independent print defaul
             && $options->browser->getFailOnTimeout()
             && $options->output->getPaperWidth() === 148.0,
     );
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 215.9);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+        && $options->output->getPaperWidth() === 215.9);
     $fake->assertCaptured(
         fn ($source, $type, $options) => $options->browser->getWidth() === 320
             && $options->browser->getSocket() === null
@@ -218,11 +221,12 @@ test('factories and fakes snapshot each set of configured defaults', function ()
             && $options->getFormat() === OutputFormat::Jpeg
             && $options->output->getQuality() === 85,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 900
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->browser->getWidth() === 900
             && $options->output->getPaperWidth() === 215.9,
     );
-    $fake->assertCapturedCount(2);
+    $fake->assertCapturedCount(3);
 
     $other = new ScreenshotFake;
 
@@ -252,14 +256,15 @@ test('PDF layout overrides are validated against current defaults and can be cor
     $pending = $fake->html('small')->pdf();
 
     expect(fn () => $pending->paperSize(30, 30))->toThrow(InvalidArgumentException::class);
-    $fake->assertNoPdfsCaptured();
+    $fake->assertNothingCaptured();
 
     $pending->margins(0, 0, 0, 0)
         ->paperSize(30, 30)
         ->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $options->output->getPaperWidth() === 30.0
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === 30.0
             && $options->output->getMargins()['top'] === 0.0,
     );
 });

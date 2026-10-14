@@ -24,7 +24,6 @@ test('one executor supports independent image and PDF builders for the same sour
     $pdf->size(400, 300)->landscape();
 
     $fake->assertNothingCaptured();
-    $fake->assertNoPdfsCaptured();
 
     expect($image->capture())->toBeInstanceOf(ImageResult::class);
     expect($pdf->capture())->toBeInstanceOf(PdfResult::class);
@@ -38,14 +37,14 @@ test('one executor supports independent image and PDF builders for the same sour
             && $options->getFormat() === OutputFormat::Jpeg
             && $options->output->getQuality() === 95,
     );
-    $fake->assertPdfCaptured(
-        fn ($source, $type, $options) => $source === 'https://example.com/invoice'
+    $fake->assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $source === 'https://example.com/invoice'
             && $type === SourceType::Url
             && $options->browser->getWidth() === 400
             && $options->output->getLandscape(),
     );
-    $fake->assertCapturedCount(2);
-    $fake->assertPdfCapturedCount(1);
+    $fake->assertCapturedCount(3);
 });
 
 test('the executor snapshots options before passing them to a driver', function () {

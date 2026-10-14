@@ -111,6 +111,8 @@ JavaScript is disabled by default. Enable it with `javascript()` when needed. Ca
 The default viewport is 1024 × 768 pixels. Full-page capture is enabled by default, cropped to a maximum of 2048 × 10000 pixels.
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::html($html)
     ->size(width: 1200, height: 800)
     ->png()
@@ -133,6 +135,8 @@ Browser settings such as `size()` can be applied before or after selecting an ou
 PNG is the default. JPEG accepts a quality from 0 to 100, defaulting to 80. Calling `jpeg()` without a quality uses the configured value:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 $image = Screenshot::html($html)->jpeg(quality: 85)->capture();
 $image = Screenshot::html($html)->png()->capture();
 ```
@@ -146,6 +150,8 @@ Switching between `png()` and `jpeg()` on an image builder preserves its other s
 Call `save()` or `store()` on a source or output builder, or capture once and reuse the result:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 $image = Screenshot::html($html)->capture();
 
 $image->save(storage_path('app/preview.png'));
@@ -173,6 +179,7 @@ Use `pdf()` to print HTML, a Blade view, or a URL as a PDF:
 
 ```php
 use DirectoryTree\Screenshot\Enums\PaperSize;
+use DirectoryTree\Screenshot\Facades\Screenshot;
 
 Screenshot::view('invoices.preview', ['invoice' => $invoice])
     ->pdf()
@@ -188,6 +195,8 @@ PDFs use Chrome's print layout, including print styles and page breaks. Screensh
 Keep the source request when producing several outputs:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 $source = Screenshot::view('invoices.preview', ['invoice' => $invoice])
     ->size(1200, 800)
     ->socket('invoices');
@@ -201,6 +210,8 @@ Select each output on the source. Each builder starts with the source's current 
 ### Timeouts
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::url('https://example.com')
     ->timeouts(load: 15000, browser: 60000)
     ->failOnTimeout()
@@ -216,6 +227,8 @@ By default, a page-load timeout captures what has rendered so far. Use `failOnTi
 By default, each capture starts its own browser and closes it automatically. Use a named socket to reuse a browser across queue workers:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::html($html)
     ->socket(key: 'invoices')
     ->save($path);
@@ -226,6 +239,8 @@ Workers using the same key share one browser, while each capture gets its own pa
 Shared browsers stay running between captures and after workers exit. You do not need to close them after each job. To deliberately shut one down, stop dispatching jobs for its key and call:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::close(key: 'invoices');
 ```
 
@@ -240,6 +255,8 @@ A few things to keep in mind:
 To bypass a socket selected by your application defaults:
 
 ```php
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::html($html)->withoutSocket()->capture();
 ```
 
@@ -340,21 +357,27 @@ Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOp
 });
 ```
 
-Use `assertNothingCaptured()` when no image should be taken. Assert browser shutdown requests with `assertClosed($key)`, `assertNotClosed($key)`, and `assertNothingClosed()`.
+`assertCaptured()` and `assertCapturedCount()` include PNG, JPEG, and PDF captures. Use `assertNothingCaptured()` when no captures should occur. Assert browser shutdown requests with `assertClosed($key)`, `assertNotClosed($key)`, and `assertNothingClosed()`.
 
-PDF captures have dedicated assertions:
+Check the output format in the callback when it matters:
 
 ```php
+use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Enums\SourceType;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
 Screenshot::fake();
 
 Screenshot::html('<h1>Invoice</h1>')->pdf()->landscape()->capture();
 
-Screenshot::assertPdfCaptured(fn ($source, $type, $options) => $options->output->getLandscape());
-Screenshot::assertPdfCapturedCount(1);
-Screenshot::assertNothingCaptured(); // No image captures.
+Screenshot::assertCapturedCount(1);
+Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
+    return $options->getFormat() === OutputFormat::Pdf && $options->output->getLandscape();
+});
 ```
 
-Use `assertNoPdfsCaptured()` to assert that no PDFs were generated. The fake preserves configured defaults and returns a fixed 1 × 1 PNG for images or a blank one-page PDF. Pass an `ImageResult` or `PdfResult` to `Screenshot::fake($result)` to supply a result for that output type.
+The fake preserves configured defaults and returns a fixed 1 × 1 PNG for images or a blank one-page PDF. Pass an `ImageResult` or `PdfResult` to `Screenshot::fake($result)` to supply a result for that output type.
 
 Views still render and `save()` and `store()` still write files. Pair the fake with `Storage::fake()` when storing captures on Laravel disks.
 

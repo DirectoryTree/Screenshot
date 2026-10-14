@@ -224,17 +224,17 @@ test('PDF fakes render views and store the supplied document with filesystem opt
     expect($stored)->toBe($result);
     expect(Storage::disk('pdfs')->get('invoice.pdf'))->toBe($result->contents());
     expect(Storage::disk('pdfs')->getVisibility('invoice.pdf'))->toBe('private');
-    Screenshot::assertPdfCaptured(
-        fn ($source, $type, $options) => str_contains($source, '&lt;Steve&gt;')
+    Screenshot::assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && str_contains($source, '&lt;Steve&gt;')
             && $options->browser->getSocket() === 'invoices'
             && $options->output->getPaperWidth() === 215.9,
     );
-    Screenshot::assertPdfCapturedCount(1);
-    Screenshot::assertNothingCaptured();
+    Screenshot::assertCapturedCount(1);
 
     Screenshot::fake();
 
-    Screenshot::assertNoPdfsCaptured();
+    Screenshot::assertNothingCaptured();
 });
 
 test('a single fake result is reused only for matching output captures', function ($pdf, $named) {
@@ -259,8 +259,7 @@ test('a single fake result is reused only for matching output captures', functio
         }
     }
 
-    $fake->assertCapturedCount(4);
-    $fake->assertPdfCapturedCount(2);
+    $fake->assertCapturedCount(6);
 })->with(['image' => false, 'PDF' => true])->with(['positional' => false, 'named' => true]);
 
 test('fake assertions receive the source enum for every source and output format', function ($source, $format) {
@@ -284,11 +283,7 @@ test('fake assertions receive the source enum for every source and output format
     $callback = fn (string $contents, SourceType $type, CaptureOptions $options) => $type === $expected
         && $options->getFormat() === $format;
 
-    if ($format === OutputFormat::Pdf) {
-        Screenshot::assertPdfCaptured($callback);
-    } else {
-        Screenshot::assertCaptured($callback);
-    }
+    Screenshot::assertCaptured($callback);
 })->with(['html', 'url', 'view'])->with(OutputFormat::cases());
 
 test('capture image and PDF configuration reaches independent pending captures', function () {
@@ -321,7 +316,11 @@ test('capture image and PDF configuration reaches independent pending captures',
     $pdf->capture();
     Screenshot::html('next')->capture();
 
-    Screenshot::assertPdfCaptured(function ($source, $type, CaptureOptions $options) {
+    Screenshot::assertCaptured(function ($source, $type, CaptureOptions $options) {
+        if ($options->getFormat() !== OutputFormat::Pdf) {
+            return false;
+        }
+
         expect($options->browser->getWidth())->toBe(900);
         expect($options->browser->getHeight())->toBe(600);
         expect($options->browser->getLoadTimeout())->toBe(2000);
@@ -372,8 +371,9 @@ test('partial capture configuration inherits remaining defaults including indivi
             && $options->output->getQuality() === 95
             && $options->output->getFullPage(),
     );
-    Screenshot::assertPdfCaptured(
-        fn ($source, $type, $options) => $options->output->getPaperWidth() === 210.0
+    Screenshot::assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === 210.0
             && $options->output->getMargins() === ['top' => 5.0, 'right' => 10.0, 'bottom' => 10.0, 'left' => 10.0],
     );
 });
@@ -389,8 +389,9 @@ test('PDF defaults validate paper orientation and margins together', function ()
 
     Screenshot::html('landscape')->pdf()->capture();
 
-    Screenshot::assertPdfCaptured(
-        fn ($source, $type, $options) => $options->output->getPaperWidth() === 148.0
+    Screenshot::assertCaptured(
+        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === 148.0
             && $options->output->getLandscape()
             && $options->output->getMargins()['left'] === 80.0,
     );

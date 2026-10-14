@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
@@ -14,8 +15,9 @@ test('standard paper sizes reach the driver with their dimensions in millimeters
         ->paper($size)
         ->capture();
 
-    $fake->assertPdfCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->output->getPaperWidth() === $width
+    $fake->assertCaptured(
+        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
+            && $options->output->getPaperWidth() === $width
             && $options->output->getPaperHeight() === $height,
     );
 })->with([
@@ -43,5 +45,5 @@ test('paper requires an enum before invoking the driver', function () {
             ->paper('a4')
             ->capture(),
     )->toThrow(TypeError::class);
-    $fake->assertNoPdfsCaptured();
+    $fake->assertNothingCaptured();
 });

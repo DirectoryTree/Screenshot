@@ -85,43 +85,11 @@ class ScreenshotFake extends Screenshot implements Driver
     }
 
     /**
-     * Assert that a PDF matching the callback was captured.
-     */
-    public function assertPdfCaptured(?callable $callback = null): void
-    {
-        foreach ($this->capturesOfType(PdfOptions::class) as [$source, $type, $options]) {
-            if (! $callback || $callback($source, $type, clone $options)) {
-                Assert::assertTrue(true);
-
-                return;
-            }
-        }
-
-        Assert::fail('The expected PDF was not captured.');
-    }
-
-    /**
-     * Assert the number of captured PDFs.
-     */
-    public function assertPdfCapturedCount(int $count): void
-    {
-        Assert::assertCount($count, $this->capturesOfType(PdfOptions::class));
-    }
-
-    /**
-     * Assert that no PDFs were captured.
-     */
-    public function assertNoPdfsCaptured(): void
-    {
-        $this->assertPdfCapturedCount(0);
-    }
-
-    /**
-     * Assert that a screenshot matching the callback was captured.
+     * Assert that an image or PDF matching the callback was captured.
      */
     public function assertCaptured(?callable $callback = null): void
     {
-        foreach ($this->capturesOfType(ImageOptions::class) as [$source, $type, $options]) {
+        foreach ($this->captures as [$source, $type, $options]) {
             if (! $callback || $callback($source, $type, clone $options)) {
                 Assert::assertTrue(true);
 
@@ -129,19 +97,19 @@ class ScreenshotFake extends Screenshot implements Driver
             }
         }
 
-        Assert::fail('The expected screenshot was not captured.');
+        Assert::fail('The expected capture was not recorded.');
     }
 
     /**
-     * Assert the number of captured screenshots.
+     * Assert the total number of image and PDF captures.
      */
     public function assertCapturedCount(int $count): void
     {
-        Assert::assertCount($count, $this->capturesOfType(ImageOptions::class));
+        Assert::assertCount($count, $this->captures);
     }
 
     /**
-     * Assert that no screenshots were captured.
+     * Assert that no images or PDFs were captured.
      */
     public function assertNothingCaptured(): void
     {
@@ -176,19 +144,5 @@ class ScreenshotFake extends Screenshot implements Driver
     public function assertNothingClosed(): void
     {
         Assert::assertCount(0, $this->closed, 'Unexpected browser shutdowns were requested.');
-    }
-
-    /**
-     * Filter the shared capture history by its options type.
-     *
-     * @param  class-string<ImageOptions|PdfOptions>  $type
-     * @return list<array{string, SourceType, CaptureOptions}>
-     */
-    protected function capturesOfType(string $type): array
-    {
-        return array_values(array_filter(
-            $this->captures,
-            static fn (array $capture) => $capture[2]->output instanceof $type,
-        ));
     }
 }

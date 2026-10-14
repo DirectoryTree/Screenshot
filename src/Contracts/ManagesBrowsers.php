@@ -2,7 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Contracts;
 
-interface ManagesBrowserSockets
+interface ManagesBrowsers
 {
     /**
      * Wait for active captures and close a named shared browser.

@@ -4,7 +4,7 @@ namespace DirectoryTree\Screenshot;
 
 use Closure;
 use DirectoryTree\Screenshot\Contracts\Driver;
-use DirectoryTree\Screenshot\Contracts\ManagesBrowserSockets;
+use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use InvalidArgumentException;
@@ -83,9 +83,9 @@ class Screenshot
     /**
      * Get a driver that supports shared browser lifecycle management.
      */
-    protected function sockets(): ManagesBrowserSockets
+    protected function sockets(): ManagesBrowsers
     {
-        if (! $this->driver instanceof ManagesBrowserSockets) {
+        if (! $this->driver instanceof ManagesBrowsers) {
             throw new LogicException('The screenshot driver does not support browser sockets.');
         }
 

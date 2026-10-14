@@ -4,7 +4,7 @@ namespace DirectoryTree\Screenshot\Drivers;
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
-use DirectoryTree\Screenshot\Contracts\ManagesBrowserSockets;
+use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
@@ -17,7 +17,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
-class ChromeDriver implements Driver, ManagesBrowserSockets
+class ChromeDriver implements Driver, ManagesBrowsers
 {
     /**
      * Create a new Chrome driver.

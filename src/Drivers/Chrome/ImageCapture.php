@@ -12,7 +12,9 @@ abstract class ImageCapture implements CapturesPage
     /**
      * Create an image capture strategy.
      */
-    public function __construct(protected ImageOptions $options) {}
+    public function __construct(
+        protected ImageOptions $options
+    ) {}
 
     /**
      * Capture the full page or viewport within the configured limits.

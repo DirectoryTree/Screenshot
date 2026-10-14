@@ -13,16 +13,16 @@ use LogicException;
 class Screenshot
 {
     /**
+     * The default image and browser options.
+     */
+    protected ImageOptions $options;
+
+    /**
      * The default configuration callbacks keyed by output format.
      *
      * @var array<string, Closure>
      */
     protected array $configureUsing = [];
-
-    /**
-     * The default image and browser options.
-     */
-    protected ImageOptions $options;
 
     /**
      * Create a new screenshot factory.

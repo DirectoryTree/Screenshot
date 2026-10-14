@@ -11,7 +11,9 @@ class PdfCapture implements CapturesPage
     /**
      * Create a PDF capture strategy.
      */
-    public function __construct(protected PdfOptions $options) {}
+    public function __construct(
+        protected PdfOptions $options
+    ) {}
 
     /**
      * Print the prepared page using the configured paper and layout.

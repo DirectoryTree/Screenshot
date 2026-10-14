@@ -2,19 +2,10 @@
 
 namespace DirectoryTree\Screenshot;
 
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use RuntimeException;
 
-class ScreenshotResult
+class ScreenshotResult extends CaptureResult
 {
-    /**
-     * The decoded image bytes.
-     *
-     * @var string Binary PNG or JPEG data.
-     */
-    protected string $contents;
-
     /**
      * The image dimensions and metadata returned by getimagesizefromstring.
      *
@@ -45,30 +36,6 @@ class ScreenshotResult
     }
 
     /**
-     * Get the image bytes.
-     */
-    public function contents(): string
-    {
-        return $this->contents;
-    }
-
-    /**
-     * Get the base64-encoded image.
-     */
-    public function base64(): string
-    {
-        return base64_encode($this->contents);
-    }
-
-    /**
-     * Get the image as a data URI.
-     */
-    public function dataUri(): string
-    {
-        return 'data:'.$this->mimeType().';base64,'.$this->base64();
-    }
-
-    /**
      * Get the image MIME type.
      */
     public function mimeType(): string
@@ -90,37 +57,5 @@ class ScreenshotResult
     public function height(): int
     {
         return $this->dimensions[1];
-    }
-
-    /**
-     * Save the image to an existing local directory.
-     */
-    public function save(string $path): static
-    {
-        set_error_handler(static fn () => true);
-
-        try {
-            $written = file_put_contents($path, $this->contents);
-        } finally {
-            restore_error_handler();
-        }
-
-        if ($written !== strlen($this->contents)) {
-            throw new RuntimeException("Unable to save the screenshot to [{$path}].");
-        }
-
-        return $this;
-    }
-
-    /**
-     * Store the image on a Laravel filesystem disk.
-     */
-    public function store(string $path, ?string $disk = null, array $options = []): static
-    {
-        if (! Storage::disk($disk)->put($path, $this->contents, $options)) {
-            throw new RuntimeException("Unable to store the screenshot at [{$path}].");
-        }
-
-        return $this;
     }
 }

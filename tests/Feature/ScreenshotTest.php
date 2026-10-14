@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -167,4 +168,23 @@ test('the configured socket lock timeout bounds lifecycle operations', function 
         fclose($lease);
         (new Filesystem)->deleteDirectory($directory);
     }
+});
+
+test('PDF fakes render views and store the supplied document with filesystem options', function () {
+    Storage::fake('pdfs');
+    $result = new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+    Screenshot::configure(fn (PendingScreenshot $screenshot) => $screenshot->socket('invoices'));
+    Screenshot::fake(pdfResult: $result);
+    $stored = Screenshot::view('card', ['name' => '<Steve>'])->pdf()->paper('letter')
+        ->store('invoice.pdf', 'pdfs', ['visibility' => 'private']);
+
+    expect($stored)->toBe($result)
+        ->and(Storage::disk('pdfs')->get('invoice.pdf'))->toBe($result->contents())
+        ->and(Storage::disk('pdfs')->getVisibility('invoice.pdf'))->toBe('private');
+    Screenshot::assertPdfCaptured(fn ($source, $type, $options, $pdf) => str_contains($source, '&lt;Steve&gt;')
+        && $options->getSocket() === 'invoices' && $pdf->getPaperWidth() === 215.9);
+    Screenshot::assertPdfCapturedCount(1);
+    Screenshot::assertNothingCaptured();
+    Screenshot::fake();
+    Screenshot::assertNoPdfsCaptured();
 });

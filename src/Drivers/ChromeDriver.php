@@ -5,6 +5,9 @@ namespace DirectoryTree\Screenshot\Drivers;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
+use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Generator;
@@ -19,7 +22,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
-class ChromeDriver implements Driver, ManagesBrowsers
+class ChromeDriver implements Driver, ManagesBrowsers, PdfDriver
 {
     /**
      * Create a new Chrome driver.
@@ -42,21 +45,79 @@ class ChromeDriver implements Driver, ManagesBrowsers
             throw new InvalidArgumentException('The source type must be html or url.');
         }
 
+        return $this->withBrowser(
+            $options,
+            fn (Browser $browser, bool $shared) => $this->capturePage($browser, $source, $type, $options, $shared),
+        );
+    }
+
+    /**
+     * Print a PDF using the same browser lifecycle as image captures.
+     */
+    public function capturePdf(string $source, string $type, CaptureOptions $options, PdfOptions $pdf): PdfResult
+    {
+        $options->validate();
+        $pdf->validate();
+
+        if (! in_array($type, ['html', 'url'], true)) {
+            throw new InvalidArgumentException('The source type must be html or url.');
+        }
+
+        return $this->withBrowser($options, function (Browser $browser, bool $shared) use ($source, $type, $options, $pdf) {
+            return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options, $pdf) {
+                return new PdfResult($page->pdf($pdf->toArray())->getBase64($options->getBrowserTimeout()));
+            });
+        });
+    }
+
+    /**
+     * Run a capture in a dedicated browser or under a shared socket lease.
+     */
+    protected function withBrowser(CaptureOptions $options, callable $callback): mixed
+    {
         if ($socket = $this->socket($options)) {
             return $socket->run(
                 fn () => $this->createBrowser($options),
-                fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
+                fn (Browser $browser) => $callback($browser, true),
                 array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->getBrowserTimeout()]),
             );
         }
 
-        return $this->capturePage($this->createBrowser($options), $source, $type, $options);
+        return $callback($this->createBrowser($options), false);
     }
 
     /**
-     * Capture and release only this worker's page.
+     * Capture an image from a prepared page.
      */
     protected function capturePage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared = false): ScreenshotResult
+    {
+        return $this->withPage($browser, $source, $type, $options, $shared, function (Page $page) use ($options) {
+            $clip = $options->getFullPage()
+                ? $page->getFullPageClip($options->getBrowserTimeout())
+                : new Clip(0, 0, $options->getWidth(), $options->getHeight());
+
+            $parameters = [
+                'format' => $options->getFormat(),
+                'captureBeyondViewport' => true,
+                'clip' => new Clip(
+                    0, 0,
+                    max(1, min($clip->getWidth(), $options->getMaxWidth())),
+                    max(1, min($clip->getHeight(), $options->getMaxHeight())),
+                ),
+            ];
+
+            if ($options->getFormat() === 'jpeg') {
+                $parameters['quality'] = $options->getQuality();
+            }
+
+            return new ScreenshotResult($page->screenshot($parameters)->getBase64($options->getBrowserTimeout()));
+        });
+    }
+
+    /**
+     * Load a page and release its resources after rendering either format.
+     */
+    protected function withPage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared, callable $render): mixed
     {
         $page = null;
         $failed = true;
@@ -99,25 +160,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 }
             }
 
-            $clip = $options->getFullPage()
-                ? $page->getFullPageClip($options->getBrowserTimeout())
-                : new Clip(0, 0, $options->getWidth(), $options->getHeight());
-
-            $parameters = [
-                'format' => $options->getFormat(),
-                'captureBeyondViewport' => true,
-                'clip' => new Clip(
-                    0, 0,
-                    max(1, min($clip->getWidth(), $options->getMaxWidth())),
-                    max(1, min($clip->getHeight(), $options->getMaxHeight())),
-                ),
-            ];
-
-            if ($options->getFormat() === 'jpeg') {
-                $parameters['quality'] = $options->getQuality();
-            }
-
-            $result = new ScreenshotResult($page->screenshot($parameters)->getBase64($options->getBrowserTimeout()));
+            $result = $render($page);
             $failed = false;
 
             return $result;

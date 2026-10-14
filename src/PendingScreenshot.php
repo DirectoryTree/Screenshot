@@ -2,10 +2,15 @@
 
 namespace DirectoryTree\Screenshot;
 
+use DirectoryTree\Screenshot\Concerns\ConfiguresBrowser;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use LogicException;
 
 class PendingScreenshot
 {
+    use ConfiguresBrowser;
+
     /**
      * Create a new pending screenshot.
      */
@@ -77,54 +82,15 @@ class PendingScreenshot
     }
 
     /**
-     * Set page-load and individual browser-command timeouts in milliseconds.
-     * Omitted values retain their current settings.
+     * Prepare a PDF using a snapshot of this capture's browser settings.
      */
-    public function timeouts(?int $load = null, ?int $browser = null): static
+    public function pdf(): PendingPdf
     {
-        $this->options->setTimeouts($load, $browser);
+        if (! $this->driver instanceof PdfDriver) {
+            throw new LogicException('The screenshot driver does not support PDF generation.');
+        }
 
-        return $this;
-    }
-
-    /**
-     * Allow JavaScript execution in the captured document.
-     */
-    public function javascript(bool $value = true): static
-    {
-        $this->options->setJavascript($value);
-
-        return $this;
-    }
-
-    /**
-     * Throw when page loading times out instead of capturing partial content.
-     */
-    public function failOnTimeout(bool $value = true): static
-    {
-        $this->options->setFailOnTimeout($value);
-
-        return $this;
-    }
-
-    /**
-     * Share a browser with other workers using the same key.
-     */
-    public function socket(string $key): static
-    {
-        $this->options->setSocket($key);
-
-        return $this;
-    }
-
-    /**
-     * Use a dedicated browser for this capture.
-     */
-    public function withoutSocket(): static
-    {
-        $this->options->setSocket(null);
-
-        return $this;
+        return new PendingPdf($this->driver, $this->source, $this->type, $this->options);
     }
 
     /**

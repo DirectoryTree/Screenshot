@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Facades;
 
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingScreenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Facade;
  * @method static void assertCaptured(?callable $callback = null)
  * @method static void assertCapturedCount(int $count)
  * @method static void assertNothingCaptured()
+ * @method static void assertPdfCaptured(?callable $callback = null)
+ * @method static void assertPdfCapturedCount(int $count)
+ * @method static void assertNoPdfsCaptured()
  * @method static void assertClosed(string $key)
  * @method static void assertNotClosed(string $key)
  * @method static void assertNothingClosed()
@@ -28,11 +32,12 @@ class Screenshot extends Facade
     /**
      * Replace the screenshot factory with a recording fake.
      */
-    public static function fake(?ScreenshotResult $result = null): ScreenshotFake
+    public static function fake(?ScreenshotResult $result = null, ?PdfResult $pdfResult = null): ScreenshotFake
     {
         static::swap($fake = ScreenshotFake::from(
             factory: static::getFacadeRoot(),
             result: $result,
+            pdfResult: $pdfResult,
         ));
 
         return $fake;

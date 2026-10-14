@@ -48,13 +48,13 @@ function sharedScreenshot(): Screenshot
     ], temporaryDirectory()));
 }
 
-test('separate workers start one shared browser and capture concurrently with independent settings', function () {
+test('separate workers start one shared browser and capture concurrently with independent settings', function ($secondFormat) {
     $factory = sharedScreenshot();
     $processes = [];
 
     try {
         foreach (['first' => 320, 'second' => 640] as $id => $width) {
-            $process = new Process([PHP_BINARY, __DIR__.'/../Fixtures/parallel-worker.php', temporaryDirectory(), $id, (string) $width]);
+            $process = new Process([PHP_BINARY, __DIR__.'/../Fixtures/parallel-worker.php', temporaryDirectory(), $id, (string) $width, $id === 'second' ? $secondFormat : 'png']);
             $process->setTimeout(30);
             $process->start();
             $processes[] = $process;
@@ -77,8 +77,13 @@ test('separate workers start one shared browser and capture concurrently with in
         $second = json_decode(file_get_contents(temporaryDirectory().'/second.json'), true);
 
         expect($first['socket'])->toBe($second['socket'])
-            ->and($first['width'])->toBe(320)->and($first['height'])->toBe(240)
-            ->and($second['width'])->toBe(640)->and($second['height'])->toBe(600);
+            ->and($first['width'])->toBe(320)->and($first['height'])->toBe(240);
+
+        if ($secondFormat === 'pdf') {
+            expect($second['mime'])->toBe('application/pdf');
+        } else {
+            expect($second['width'])->toBe(640)->and($second['height'])->toBe(600);
+        }
 
         // Both worker processes have exited; the same browser remains reusable.
         $result = $factory->html('third')->socket('parallel')->size(500, 300)->capture();
@@ -97,7 +102,7 @@ test('separate workers start one shared browser and capture concurrently with in
             $process->stop();
         }
     }
-});
+})->with(['png', 'pdf']);
 
 test('named sockets are reusable and dead browsers are replaced', function () {
     $factory = sharedScreenshot();

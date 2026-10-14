@@ -4,12 +4,15 @@ namespace DirectoryTree\Screenshot\Testing;
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Contracts\PdfDriver;
+use DirectoryTree\Screenshot\PdfOptions;
+use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\Screenshot;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use PHPUnit\Framework\Assert;
 
-class ScreenshotFake extends Screenshot implements Driver
+class ScreenshotFake extends Screenshot implements Driver, PdfDriver
 {
     /**
      * The recorded captures.
@@ -17,6 +20,13 @@ class ScreenshotFake extends Screenshot implements Driver
      * @var list<array{string, string, CaptureOptions}>
      */
     protected array $captures = [];
+
+    /**
+     * The recorded PDF captures.
+     *
+     * @var list<array{string, string, CaptureOptions, PdfOptions}>
+     */
+    protected array $pdfCaptures = [];
 
     /**
      * The recorded browser shutdown requests.
@@ -32,6 +42,7 @@ class ScreenshotFake extends Screenshot implements Driver
         protected ?ScreenshotResult $result = null,
         ?ViewFactory $views = null,
         CaptureOptions $options = new CaptureOptions,
+        protected ?PdfResult $pdfResult = null,
     ) {
         parent::__construct($this, clone $options, $views);
     }
@@ -39,12 +50,13 @@ class ScreenshotFake extends Screenshot implements Driver
     /**
      * Create a fresh fake using an existing factory's configuration.
      */
-    public static function from(Screenshot $factory, ?ScreenshotResult $result = null): static
+    public static function from(Screenshot $factory, ?ScreenshotResult $result = null, ?PdfResult $pdfResult = null): static
     {
         return (new static(
             result: $result,
             views: $factory->views,
             options: $factory->options,
+            pdfResult: $pdfResult,
         ))->configure($factory->configureUsing);
     }
 
@@ -66,6 +78,48 @@ class ScreenshotFake extends Screenshot implements Driver
         return $this->result ?? new ScreenshotResult(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
         );
+    }
+
+    /**
+     * Record a PDF capture and return a valid blank document by default.
+     */
+    public function capturePdf(string $source, string $type, CaptureOptions $options, PdfOptions $pdf): PdfResult
+    {
+        $this->pdfCaptures[] = [$source, $type, clone $options, clone $pdf];
+
+        return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+    }
+
+    /**
+     * Assert that a PDF matching the callback was captured.
+     */
+    public function assertPdfCaptured(?callable $callback = null): void
+    {
+        foreach ($this->pdfCaptures as [$source, $type, $options, $pdf]) {
+            if (! $callback || $callback($source, $type, clone $options, clone $pdf)) {
+                Assert::assertTrue(true);
+
+                return;
+            }
+        }
+
+        Assert::fail('The expected PDF was not captured.');
+    }
+
+    /**
+     * Assert the number of captured PDFs.
+     */
+    public function assertPdfCapturedCount(int $count): void
+    {
+        Assert::assertCount($count, $this->pdfCaptures);
+    }
+
+    /**
+     * Assert that no PDFs were captured.
+     */
+    public function assertNoPdfsCaptured(): void
+    {
+        $this->assertPdfCapturedCount(0);
     }
 
     /**

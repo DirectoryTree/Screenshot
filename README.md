@@ -156,6 +156,27 @@ Both pending screenshots and captured results accept `options` on `store()`. The
 
 Each call to a pending screenshot's `capture()`, `save()`, or `store()` takes a new screenshot. Keep the result when you need to save or return the same image more than once.
 
+### PDFs
+
+Use `pdf()` to print HTML, a Blade view, or a URL as a PDF:
+
+```php
+Screenshot::view('invoices.preview', ['invoice' => $invoice])
+    ->socket(key: 'invoices')
+    ->pdf()
+    ->paper('a4')
+    ->margins(top: 10, right: 10, bottom: 10, left: 10)
+    ->store(path: 'invoices/invoice.pdf', disk: 's3');
+```
+
+PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` accepts A3, A4, A5, Letter, or Legal. Use `paperSize(width: 100, height: 150)` for custom dimensions in millimeters, `landscape()` for landscape orientation, and `background(false)` to omit backgrounds. `preferCssPageSize()` gives CSS `@page` sizes precedence over the selected paper size.
+
+PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
+
+`pdf()` snapshots the pending screenshot's browser settings and returns a `PendingPdf`. Application defaults for JavaScript, timeouts, and sockets carry over, and those methods remain available after `pdf()`. Set print options on the returned PDF. Images and PDFs can share the same named browser.
+
+`capture()` returns a `PdfResult` with `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. It has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
+
 ### Timeouts
 
 ```php
@@ -274,6 +295,8 @@ The same fluent options and `configure()` callback are available. `view()` requi
 
 Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
+PDF support is optional for custom drivers: implement [`PdfDriver`](src/Contracts/PdfDriver.php) to enable `pdf()`. Existing image-only drivers continue to work and throw a clear exception if PDF generation is requested.
+
 ## Testing
 
 Use the facade fake to test your application without starting Chrome:
@@ -311,6 +334,22 @@ Screenshot::assertNotClosed(key: 'reports');
 ```
 
 The fake preserves configured defaults and returns a fixed 1 × 1 PNG. Pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Views still render and explicit file writes still happen, so pair it with `Storage::fake()` where appropriate.
+
+PDF captures are recorded separately and return a valid blank one-page PDF:
+
+```php
+Screenshot::fake();
+
+Screenshot::html('<h1>Invoice</h1>')->socket('invoices')->pdf()->landscape()->capture();
+
+Screenshot::assertPdfCaptured(fn ($source, $type, $options, $pdf) =>
+    $options->getSocket() === 'invoices' && $pdf->getLandscape()
+);
+Screenshot::assertPdfCapturedCount(1);
+Screenshot::assertNothingCaptured(); // No image captures.
+```
+
+Use `assertNoPdfsCaptured()` to assert that no PDFs were generated, or `Screenshot::fake(pdfResult: $result)` to supply a custom `PdfResult`.
 
 ## Handling Untrusted Content
 

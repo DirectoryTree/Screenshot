@@ -2,6 +2,7 @@
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\PdfOptions;
 use HeadlessChromium\Browser;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Connection;
@@ -11,6 +12,7 @@ use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Communication\Target;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
+use HeadlessChromium\PageUtils\PagePdf;
 use HeadlessChromium\PageUtils\PageScreenshot;
 use HeadlessChromium\PageUtils\ResponseWaiter;
 
@@ -161,3 +163,29 @@ test('shared page initialization failures close only the owned target and preser
 
     expect(fn () => $driver->shared($browser))->toThrow(OperationTimedOut::class, 'initialization failure');
 })->with([false, true]);
+
+test('PDF rendering receives print options and timeout and closes the dedicated browser', function () {
+    [$browser, $page] = chromePage();
+    $page->shouldReceive('setHtml')->once()->with('invoice', 15000);
+    $pdf = Mockery::mock(PagePdf::class);
+    $page->shouldReceive('pdf')->once()->withArgs(fn ($options) => $options['landscape'] && $options['printBackground'])
+        ->andReturn($pdf);
+    $pdf->shouldReceive('getBase64')->once()->with(12345)->andReturn(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+    $page->shouldReceive('close')->once();
+    $browser->shouldReceive('close')->once();
+
+    $result = chromeDriver($browser)->capturePdf('invoice', 'html', new CaptureOptions(browserTimeout: 12345), new PdfOptions(landscape: true));
+    expect($result->mimeType())->toBe('application/pdf');
+});
+
+test('PDF printing failures preserve the error and close browser resources', function () {
+    [$browser, $page] = chromePage();
+    $page->shouldReceive('setHtml')->once();
+    $page->shouldReceive('pdf')->once()->andThrow(new RuntimeException('print failure'));
+    $page->shouldReceive('close')->once()->andThrow(new RuntimeException('cleanup failure'));
+    $page->shouldReceive('getSession')->andThrow(new RuntimeException('closed session'));
+    $browser->shouldReceive('close')->once();
+
+    expect(fn () => chromeDriver($browser)->capturePdf('invoice', 'html', new CaptureOptions, new PdfOptions))
+        ->toThrow(RuntimeException::class, 'print failure');
+});

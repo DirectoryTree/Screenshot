@@ -15,18 +15,11 @@ use PHPUnit\Framework\Assert;
 class ScreenshotFake extends Screenshot implements Driver
 {
     /**
-     * The recorded captures.
+     * The recorded image and PDF captures, in capture order.
      *
-     * @var list<array{string, string, ImageOptions}>
+     * @var list<array{string, string, ImageOptions|PdfOptions}>
      */
     protected array $captures = [];
-
-    /**
-     * The recorded PDF captures.
-     *
-     * @var list<array{string, string, PdfOptions}>
-     */
-    protected array $pdfCaptures = [];
 
     /**
      * The recorded browser shutdown requests.
@@ -77,13 +70,11 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function capture(string $source, string $type, ImageOptions|PdfOptions $options): ImageResult|PdfResult
     {
-        if ($options->getFormat() === OutputFormat::Pdf) {
-            $this->pdfCaptures[] = [$source, $type, clone $options];
+        $this->captures[] = [$source, $type, clone $options];
 
+        if ($options->getFormat() === OutputFormat::Pdf) {
             return $this->pdfResult ?? new PdfResult(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
         }
-
-        $this->captures[] = [$source, $type, clone $options];
 
         return $this->result ?? new ImageResult(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII='
@@ -95,7 +86,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertPdfCaptured(?callable $callback = null): void
     {
-        foreach ($this->pdfCaptures as [$source, $type, $options]) {
+        foreach ($this->capturesOfType(PdfOptions::class) as [$source, $type, $options]) {
             if (! $callback || $callback($source, $type, clone $options)) {
                 Assert::assertTrue(true);
 
@@ -111,7 +102,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertPdfCapturedCount(int $count): void
     {
-        Assert::assertCount($count, $this->pdfCaptures);
+        Assert::assertCount($count, $this->capturesOfType(PdfOptions::class));
     }
 
     /**
@@ -127,7 +118,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertCaptured(?callable $callback = null): void
     {
-        foreach ($this->captures as [$source, $type, $options]) {
+        foreach ($this->capturesOfType(ImageOptions::class) as [$source, $type, $options]) {
             if (! $callback || $callback($source, $type, clone $options)) {
                 Assert::assertTrue(true);
 
@@ -143,7 +134,7 @@ class ScreenshotFake extends Screenshot implements Driver
      */
     public function assertCapturedCount(int $count): void
     {
-        Assert::assertCount($count, $this->captures);
+        Assert::assertCount($count, $this->capturesOfType(ImageOptions::class));
     }
 
     /**
@@ -182,5 +173,19 @@ class ScreenshotFake extends Screenshot implements Driver
     public function assertNothingClosed(): void
     {
         Assert::assertCount(0, $this->closed, 'Unexpected browser shutdowns were requested.');
+    }
+
+    /**
+     * Filter the shared capture history by its options type.
+     *
+     * @param  class-string<ImageOptions|PdfOptions>  $type
+     * @return list<array{string, string, ImageOptions|PdfOptions}>
+     */
+    protected function capturesOfType(string $type): array
+    {
+        return array_values(array_filter(
+            $this->captures,
+            static fn (array $capture) => $capture[2] instanceof $type,
+        ));
     }
 }

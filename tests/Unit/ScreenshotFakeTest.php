@@ -1,6 +1,9 @@
 <?php
 
+use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
+use DirectoryTree\Screenshot\OutputFormat;
+use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use PHPUnit\Framework\AssertionFailedError;
 
@@ -54,4 +57,59 @@ test('assertNothingClosed fails when any shutdown was requested', function () {
 
     expect(fn () => $fake->assertNothingClosed())
         ->toThrow(AssertionFailedError::class, 'Unexpected browser shutdowns were requested.');
+});
+
+test('one capture history preserves mixed output order and filters assertion callbacks', function () {
+    $fake = new class extends ScreenshotFake
+    {
+        public function recordedSources(): array
+        {
+            return array_column($this->captures, 0);
+        }
+    };
+
+    $fake->html('png')->capture();
+    $fake->html('first pdf')->pdf()->capture();
+    $fake->html('jpeg')->jpeg()->capture();
+    $fake->html('second pdf')->pdf()->capture();
+
+    expect($fake->recordedSources())->toBe(['png', 'first pdf', 'jpeg', 'second pdf']);
+    $fake->assertCapturedCount(2);
+    $fake->assertPdfCapturedCount(2);
+    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $source === 'jpeg'
+        && $options->getFormat() === OutputFormat::Jpeg);
+    $fake->assertPdfCaptured(fn ($source, $type, PdfOptions $options) => $source === 'second pdf'
+        && $options->getFormat() === OutputFormat::Pdf);
+});
+
+test('PDF records cannot satisfy image assertions', function () {
+    $fake = new ScreenshotFake;
+    $fake->html('pdf')->pdf()->capture();
+
+    $fake->assertNothingCaptured();
+    $fake->assertPdfCapturedCount(1);
+    expect(fn () => $fake->assertCaptured())->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertCapturedCount(1))->toThrow(AssertionFailedError::class);
+});
+
+test('image records cannot satisfy PDF assertions', function () {
+    $fake = new ScreenshotFake;
+    $fake->html('image')->capture();
+
+    $fake->assertNoPdfsCaptured();
+    $fake->assertCapturedCount(1);
+    expect(fn () => $fake->assertPdfCaptured())->toThrow(AssertionFailedError::class);
+    expect(fn () => $fake->assertPdfCapturedCount(1))->toThrow(AssertionFailedError::class);
+});
+
+test('a fresh fake clears both kinds of records without changing the original history', function () {
+    $original = new ScreenshotFake;
+    $original->html('image')->capture();
+    $original->html('pdf')->pdf()->capture();
+
+    $fake = ScreenshotFake::from($original);
+    $fake->assertNothingCaptured();
+    $fake->assertNoPdfsCaptured();
+    $original->assertCapturedCount(1);
+    $original->assertPdfCapturedCount(1);
 });

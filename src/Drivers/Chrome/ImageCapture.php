@@ -34,7 +34,11 @@ abstract class ImageCapture implements CapturesPage
             ),
         ]);
 
-        return new ImageResult($page->screenshot($parameters)->getBase64($this->options->getBrowserTimeout()));
+        return new ImageResult(
+            $page->screenshot($parameters)->getBase64(
+                $this->options->getBrowserTimeout()
+            )
+        );
     }
 
     /**

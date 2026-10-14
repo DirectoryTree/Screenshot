@@ -20,6 +20,12 @@ class PdfCapture implements CapturesPage
      */
     public function capture(Page $page): PdfResult
     {
-        return new PdfResult($page->pdf($this->options->toArray())->getBase64($this->options->getBrowserTimeout()));
+        return new PdfResult(
+            $page->pdf(
+                $this->options->toArray()
+            )->getBase64(
+                $this->options->getBrowserTimeout()
+            )
+        );
     }
 }

@@ -89,7 +89,6 @@ class ImageOptions extends BrowserOptions
         }
 
         $this->format = $format;
-        $this->specified['format'] = true;
 
         if ($quality !== null) {
             $this->quality = $quality;
@@ -131,7 +130,7 @@ class ImageOptions extends BrowserOptions
     }
 
     /**
-     * Merge image defaults without replacing explicit values.
+     * Merge image defaults without changing the selected format or explicit values.
      *
      * @param  ImageOptions  $defaults
      */
@@ -144,7 +143,6 @@ class ImageOptions extends BrowserOptions
             $this->maxHeight = $defaults->maxHeight;
         }
 
-        $this->format = isset($this->specified['format']) ? $this->format : $defaults->format;
         $this->quality = isset($this->specified['quality']) ? $this->quality : $defaults->quality;
         $this->fullPage = isset($this->specified['fullPage']) ? $this->fullPage : $defaults->fullPage;
     }

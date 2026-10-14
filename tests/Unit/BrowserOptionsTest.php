@@ -104,3 +104,16 @@ test('image and PDF defaults cannot be mixed', function ($options, $defaults) {
     fn () => [ImageOptions::make(), PdfOptions::make()],
     fn () => [PdfOptions::make(), ImageOptions::make()],
 ]);
+
+test('image defaults preserve the selected output while supplying unspecified settings', function ($format, $defaultFormat) {
+    $defaults = ImageOptions::make()->setFormat($defaultFormat, 95)->setSize(800, 600);
+    $options = ImageOptions::make()->setFormat($format);
+    $merged = $options->asDefaults()->withDefaults($defaults);
+
+    expect($merged->getFormat())->toBe($format)->and($merged->getQuality())->toBe(95)
+        ->and($merged->getWidth())->toBe(800)->and($defaults->getFormat())->toBe($defaultFormat)
+        ->and($options->getWidth())->toBe(1024);
+})->with([
+    [OutputFormat::Png, OutputFormat::Jpeg],
+    [OutputFormat::Jpeg, OutputFormat::Png],
+]);

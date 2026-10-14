@@ -126,23 +126,15 @@ abstract class PendingCapture
     public function capture(): ImageResult|PdfResult
     {
         $capture = clone $this;
-        $capture->options = clone $this->defaults;
+        $capture->options = $this->options->asDefaults()->withDefaults($this->defaults);
         $capture->configureUsing = [];
         $format = $this->options->getFormat();
-
-        if ($capture->options instanceof ImageOptions) {
-            $capture->options->setFormat($format);
-        }
 
         if ($callback = $this->configureUsing[$format->value] ?? null) {
             $callback($capture);
         }
 
         $options = $this->options->withDefaults($capture->options);
-
-        if ($options instanceof ImageOptions) {
-            $options->setFormat($format);
-        }
 
         return $this->driver->capture($this->source, $this->type, $options->asDefaults());
     }

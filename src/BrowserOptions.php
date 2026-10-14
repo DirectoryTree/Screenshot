@@ -223,7 +223,8 @@ abstract class BrowserOptions
     }
 
     /**
-     * Fill unspecified settings from defaults and validate the complete result.
+     * Fill unspecified settings from defaults while preserving the output format.
+     * Validate the complete result before returning it.
      */
     public function withDefaults(self $defaults): static
     {

@@ -215,3 +215,21 @@ test('explicit PDF booleans and each margin win over defaults', function () {
         && ! $options->getPreferCssPageSize()
         && $options->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0]);
 });
+
+test('format callbacks cannot change the selected image output', function ($format) {
+    $fake = new ScreenshotFake;
+    $fake->configure($format, function (PendingImage $image) use ($format) {
+        if ($format === OutputFormat::Png) {
+            $image->jpeg(95);
+        } else {
+            $image->png();
+        }
+    });
+    $pending = $fake->html('image');
+    if ($format === OutputFormat::Jpeg) {
+        $pending->jpeg();
+    }
+    $pending->capture();
+
+    $fake->assertCaptured(fn ($source, $type, ImageOptions $options) => $options->getFormat() === $format);
+})->with([OutputFormat::Png, OutputFormat::Jpeg]);

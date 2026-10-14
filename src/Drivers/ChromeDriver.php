@@ -7,6 +7,7 @@ use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\ScreenshotResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
+use Generator;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Clip;
@@ -144,18 +145,27 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 $connection->sendMessageSync(new Message('Target.closeTarget', ['targetId' => $target]));
 
                 // Chrome can acknowledge closure before the target is destroyed.
-                Utils::tryWithTimeout($connection->getSendSyncDefaultTimeout() * 1000, (function () use ($browser, $connection, $target) {
-                    while ($browser->getTarget($target)) {
-                        yield 1000;
-
-                        $connection->readData();
-                    }
-                })());
+                Utils::tryWithTimeout(
+                    $connection->getSendSyncDefaultTimeout() * 1000,
+                    $this->waitForTargetToClose($browser, $target),
+                );
             } catch (Throwable) {
                 // Preserve the initialization failure without closing other workers' pages.
             }
 
             throw $e;
+        }
+    }
+
+    /**
+     * Wait for Chrome to confirm that the target was destroyed.
+     */
+    protected function waitForTargetToClose(Browser $browser, string $target): Generator
+    {
+        while ($browser->getTarget($target)) {
+            yield 1000;
+
+            $browser->getConnection()->readData();
         }
     }
 

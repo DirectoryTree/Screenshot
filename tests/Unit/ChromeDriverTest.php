@@ -132,7 +132,7 @@ test('a shared capture failure closes its page without closing other workers bro
 test('shared page initialization failures close only the owned target and preserve the original error', function ($cleanupFails) {
     $browser = Mockery::mock(Browser::class);
     $connection = Mockery::mock(Connection::class);
-    $browser->shouldReceive('getConnection')->once()->andReturn($connection);
+    $browser->shouldReceive('getConnection')->andReturn($connection);
     $browser->shouldNotReceive('close');
     $connection->shouldReceive('sendMessageSync')->once()
         ->withArgs(fn ($message) => $message->getMethod() === 'Target.createTarget')

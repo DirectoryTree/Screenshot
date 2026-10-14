@@ -98,6 +98,10 @@ Screenshot::url('https://example.com')
     ->save(storage_path('app/example.png'));
 ```
 
+`html()`, `view()`, and `url()` return a `PendingSource` containing the source and browser settings. Select `png()` or `jpeg()` to create a `PendingImage`, or `pdf()` to create a `PendingPdf`. Output options are copied only when that output is selected.
+
+Calling `capture()`, `save()`, or `store()` directly on the source uses the configured image format, which defaults to PNG.
+
 URLs must use HTTP or HTTPS. For HTML and views, use absolute asset URLs or provide a `<base href="...">` so Chrome can resolve images, stylesheets, and fonts.
 
 JavaScript is disabled by default. Enable it with `javascript()` when needed. Captures wait for the page's load event; they do not wait for application-specific JavaScript work to finish.
@@ -109,15 +113,19 @@ The default viewport is 1024 × 768 pixels. Full-page capture is enabled by defa
 ```php
 Screenshot::html($html)
     ->size(width: 1200, height: 800)
+    ->png()
     ->maxSize(width: 1600, height: 6000)
     ->fullPage()
     ->capture();
 
 Screenshot::html($html)
     ->size(width: 1200, height: 800)
+    ->png()
     ->viewport()
     ->capture();
 ```
+
+Browser settings such as `size()` can be applied before or after selecting an output. Select `png()` or `jpeg()` before applying image settings such as `maxSize()`, `fullPage()`, or `viewport()`.
 
 `size()` sets the layout viewport. `maxSize()` crops the image from the top-left corner without scaling it, and applies to viewport captures too. Each dimension must be between 1 and 16384 pixels, with at most 40 million pixels per width/height pair.
 
@@ -175,7 +183,20 @@ PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` a
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 
-`html()`, `view()`, and `url()` return a `PendingImage`. Calling `pdf()` creates an independent `PendingPdf` with a snapshot of its browser settings. Both builders support `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Configure image options on `PendingImage` and print options on `PendingPdf`; images and PDFs can share the same named browser.
+The source request and both output builders support `size()`, `socket()`, `withoutSocket()`, `timeouts()`, `javascript()`, and `failOnTimeout()`. Selecting an output snapshots the source's current browser settings and copies the configured defaults for that output. Each selection creates an independent builder, so later changes to the source or another builder do not affect it.
+
+Keep the source request when producing several outputs:
+
+```php
+$source = Screenshot::view('invoices.preview', ['invoice' => $invoice])
+    ->size(1200, 800)
+    ->socket('invoices');
+
+$source->jpeg(90)->maxSize(1600, 6000)->save($imagePath);
+$source->pdf()->paper(PaperSize::A4)->save($pdfPath);
+```
+
+Image builders hold image settings and PDF builders hold print settings. Select PDF output on the source request. Images and PDFs can share the same named browser.
 
 Both builders use `capture()`, `save()`, and `store()`: `PendingImage` returns an `ImageResult`, and `PendingPdf` returns a `PdfResult`. Both results provide `contents()`, `base64()`, `dataUri()`, `mimeType()`, `save()`, and `store()`. `PdfResult` has no image width or height methods. Saving a PDF uses the same paths, filesystem options, and failure behavior as saving an image.
 
@@ -266,7 +287,7 @@ Omitted entries use the package defaults. The available settings are:
 
 Capture dimensions are in pixels, timeouts are in milliseconds, and PDF margins are in millimeters. Use `socket => null` for dedicated browsers.
 
-Each pending capture gets an independent copy of the factory's defaults. Fluent options update that copy directly:
+Source requests receive independent browser defaults. Selecting an output copies only its image or PDF defaults. Fluent options update each builder's own settings:
 
 ```php
 use DirectoryTree\Screenshot\Enums\PaperSize;
@@ -275,13 +296,15 @@ Screenshot::html($html)->size(800, 600)->jpeg()->capture();
 Screenshot::view('invoices.preview', $data)->withoutSocket()->pdf()->paper(PaperSize::A4)->capture();
 ```
 
-`jpeg()` uses the current quality; `jpeg(quality: 90)` changes it. Switching between PNG and JPEG preserves browser and image settings. Calling `pdf()` copies all current browser settings, including inherited defaults, and starts with the configured PDF settings. Image quality, crop limits, and full-page mode do not carry into PDFs.
+On a source request, `jpeg()` uses the configured quality and `jpeg(quality: 90)` overrides it. Calling `png()` or `jpeg()` again on an image builder changes its format while preserving its current settings. Calling `pdf()` on the source uses its current browser settings and the configured PDF defaults.
 
-Defaults are loaded when the screenshot factory is resolved. Pending captures retain their settings, including their PDF defaults, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
+Defaults are loaded when the screenshot factory is resolved. Existing source requests use their originating factory's defaults. Output builders retain their own settings, and repeated captures use their current options. Restart long-running workers after changing configuration. Set values that vary by job through the fluent API.
 
-### Updating From Format Callbacks
+### Updating Existing Captures
 
 Replace `Screenshot::configure($format, $callback)` registrations with entries in `config/screenshot.php`, or constructor options when using plain PHP. Browser defaults now apply to every output; PNG and JPEG share image defaults. Use the fluent API for settings specific to an individual capture.
+
+Source methods now return `PendingSource`. Move image-specific settings after `png()` or `jpeg()`, and select PDF output on the source request. To produce an image and PDF from the same source, keep the source request and select each output separately.
 
 Custom drivers and fake assertion callbacks now receive `CaptureOptions`. Read browser settings through `$options->browser` and image or PDF settings through `$options->output`. `getFormat()` remains available on `CaptureOptions`.
 

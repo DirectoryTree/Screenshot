@@ -43,10 +43,10 @@ test('fluent settings replace defaults including false null and package default 
             ->setPreferCssPageSize(true),
     );
 
-    $image = $fake->html('override')->size(1024, 768)->withoutSocket()->javascript(false)
-        ->failOnTimeout(false)->timeouts(load: 15000)->fullPage()->png();
-    $image->jpeg(80)->capture();
-    $image->pdf()->paper(PaperSize::A4)->landscape(false)->margins(1, 2, 3, 4)
+    $source = $fake->html('override')->size(1024, 768)->withoutSocket()->javascript(false)
+        ->failOnTimeout(false)->timeouts(load: 15000);
+    $source->png()->fullPage()->jpeg(80)->capture();
+    $source->pdf()->paper(PaperSize::A4)->landscape(false)->margins(1, 2, 3, 4)
         ->background(false)->preferCssPageSize(false)->capture();
     $fake->html('default')->capture();
 
@@ -87,19 +87,19 @@ test('format changes preserve current browser settings image options and JPEG qu
         && $options->output->getQuality() === 95);
 });
 
-test('PDF conversion copies inherited and overridden browser settings with independent print defaults', function () {
+test('PDF selection copies source browser settings with independent print defaults', function () {
     $fake = new ScreenshotFake(
         browser: (new BrowserOptions)->setSize(900, 600)->setJavascript(true)->setSocket('shared')->setTimeouts(2000, 4000),
         image: (new ImageOptions)->setFormat(OutputFormat::Jpeg, 95)->setMaxSize(100, 100)->setFullPage(false),
         pdf: (new PdfOptions)->setPaper(PaperSize::Letter),
     );
-    $image = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)->failOnTimeout();
-    $first = $image->pdf()->paper(PaperSize::A5);
-    $second = $image->pdf();
-    $image->size(320, 240)->withoutSocket()->javascript(false);
+    $source = $fake->html('invoice')->size(640, 480)->timeouts(load: 1000)->failOnTimeout();
+    $first = $source->pdf()->paper(PaperSize::A5);
+    $second = $source->pdf();
+    $source->size(320, 240)->withoutSocket()->javascript(false);
     $first->capture();
     $second->capture();
-    $image->capture();
+    $source->capture();
 
     $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 640
         && $options->browser->getHeight() === 480 && $options->browser->getJavascript()

@@ -23,10 +23,9 @@ function pdfPageSize(string $contents): array
     return [(float) ($matches[1] ?? 0), (float) ($matches[2] ?? 0)];
 }
 
-test('real Chrome prints a paginated PDF independently of screenshot crop settings', function () {
+test('real Chrome prints a paginated PDF using the source viewport', function () {
     $result = pdfScreenshot()->html(file_get_contents(__DIR__.'/../Fixtures/document-pdf.html'))
-        ->size(320, 240)->maxSize(100, 100)->viewport()->jpeg()
-        ->pdf()->capture();
+        ->size(320, 240)->pdf()->capture();
 
     expect($result->mimeType())->toBe('application/pdf')
         ->and($result->contents())->toStartWith('%PDF-')
@@ -74,8 +73,9 @@ test('PDF URL captures honor strict and partial page load timeouts', function ()
 });
 
 test('image and PDF builders capture independently using the same terminal methods', function () {
-    $image = pdfScreenshot()->html('<h1>Any format</h1>')->size(320, 240)->viewport();
-    $pdf = $image->pdf()->paper(PaperSize::Letter);
+    $source = pdfScreenshot()->html('<h1>Any format</h1>')->size(320, 240);
+    $image = $source->png()->viewport();
+    $pdf = $source->pdf()->paper(PaperSize::Letter);
 
     expect($pdf->capture()->mimeType())->toBe('application/pdf')
         ->and($image->png()->capture()->mimeType())->toBe('image/png')

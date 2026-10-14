@@ -87,8 +87,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Paper sizes are a3, a4, a5, letter, or legal. Margins are in millimeters.
-    | Converting an image to PDF preserves its current browser settings and
-    | uses these print defaults independently of its image settings.
+    | Selecting PDF output copies the source's current browser settings and
+    | these print defaults into an independent PDF builder.
     |
     */
 

@@ -20,10 +20,11 @@ function pdfFixture(): string
     return base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf'));
 }
 
-test('PDF conversion snapshots browser defaults without capturing or changing the source', function () {
+test('PDF selection snapshots browser defaults without capturing or changing the source', function () {
     $fake = new ScreenshotFake(browser: (new BrowserOptions)->setSocket('invoices')->setTimeouts(load: 5000, browser: 10000));
-    $image = $fake->html('invoice')->size(500, 300)->jpeg();
-    $pdf = $image->pdf();
+    $source = $fake->html('invoice')->size(500, 300);
+    $image = $source->jpeg();
+    $pdf = $source->pdf();
     $image->socket('images');
     $fake->assertNoPdfsCaptured();
     $fake->assertNothingCaptured();
@@ -74,9 +75,9 @@ test('one driver contract handles images and PDFs with the requested enum format
         ->withArgs(fn ($source, $type, CaptureOptions $options) => $source === 'invoice'
             && $type === SourceType::Html && $options->getFormat() === OutputFormat::Pdf && $options->output->getLandscape())
         ->andReturn($pdf);
-    $pending = (new Screenshot($driver))->html('invoice')->jpeg();
+    $pending = (new Screenshot($driver))->html('invoice');
 
-    expect($pending->capture())->toBe($image)
+    expect($pending->jpeg()->capture())->toBe($image)
         ->and($pending->pdf()->landscape()->capture())->toBe($pdf);
 });
 
@@ -135,8 +136,9 @@ test('orientation changes cannot invalidate the printable area', function () {
 
 test('image and PDF builders save their own result types without changing each other', function () {
     $fake = new ScreenshotFake;
-    $image = $fake->html('invoice');
-    $pdf = $image->pdf();
+    $source = $fake->html('invoice');
+    $image = $source->png();
+    $pdf = $source->pdf();
     $imagePath = tempnam(sys_get_temp_dir(), 'screenshot-image-');
     $pdfPath = tempnam(sys_get_temp_dir(), 'screenshot-pdf-');
 

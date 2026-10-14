@@ -42,7 +42,7 @@ test('the install command downloads a browser that the application can capture w
         $pdf = Screenshot::html('<h1>Installed Chrome PDF</h1>')->pdf()->capture();
         expect($pdf->mimeType())->toBe('application/pdf')->and($pdf->contents())->toStartWith('%PDF-');
 
-        $jpeg = Screenshot::html('<h1>Installed Chrome</h1>')->size(320, 240)->viewport()->jpeg()->capture();
+        $jpeg = Screenshot::html('<h1>Installed Chrome</h1>')->size(320, 240)->jpeg()->viewport()->capture();
         expect($jpeg->width())->toBe(320)
             ->and($jpeg->height())->toBe(240)
             ->and($jpeg->mimeType())->toBe('image/jpeg');

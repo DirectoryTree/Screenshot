@@ -8,6 +8,7 @@ use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
+use DirectoryTree\Screenshot\PendingSource;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
@@ -221,6 +222,8 @@ test('fake assertions receive the source enum for every source and output format
         OutputFormat::Pdf => $pending->pdf(),
     })->capture();
 
+    expect($pending)->toBeInstanceOf(PendingSource::class);
+
     $expected = $source === 'url' ? SourceType::Url : SourceType::Html;
     $callback = fn (string $contents, SourceType $type, CaptureOptions $options) => $type === $expected && $options->getFormat() === $format;
 
@@ -252,9 +255,9 @@ test('capture image and PDF configuration reaches independent pending captures',
         'screenshot.pdf.prefer_css_page_size' => true,
     ]);
     Screenshot::fake();
-    $image = Screenshot::html('invoice');
-    $pdf = $image->pdf();
-    $image->size(320, 240)->png()->capture();
+    $source = Screenshot::html('invoice');
+    $pdf = $source->pdf();
+    $source->size(320, 240)->png()->capture();
     $pdf->capture();
     Screenshot::html('next')->capture();
 

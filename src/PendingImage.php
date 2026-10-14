@@ -7,17 +7,15 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 class PendingImage
 {
     /**
-     * Create an image builder with independent image and PDF settings.
+     * Create an image builder with independent settings.
      *
      * @param  CaptureOptions<ImageOptions>  $options
      */
     public function __construct(
         protected PendingCapture $capture,
         protected CaptureOptions $options,
-        protected PdfOptions $pdf = new PdfOptions,
     ) {
         $this->options = clone $options;
-        $this->pdf = clone $pdf;
     }
 
     /**
@@ -126,17 +124,6 @@ class PendingImage
         $this->options->output->setFormat(OutputFormat::Jpeg, $quality);
 
         return $this;
-    }
-
-    /**
-     * Prepare a PDF using a snapshot of this capture's browser settings.
-     */
-    public function pdf(): PendingPdf
-    {
-        return new PendingPdf(
-            $this->capture,
-            new CaptureOptions($this->options->browser, $this->pdf),
-        );
     }
 
     /**

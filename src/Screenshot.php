@@ -30,27 +30,27 @@ class Screenshot
     /**
      * Prepare a screenshot of an HTML document.
      */
-    public function html(string $html): PendingImage
+    public function html(string $html): PendingSource
     {
-        return $this->newPendingImage($html, SourceType::Html);
+        return $this->newPendingSource($html, SourceType::Html);
     }
 
     /**
      * Prepare a screenshot of an HTTP or HTTPS URL.
      */
-    public function url(string $url): PendingImage
+    public function url(string $url): PendingSource
     {
         if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true)) {
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 
-        return $this->newPendingImage($url, SourceType::Url);
+        return $this->newPendingSource($url, SourceType::Url);
     }
 
     /**
      * Render a Laravel view and prepare its screenshot.
      */
-    public function view(string $view, array $data = []): PendingImage
+    public function view(string $view, array $data = []): PendingSource
     {
         if (! $this->views) {
             throw new LogicException('A view factory is required to capture Laravel views.');
@@ -80,13 +80,26 @@ class Screenshot
     }
 
     /**
-     * Prepare a capture with an independent snapshot of its defaults.
+     * Prepare an image with independent browser and image settings.
      */
-    protected function newPendingImage(string $source, SourceType $type): PendingImage
+    public function newPendingImage(PendingCapture $capture, BrowserOptions $browser): PendingImage
     {
-        return new PendingImage(
-            new PendingCapture($this->driver, $source, $type),
-            new CaptureOptions($this->browser, $this->image), $this->pdf,
-        );
+        return new PendingImage($capture, new CaptureOptions($browser, $this->image));
+    }
+
+    /**
+     * Prepare a PDF with independent browser and print settings.
+     */
+    public function newPendingPdf(PendingCapture $capture, BrowserOptions $browser): PendingPdf
+    {
+        return new PendingPdf($capture, new CaptureOptions($browser, $this->pdf));
+    }
+
+    /**
+     * Prepare a source with an independent snapshot of its browser settings.
+     */
+    protected function newPendingSource(string $source, SourceType $type): PendingSource
+    {
+        return new PendingSource($this, new PendingCapture($this->driver, $source, $type), $this->browser);
     }
 }

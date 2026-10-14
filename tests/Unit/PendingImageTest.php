@@ -4,11 +4,9 @@ use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
-use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
-use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PendingCapture;
 use DirectoryTree\Screenshot\PendingImage;
 use DirectoryTree\Screenshot\Screenshot;
@@ -103,7 +101,7 @@ test('drivers receive independent options snapshots', function () {
 
 test('invalid mutations leave all pending screenshot options unchanged', function ($method, $arguments) {
     $fake = new ScreenshotFake;
-    $pending = $fake->html('hello');
+    $pending = $fake->html('hello')->png();
     expect(fn () => $pending->{$method}(...$arguments))->toThrow(InvalidArgumentException::class);
     $pending->capture();
     $fake->assertCaptured(fn ($source, $type, $options) => $options == new CaptureOptions(new BrowserOptions, new ImageOptions));
@@ -168,23 +166,4 @@ test('image builders reject PDF defaults before calling the driver', function ()
 
     expect(fn () => new PendingImage(new PendingCapture($driver, 'invoice', SourceType::Html), new CaptureOptions(new BrowserOptions, (new ImageOptions)->setFormat(OutputFormat::Pdf))))
         ->toThrow(InvalidArgumentException::class, 'Image options require PNG or JPEG output.');
-});
-
-test('directly constructed image builders snapshot their PDF defaults', function () {
-    $fake = new ScreenshotFake;
-    $pdf = (new PdfOptions)->setPaper(PaperSize::Letter);
-    $pending = new PendingImage(
-        new PendingCapture($fake, 'invoice', SourceType::Html),
-        new CaptureOptions(new BrowserOptions, new ImageOptions),
-        $pdf,
-    );
-    $pdf->setPaper(PaperSize::Legal);
-    $first = $pending->pdf()->paper(PaperSize::A5);
-    $second = $pending->pdf();
-    $first->capture();
-    $second->capture();
-
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 148.0);
-    $fake->assertPdfCaptured(fn ($source, $type, $options) => $options->output->getPaperWidth() === 215.9);
-    $fake->assertPdfCapturedCount(2);
 });

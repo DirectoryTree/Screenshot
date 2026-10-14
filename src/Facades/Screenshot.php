@@ -4,15 +4,15 @@ namespace DirectoryTree\Screenshot\Facades;
 
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
-use DirectoryTree\Screenshot\PendingImage;
+use DirectoryTree\Screenshot\PendingSource;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static PendingImage html(string $html)
- * @method static PendingImage url(string $url)
- * @method static PendingImage view(string $view, array $data = [])
+ * @method static PendingSource html(string $html)
+ * @method static PendingSource url(string $url)
+ * @method static PendingSource view(string $view, array $data = [])
  * @method static void close(string $key)
  * @method static void assertCaptured(?callable $callback = null)
  * @method static void assertCapturedCount(int $count)

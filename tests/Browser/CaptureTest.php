@@ -38,7 +38,7 @@ test('real Chromium applies configured defaults and per-capture dimension limits
         image: (new ImageOptions)->setFullPage(false)->setFormat(OutputFormat::Jpeg, 85),
     );
     $result = $factory->html(file_get_contents(__DIR__.'/../Fixtures/document.html'))
-        ->maxSize(500, 300)->jpeg()->capture();
+        ->jpeg()->maxSize(500, 300)->capture();
 
     expect($result->width())->toBe(500)
         ->and($result->height())->toBe(300)
@@ -58,7 +58,7 @@ test('real Chromium disables JavaScript by default and permits opting in', funct
 
 test('real Chromium bounds oversized full page documents', function () {
     $result = realScreenshot()->html('<style>body{margin:0;width:5000px;height:15000px}</style>')
-        ->maxSize(700, 800)->capture();
+        ->png()->maxSize(700, 800)->capture();
 
     expect($result->width())->toBe(700)->and($result->height())->toBe(800);
 });

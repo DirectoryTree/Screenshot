@@ -11,6 +11,7 @@ use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Exception\OperationTimedOut;
 use HeadlessChromium\Page;
 use HeadlessChromium\PageUtils\PageScreenshot;
+use HeadlessChromium\PageUtils\ResponseWaiter;
 
 function chromeDriver(Browser $browser): ChromeDriver
 {
@@ -97,4 +98,23 @@ test('capture failures still close the page and browser', function () {
 
     expect(fn () => chromeDriver($browser)->capture('hello', 'html', new CaptureOptions))
         ->toThrow(RuntimeException::class, 'screenshot failure');
+});
+
+test('a shared capture failure closes its page without closing other workers browsers', function () {
+    [$browser, $page] = chromePage();
+    $viewport = Mockery::mock(ResponseWaiter::class);
+    $page->shouldReceive('setViewport')->once()->with(1024, 768)->andReturn($viewport);
+    $viewport->shouldReceive('await')->once()->with(60000);
+    $page->shouldReceive('setHtml')->once()->andThrow(new RuntimeException('capture failure'));
+    $page->shouldReceive('close')->once();
+    $browser->shouldNotReceive('close');
+    $driver = new class extends ChromeDriver
+    {
+        public function shared(Browser $browser): void
+        {
+            $this->capturePage($browser, 'hello', 'html', new CaptureOptions, shared: true);
+        }
+    };
+
+    expect(fn () => $driver->shared($browser))->toThrow(RuntimeException::class, 'capture failure');
 });

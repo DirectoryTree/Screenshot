@@ -97,6 +97,30 @@ class PendingScreenshot
     }
 
     /**
+     * Share a browser with other workers using the same key.
+     */
+    public function socket(string $key): static
+    {
+        return $this->withOptions(['socket' => $key, 'socketPath' => null]);
+    }
+
+    /**
+     * Share a browser using a file containing its WebSocket address.
+     */
+    public function socketPath(string $path): static
+    {
+        return $this->withOptions(['socket' => null, 'socketPath' => $path]);
+    }
+
+    /**
+     * Use a dedicated browser for this capture.
+     */
+    public function withoutSocket(): static
+    {
+        return $this->withOptions(['socket' => null, 'socketPath' => null]);
+    }
+
+    /**
      * Capture the screenshot.
      */
     public function capture(): ScreenshotResult

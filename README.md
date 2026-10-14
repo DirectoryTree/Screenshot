@@ -7,6 +7,8 @@
     <span> · </span>
     <a href="#usage">Usage</a>
     <span> · </span>
+    <a href="#shared-browsers-and-parallel-workers">Parallel Workers</a>
+    <span> · </span>
     <a href="#configuration">Configuration</a>
     <span> · </span>
     <a href="#testing">Testing</a>
@@ -178,7 +180,63 @@ Screenshot::url('https://example.com')
     ->capture();
 ```
 
-Use an appropriate job timeout when capturing inside a queue worker. Each capture starts its own browser and closes the page and browser in a `finally` block. A failed page close falls back to closing the target. The package does not persist browser sockets or reuse cookies across captures.
+Use an appropriate job timeout when capturing inside a queue worker. By default, each capture starts its own browser and closes the page and browser in a `finally` block. A failed page close falls back to closing the target. Shared browser mode keeps the browser running and closes only the capture’s page.
+
+## Shared Browsers and Parallel Workers
+
+Use a named socket to reuse one browser across queue workers or PHP processes:
+
+```php
+Screenshot::html($html)
+    ->socket('emails')
+    ->size(1024, 768)
+    ->save($path);
+```
+
+Workers using the same key and socket directory connect to the same Chrome instance. Each capture gets its own page, viewport, and JavaScript settings. Captures can run at the same time; the startup lock is released before rendering begins. Different keys select different browsers.
+
+You can also provide an explicit local socket file:
+
+```php
+Screenshot::html($html)
+    ->socketPath(storage_path('app/chromium.socket'))
+    ->capture();
+```
+
+The file contains Chrome's WebSocket address (`ws://...`); it is not a Unix domain socket. If no live browser is available, Screenshot starts one and atomically saves its address. Concurrent startup uses filesystem locks, so cooperating workers do not create competing browsers. A dead or unresponsive saved connection is replaced on the next capture, subject to Chrome being able to start. Capture failures are not automatically retried.
+
+A named key is hashed into a filename under `screenshot.socket_directory`. In Laravel this defaults to `storage/framework/cache/screenshots`. Use a stable, private directory shared by the workers on the **same host**, with the same OS user and a local filesystem supporting `flock`. Keys do not use Laravel Cache or Redis and do not coordinate browsers across hosts or containers with different network namespaces. Do not delete or replace the directory or its lock files while workers are running. An explicit socket path should be absolute and identical in every worker.
+
+To enable a named socket by default:
+
+```dotenv
+SCREENSHOT_SOCKET=emails
+```
+
+Or set `defaults.socket` / `defaults.socketPath` in `config/screenshot.php`, specifying only one. You can override the default on any capture with `socket()` or `socketPath()`, or opt out with `withoutSocket()`:
+
+```php
+Screenshot::html($html)->withoutSocket()->capture();
+```
+
+The API is synchronous within each PHP process. Run captures in separate Laravel queue jobs or PHP workers for parallel execution; selecting a socket does not dispatch jobs or add a batch scheduler. Limit worker concurrency to fit your browser host's memory and CPU.
+
+### Browser Lifetime
+
+Shared browsers outlive individual captures and worker exits. Close a shared browser explicitly when it is no longer needed:
+
+```php
+Screenshot::closeSocket('emails');
+Screenshot::closeSocketPath(storage_path('app/chromium.socket'));
+```
+
+Closing waits for cooperating active captures to finish, requests graceful browser shutdown, and removes the endpoint file. Chrome may finish flushing its profile asynchronously. A later capture starts a new browser. Lock waits are bounded by `screenshot.socket_lock_timeout` (60000 milliseconds by default, per lock acquisition); a lock timeout throws without closing active captures. Stop dispatching new jobs before shutdown to avoid continued readers delaying it. Do not call shutdown from inside an active capture on the same socket.
+
+Only use these lifecycle methods for browsers managed by this application. If a worker is forcibly killed, its filesystem lease is released by the OS, but its page may remain open; drain workers and recycle the shared browser after such failures. Cleanup failures never cause a capture to terminate a browser being used by other workers.
+
+Browser launch settings such as the binary, proxy, and custom flags are chosen by the worker that starts the browser. Use consistent configuration for a key and close/restart the browser after changing those settings. Dimensions, JavaScript, command timeouts, and configured HTTP headers are applied per worker/page.
+
+**A shared browser also shares cookies and browser storage.** Use dedicated mode or separate keys for workloads requiring separate browser state. By default, a shared browser uses a profile directory beside its socket (`<socket>.profile`). Explicit shutdown retains this profile and the stable `.lock` / `.usage` files, so saved browser state may survive a restart. Remove them only after all workers have stopped and the browser is closed. A configured `browser_options.userDataDir` overrides this profile path; never point different browser keys at the same profile directory.
 
 ## Configuration
 
@@ -190,6 +248,9 @@ The published `config/screenshot.php` contains the executable path, browser opti
 'browser_options' => [
     'startupTimeout' => 30,
 ],
+
+'socket_directory' => storage_path('framework/cache/screenshots'),
+'socket_lock_timeout' => 60000,
 
 'defaults' => [
     'width' => 1024,
@@ -203,10 +264,12 @@ The published `config/screenshot.php` contains the executable path, browser opti
     'fullPage' => true,
     'javascript' => false,
     'failOnTimeout' => false,
+    'socket' => env('SCREENSHOT_SOCKET'),
+    'socketPath' => null,
 ],
 ```
 
-Browser options use [Chrome PHP's option names](https://github.com/chrome-php/chrome#available-options). Screenshot always manages `keepAlive`, `windowSize`, and `sendSyncDefaultTimeout` to maintain capture ownership and dimensions. Keep Chrome's sandbox enabled in production; `noSandbox` is available only as an explicit browser option for environments that require it.
+Browser options use [Chrome PHP's option names](https://github.com/chrome-php/chrome#available-options). Screenshot always manages `keepAlive`, `windowSize`, and `sendSyncDefaultTimeout` to maintain capture lifetime and dimensions. Keep Chrome's sandbox enabled in production; `noSandbox` is available only as an explicit browser option for environments that require it.
 
 ### Using PHP Without Laravel
 
@@ -216,12 +279,17 @@ HTML and URL capture, image conversion, and local saving do not require a booted
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Screenshot;
 
-$screenshot = new Screenshot(new ChromeDriver('/usr/bin/chromium'));
+$screenshot = new Screenshot(new ChromeDriver(
+    '/usr/bin/chromium',
+    socketDirectory: __DIR__.'/storage/screenshots',
+));
 
 $screenshot->html('<h1>Hello, world!</h1>')
     ->size(800, 600)
     ->save(__DIR__.'/preview.png');
 ```
+
+Named standalone sockets default to `sys_get_temp_dir().'/directorytree-screenshot'`; set an application-specific `socketDirectory` as shown above when sharing browsers.
 
 Laravel components are Composer dependencies, but standalone captures do not use the container or facades. `view()` requires an injected `Illuminate\Contracts\View\Factory`; `store()` requires a booted Laravel filesystem.
 
@@ -252,7 +320,7 @@ Screenshot::assertCapturedCount(1);
 Storage::disk('screenshots')->assertExists('invoice.png');
 ```
 
-`Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
+`Screenshot::assertNothingCaptured()` asserts that no terminal capture call was made. Socket selectors are recorded on `CaptureOptions`; the fake does not start browsers, write socket files, or perform shutdown. The fake still renders Blade views and performs explicit file writes, so combine it with `Storage::fake()` when appropriate. It returns a fixed 1 × 1 PNG regardless of requested format or dimensions; pass a `ScreenshotResult` to `Screenshot::fake($result)` when specific output matters. Assertions require PHPUnit, which is included with Pest.
 
 The `DirectoryTree\Screenshot\Contracts\Driver` contract can also be replaced in Laravel's container or supplied to the standalone factory.
 
@@ -266,6 +334,6 @@ composer lint
 CHROME_PATH=/usr/bin/chromium composer test-browser
 ```
 
-The unit and Laravel tests cover validation, capture isolation, facade fakes, view rendering, storage failures, page-load timeouts, and cleanup on failures. Browser tests use local fixtures and require a working Chrome executable. In a disposable test container that cannot enable the sandbox, opt in with `SCREENSHOT_NO_SANDBOX=1`.
+The unit and Laravel tests cover validation, capture isolation, facade fakes, view rendering, storage failures, page-load timeouts, cleanup on failures, socket publication, and lock contention. Browser tests exercise separate concurrent PHP workers sharing one browser, independent page settings, reuse after worker exit, dead socket recovery, and shutdown. They use local fixtures and require a working Chrome executable. In a disposable test container that cannot enable the sandbox, opt in with `SCREENSHOT_NO_SANDBOX=1`.
 
 CI runs PHP 8.2 / Laravel 12, PHP 8.3 / Laravel 13, and PHP 8.4 / Laravel 12 and 13. A separate job exercises real Chromium captures. No Packagist publication or release workflow is configured.

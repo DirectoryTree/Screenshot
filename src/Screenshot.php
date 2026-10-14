@@ -3,6 +3,7 @@
 namespace DirectoryTree\Screenshot;
 
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Contracts\ManagesBrowserSockets;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use InvalidArgumentException;
@@ -37,6 +38,34 @@ class Screenshot
         }
 
         return new PendingScreenshot($this->driver, $url, 'url', clone $this->options);
+    }
+
+    /**
+     * Wait for active captures and stop a named shared browser.
+     */
+    public function closeSocket(string $key): void
+    {
+        $this->socketManager()->closeSocket($key);
+    }
+
+    /**
+     * Wait for active captures and stop a file-backed shared browser.
+     */
+    public function closeSocketPath(string $path): void
+    {
+        $this->socketManager()->closeSocketPath($path);
+    }
+
+    /**
+     * Get a driver that supports shared browser lifecycle management.
+     */
+    protected function socketManager(): ManagesBrowserSockets
+    {
+        if (! $this->driver instanceof ManagesBrowserSockets) {
+            throw new LogicException('The screenshot driver does not support browser sockets.');
+        }
+
+        return $this->driver;
     }
 
     /**

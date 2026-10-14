@@ -19,6 +19,8 @@ class ScreenshotServiceProvider extends ServiceProvider
             return new ChromeDriver(
                 $app['config']->get('screenshot.binary'),
                 $app['config']->get('screenshot.browser_options', []),
+                $app['config']->get('screenshot.socket_directory'),
+                $app['config']->get('screenshot.socket_lock_timeout', 60000),
             );
         });
 

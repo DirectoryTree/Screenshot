@@ -8,14 +8,29 @@ return [
     |--------------------------------------------------------------------------
     |
     | Leave the binary unset to use Chrome PHP's automatic discovery. Browser
-    | options are passed to Chrome PHP. Each capture owns and closes its
-    | browser, so keepAlive, windowSize and the command timeout are managed.
+    | options are passed to Chrome PHP. Browser lifetime, viewport size and
+    | command timeouts are managed by Screenshot.
     |
     */
 
     'binary' => env('SCREENSHOT_CHROME_PATH'),
 
     'browser_options' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared Browser Sockets
+    |--------------------------------------------------------------------------
+    |
+    | Named sockets use this local directory. All workers sharing a browser
+    | must use the same directory and OS user on the same host. Lock waits
+    | are bounded in milliseconds. Keep these files outside the web root.
+    |
+    */
+
+    'socket_directory' => storage_path('framework/cache/screenshots'),
+
+    'socket_lock_timeout' => 60000,
 
     /*
     |--------------------------------------------------------------------------
@@ -40,6 +55,8 @@ return [
         'fullPage' => true,
         'javascript' => false,
         'failOnTimeout' => false,
+        'socket' => env('SCREENSHOT_SOCKET'),
+        'socketPath' => null,
     ],
 
 ];

@@ -4,7 +4,9 @@ namespace DirectoryTree\Screenshot\Drivers;
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Contracts\ManagesBrowserSockets;
 use DirectoryTree\Screenshot\ScreenshotResult;
+use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Clip;
@@ -15,7 +17,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
-class ChromeDriver implements Driver
+class ChromeDriver implements Driver, ManagesBrowserSockets
 {
     /**
      * Create a new Chrome driver.
@@ -23,10 +25,12 @@ class ChromeDriver implements Driver
     public function __construct(
         protected ?string $binary = null,
         protected array $browserOptions = [],
+        protected ?string $socketDirectory = null,
+        protected int $lockTimeout = 60000,
     ) {}
 
     /**
-     * Capture an image using a dedicated browser process.
+     * Capture an image using a dedicated or shared browser process.
      */
     public function capture(string $source, string $type, CaptureOptions $options): ScreenshotResult
     {
@@ -36,12 +40,35 @@ class ChromeDriver implements Driver
             throw new InvalidArgumentException('The source type must be html or url.');
         }
 
-        $browser = $this->createBrowser($options);
+        if ($socket = $this->socket($options)) {
+            return $socket->run(
+                fn () => $this->createBrowser($options),
+                fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
+                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->timeout]),
+            );
+        }
+
+        return $this->capturePage($this->createBrowser($options), $source, $type, $options);
+    }
+
+    /**
+     * Capture and release only this worker's page.
+     */
+    protected function capturePage(Browser $browser, string $source, string $type, CaptureOptions $options, bool $shared = false): ScreenshotResult
+    {
         $page = null;
         $failed = true;
 
         try {
+            if ($shared && isset($this->browserOptions['headers'])) {
+                $browser->getConnection()->setConnectionHttpHeaders($this->browserOptions['headers']);
+            }
+
             $page = $browser->createPage();
+
+            if ($shared) {
+                $page->setViewport($options->width, $options->height)->await($options->timeout);
+            }
 
             $response = $page->getSession()->sendMessageSync(
                 new Message('Emulation.setScriptExecutionDisabled', ['value' => ! $options->javascript]),
@@ -93,39 +120,86 @@ class ChromeDriver implements Driver
 
             return $result;
         } finally {
-            $this->close($browser, $page, $failed);
+            $this->close($browser, $page, $failed, $shared);
         }
     }
 
     /**
-     * Start a browser that is owned by this capture operation.
+     * Start a dedicated browser or a persistent shared browser.
      */
     protected function createBrowser(CaptureOptions $options): Browser
     {
-        return (new BrowserFactory($this->binary))->createBrowser(array_merge($this->browserOptions, [
+        $socket = $this->socket($options);
+        $browserOptions = $this->browserOptions;
+
+        if ($socket && empty($browserOptions['userDataDir'])) {
+            $browserOptions['userDataDir'] = $socket->path().'.profile';
+        }
+
+        return (new BrowserFactory($this->binary))->createBrowser(array_merge($browserOptions, [
             'windowSize' => [$options->width, $options->height],
             'sendSyncDefaultTimeout' => $options->timeout,
-            'keepAlive' => false,
+            'keepAlive' => $socket !== null,
         ]));
+    }
+
+    /**
+     * Resolve the shared socket selected for this capture.
+     */
+    protected function socket(CaptureOptions $options): ?BrowserSocket
+    {
+        if ($options->socketPath !== null) {
+            return new BrowserSocket($options->socketPath, $this->lockTimeout);
+        }
+
+        return $options->socket !== null
+            ? BrowserSocket::named($options->socket, $this->socketDirectory, $this->lockTimeout)
+            : null;
+    }
+
+    /**
+     * Wait for active captures and stop a named shared browser.
+     */
+    public function closeSocket(string $key): void
+    {
+        BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout)->close($this->browserOptions);
+    }
+
+    /**
+     * Wait for active captures and stop a file-backed shared browser.
+     */
+    public function closeSocketPath(string $path): void
+    {
+        (new BrowserSocket($path, $this->lockTimeout))->close($this->browserOptions);
     }
 
     /**
      * Release the page and browser without replacing a capture exception.
      */
-    protected function close(Browser $browser, ?Page $page, bool $failed): void
+    protected function close(Browser $browser, ?Page $page, bool $failed, bool $shared = false): void
     {
         if ($page) {
             try {
                 $page->close();
             } catch (Throwable) {
                 try {
-                    $browser->getConnection()->sendMessageSync(new Message('Target.closeTarget', [
+                    $response = $browser->getConnection()->sendMessageSync(new Message('Target.closeTarget', [
                         'targetId' => $page->getSession()->getTargetId(),
                     ]));
-                } catch (Throwable) {
-                    // Closing the owned browser also releases any remaining targets.
+
+                    if ($shared && ! $response->isSuccessful()) {
+                        throw new RuntimeException('Unable to close the screenshot page: '.$response->getErrorMessage());
+                    }
+                } catch (Throwable $e) {
+                    if ($shared && ! $failed) {
+                        throw $e;
+                    }
                 }
             }
+        }
+
+        if ($shared) {
+            return;
         }
 
         try {

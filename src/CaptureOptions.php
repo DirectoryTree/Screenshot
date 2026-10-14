@@ -21,6 +21,8 @@ class CaptureOptions
         public bool $fullPage = true,
         public bool $javascript = false,
         public bool $failOnTimeout = false,
+        public ?string $socket = null,
+        public ?string $socketPath = null,
     ) {
         $this->validate();
     }
@@ -30,6 +32,18 @@ class CaptureOptions
      */
     public function validate(): void
     {
+        if ($this->socket !== null && trim($this->socket) === '') {
+            throw new InvalidArgumentException('The socket key must not be empty.');
+        }
+
+        if ($this->socketPath !== null && (trim($this->socketPath) === '' || str_contains($this->socketPath, "\0") || str_contains($this->socketPath, '://'))) {
+            throw new InvalidArgumentException('The socket path must be a local filesystem path.');
+        }
+
+        if ($this->socket !== null && $this->socketPath !== null) {
+            throw new InvalidArgumentException('Specify a socket key or a socket path, not both.');
+        }
+
         foreach ([[$this->width, $this->height], [$this->maxWidth, $this->maxHeight]] as [$width, $height]) {
             if ($width < 1 || $height < 1 || $width > 16384 || $height > 16384 || $width * $height > 40000000) {
                 throw new InvalidArgumentException('Dimensions must be between 1 and 16384 pixels and no more than 40 million pixels in total.');

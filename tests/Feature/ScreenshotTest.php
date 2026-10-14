@@ -4,6 +4,8 @@ use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\Screenshot as Factory;
 use DirectoryTree\Screenshot\ScreenshotResult;
+use DirectoryTree\Screenshot\Support\BrowserSocket;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 
@@ -46,4 +48,30 @@ test('configuration has a publishable tag', function () {
     $paths = ServiceProvider::pathsToPublish(null, 'screenshot-config');
 
     expect(array_values($paths))->toContain(config_path('screenshot.php'));
+});
+
+test('the facade fake preserves configured socket defaults without starting a browser', function () {
+    config(['screenshot.defaults.socket' => 'emails']);
+    Screenshot::fake();
+    Screenshot::html('shared')->capture();
+    Screenshot::html('dedicated')->withoutSocket()->capture();
+    Screenshot::closeSocket('emails');
+    Screenshot::closeSocketPath('/unused/socket');
+
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'shared' && $options->socket === 'emails');
+    Screenshot::assertCaptured(fn ($source, $type, $options) => $source === 'dedicated' && $options->socket === null);
+    Screenshot::assertCapturedCount(2);
+});
+
+test('the configured socket directory is used for lifecycle operations', function () {
+    $directory = sys_get_temp_dir().'/screenshot-config-'.bin2hex(random_bytes(8));
+    config(['screenshot.socket_directory' => $directory]);
+
+    try {
+        Screenshot::closeSocket('emails');
+        $path = BrowserSocket::named('emails', $directory)->path();
+        expect(file_exists($path.'.lock'))->toBeTrue();
+    } finally {
+        (new Filesystem)->deleteDirectory($directory);
+    }
 });

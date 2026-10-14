@@ -33,16 +33,16 @@ test('one executor supports independent image and PDF builders for the same sour
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'https://example.com/invoice'
             && $type === SourceType::Url
-            && $options->browser->getWidth() === 800
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 95,
+            && $options->browser()->getWidth() === 800
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 95,
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
             && $source === 'https://example.com/invoice'
             && $type === SourceType::Url
-            && $options->browser->getWidth() === 400
-            && $options->output->getLandscape(),
+            && $options->browser()->getWidth() === 400
+            && $options->output()->getLandscape(),
     );
     $fake->assertCapturedCount(3);
 });
@@ -58,11 +58,11 @@ test('the executor snapshots options before passing them to a driver', function 
             expect($source)->toBe('invoice');
             expect($type)->toBe(SourceType::Html);
             expect($snapshot)->not->toBe($options);
-            expect($snapshot->browser)->not->toBe($options->browser);
-            expect($snapshot->output)->not->toBe($options->output);
+            expect($snapshot->browser())->not->toBe($options->browser());
+            expect($snapshot->output())->not->toBe($options->output());
 
-            $snapshot->browser->setSize(400, 300);
-            $snapshot->output->setFormat(OutputFormat::Jpeg, 50);
+            $snapshot->browser()->setSize(400, 300);
+            $snapshot->output()->setFormat(OutputFormat::Jpeg, 50);
 
             return true;
         })
@@ -71,9 +71,9 @@ test('the executor snapshots options before passing them to a driver', function 
     $capture = new PendingCapture($driver, 'invoice', SourceType::Html);
 
     expect($capture->capture($options))->toBe($result);
-    expect($options->browser->getWidth())->toBe(800);
-    expect($options->getFormat())->toBe(OutputFormat::Png);
-    expect($options->output->getQuality())->toBe(80);
+    expect($options->browser()->getWidth())->toBe(800);
+    expect($options->format())->toBe(OutputFormat::Png);
+    expect($options->output()->getQuality())->toBe(80);
 });
 
 test('the executor validates settings before invoking the driver', function () {

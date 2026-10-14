@@ -366,11 +366,11 @@ Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Cont
 
 Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture(string $source, SourceType $type, CaptureOptions $options)`. Blade views are rendered to HTML first. `CaptureOptions` contains:
 
-- `$options->browser` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
-- `$options->output` is an `ImageOptions` or `PdfOptions` object containing output settings.
-- `$options->element` is the selected CSS selector, or `null` for the whole page.
+- `$options->browser()` is a `BrowserOptions` object containing viewport, timeout, JavaScript, and socket settings.
+- `$options->output()` is an `ImageOptions` or `PdfOptions` object containing output settings.
+- `$options->element()` is the selected CSS selector, or `null` for the whole page.
 
-`$options->getFormat()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects.
+`$options->format()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects.
 
 ## Testing
 
@@ -389,7 +389,7 @@ Screenshot::html('<h1>Invoice</h1>')
 
 Screenshot::assertCapturedCount(count: 1);
 Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
-    return $source === '<h1>Invoice</h1>' && $options->browser->getWidth() === 800;
+    return $source === '<h1>Invoice</h1>' && $options->browser()->getWidth() === 800;
 });
 ```
 
@@ -409,7 +409,7 @@ Screenshot::html('<h1>Invoice</h1>')->pdf()->landscape()->capture();
 
 Screenshot::assertCapturedCount(1);
 Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOptions $options) {
-    return $options->getFormat() === OutputFormat::Pdf && $options->output->getLandscape();
+    return $options->format() === OutputFormat::Pdf && $options->output()->getLandscape();
 });
 ```
 

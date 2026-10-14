@@ -34,15 +34,15 @@ class ChromeDriver implements Driver, ManagesBrowsers
     {
         $options->validate();
 
-        if ($socket = $this->socket($options->browser)) {
+        if ($socket = $this->socket($options->browser())) {
             return $socket->run(
-                fn () => $this->createBrowser($options->browser),
+                fn () => $this->createBrowser($options->browser()),
                 fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
-                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->browser->getBrowserTimeout()]),
+                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->browser()->getBrowserTimeout()]),
             );
         }
 
-        return $this->capturePage($this->createBrowser($options->browser), $source, $type, $options);
+        return $this->capturePage($this->createBrowser($options->browser()), $source, $type, $options);
     }
 
     /**

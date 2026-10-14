@@ -15,9 +15,9 @@ class CaptureOptions
      * @param  TOutput  $output
      */
     public function __construct(
-        public BrowserOptions $browser,
-        public ImageOptions|PdfOptions $output,
-        public ?string $element = null,
+        protected BrowserOptions $browser,
+        protected ImageOptions|PdfOptions $output,
+        protected ?string $element = null,
     ) {}
 
     /**
@@ -30,9 +30,35 @@ class CaptureOptions
     }
 
     /**
+     * Get the browser settings.
+     */
+    public function browser(): BrowserOptions
+    {
+        return $this->browser;
+    }
+
+    /**
+     * Get the output settings.
+     *
+     * @return TOutput
+     */
+    public function output(): ImageOptions|PdfOptions
+    {
+        return $this->output;
+    }
+
+    /**
+     * Get the selected CSS selector.
+     */
+    public function element(): ?string
+    {
+        return $this->element;
+    }
+
+    /**
      * Get the selected output format.
      */
-    public function getFormat(): OutputFormat
+    public function format(): OutputFormat
     {
         return $this->output->getFormat();
     }

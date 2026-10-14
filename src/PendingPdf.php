@@ -23,7 +23,7 @@ class PendingPdf
      */
     public function size(int $width, int $height): static
     {
-        $this->options->browser->setSize($width, $height);
+        $this->options->browser()->setSize($width, $height);
 
         return $this;
     }
@@ -33,7 +33,7 @@ class PendingPdf
      */
     public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->options->browser->setTimeouts($load, $browser);
+        $this->options->browser()->setTimeouts($load, $browser);
 
         return $this;
     }
@@ -43,7 +43,7 @@ class PendingPdf
      */
     public function javascript(bool $value = true): static
     {
-        $this->options->browser->setJavascript($value);
+        $this->options->browser()->setJavascript($value);
 
         return $this;
     }
@@ -53,7 +53,7 @@ class PendingPdf
      */
     public function failOnTimeout(bool $value = true): static
     {
-        $this->options->browser->setFailOnTimeout($value);
+        $this->options->browser()->setFailOnTimeout($value);
 
         return $this;
     }
@@ -63,7 +63,7 @@ class PendingPdf
      */
     public function socket(string $key): static
     {
-        $this->options->browser->setSocket($key);
+        $this->options->browser()->setSocket($key);
 
         return $this;
     }
@@ -73,7 +73,7 @@ class PendingPdf
      */
     public function withoutSocket(): static
     {
-        $this->options->browser->setSocket(null);
+        $this->options->browser()->setSocket(null);
 
         return $this;
     }
@@ -83,7 +83,7 @@ class PendingPdf
      */
     public function paper(PaperSize $size): static
     {
-        $this->options->output->setPaper($size);
+        $this->options->output()->setPaper($size);
 
         return $this;
     }
@@ -93,7 +93,7 @@ class PendingPdf
      */
     public function paperSize(float $width, float $height): static
     {
-        $this->options->output->setPaperSize($width, $height);
+        $this->options->output()->setPaperSize($width, $height);
 
         return $this;
     }
@@ -103,7 +103,7 @@ class PendingPdf
      */
     public function landscape(bool $value = true): static
     {
-        $this->options->output->setLandscape($value);
+        $this->options->output()->setLandscape($value);
 
         return $this;
     }
@@ -113,7 +113,7 @@ class PendingPdf
      */
     public function margins(float $top = 10, float $right = 10, float $bottom = 10, float $left = 10): static
     {
-        $this->options->output->setMargins($top, $right, $bottom, $left);
+        $this->options->output()->setMargins($top, $right, $bottom, $left);
 
         return $this;
     }
@@ -123,7 +123,7 @@ class PendingPdf
      */
     public function background(bool $value = true): static
     {
-        $this->options->output->setBackground($value);
+        $this->options->output()->setBackground($value);
 
         return $this;
     }
@@ -133,7 +133,7 @@ class PendingPdf
      */
     public function preferCssPageSize(bool $value = true): static
     {
-        $this->options->output->setPreferCssPageSize($value);
+        $this->options->output()->setPreferCssPageSize($value);
 
         return $this;
     }

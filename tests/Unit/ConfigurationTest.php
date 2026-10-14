@@ -27,23 +27,23 @@ test('configured defaults are available before selecting an output format', func
     $pending->pdf()->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Png
-            && $options->browser->getWidth() === 900
-            && $options->browser->getSocket() === 'captures'
-            && ! $options->output->getFullPage(),
+        fn ($source, $type, CaptureOptions $options) => $options->format() === OutputFormat::Png
+            && $options->browser()->getWidth() === 900
+            && $options->browser()->getSocket() === 'captures'
+            && ! $options->output()->getFullPage(),
     );
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Jpeg
-            && $options->browser->getLoadTimeout() === 2000
-            && $options->browser->getBrowserTimeout() === 90000
-            && $options->output->getQuality() === 85,
+        fn ($source, $type, CaptureOptions $options) => $options->format() === OutputFormat::Jpeg
+            && $options->browser()->getLoadTimeout() === 2000
+            && $options->browser()->getBrowserTimeout() === 90000
+            && $options->output()->getQuality() === 85,
     );
     $fake->assertCaptured(
-        fn ($source, $type, CaptureOptions $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 900
-            && $options->browser->getSocket() === 'captures'
-            && $options->output->getPaperWidth() === 215.9
-            && $options->output->getLandscape(),
+        fn ($source, $type, CaptureOptions $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 900
+            && $options->browser()->getSocket() === 'captures'
+            && $options->output()->getPaperWidth() === 215.9
+            && $options->output()->getLandscape(),
     );
 });
 
@@ -83,32 +83,32 @@ test('fluent settings replace defaults including false null and package default 
 
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'override'
-            && $options->browser->getWidth() === 1024
-            && $options->browser->getHeight() === 768
-            && $options->browser->getSocket() === null
-            && ! $options->browser->getJavascript()
-            && ! $options->browser->getFailOnTimeout()
-            && $options->browser->getLoadTimeout() === 15000
-            && $options->browser->getBrowserTimeout() === 90000
-            && $options->output->getQuality() === 80
-            && $options->output->getFullPage(),
+            && $options->browser()->getWidth() === 1024
+            && $options->browser()->getHeight() === 768
+            && $options->browser()->getSocket() === null
+            && ! $options->browser()->getJavascript()
+            && ! $options->browser()->getFailOnTimeout()
+            && $options->browser()->getLoadTimeout() === 15000
+            && $options->browser()->getBrowserTimeout() === 90000
+            && $options->output()->getQuality() === 80
+            && $options->output()->getFullPage(),
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getSocket() === null
-            && ! $options->browser->getJavascript()
-            && $options->output->getPaperWidth() === 210.0
-            && ! $options->output->getLandscape()
-            && ! $options->output->getBackground()
-            && ! $options->output->getPreferCssPageSize()
-            && $options->output->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0],
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getSocket() === null
+            && ! $options->browser()->getJavascript()
+            && $options->output()->getPaperWidth() === 210.0
+            && ! $options->output()->getLandscape()
+            && ! $options->output()->getBackground()
+            && ! $options->output()->getPreferCssPageSize()
+            && $options->output()->getMargins() === ['top' => 1.0, 'right' => 2.0, 'bottom' => 3.0, 'left' => 4.0],
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'default'
-            && $options->browser->getWidth() === 1280
-            && $options->browser->getSocket() === 'defaults'
-            && $options->output->getQuality() === 95
-            && ! $options->output->getFullPage(),
+            && $options->browser()->getWidth() === 1280
+            && $options->browser()->getSocket() === 'defaults'
+            && $options->output()->getQuality() === 95
+            && ! $options->output()->getFullPage(),
     );
 });
 
@@ -136,19 +136,19 @@ test('format changes preserve current browser settings image options and JPEG qu
 
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'latest'
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 70
-            && $options->browser->getWidth() === 640
-            && $options->browser->getHeight() === 480
-            && $options->output->getMaxWidth() === 1200
-            && $options->output->getMaxHeight() === 1600
-            && ! $options->output->getFullPage()
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 2000,
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 70
+            && $options->browser()->getWidth() === 640
+            && $options->browser()->getHeight() === 480
+            && $options->output()->getMaxWidth() === 1200
+            && $options->output()->getMaxHeight() === 1600
+            && ! $options->output()->getFullPage()
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 2000,
     );
     $fake->assertCaptured(
         fn ($source, $type, $options) => $source === 'default quality'
-            && $options->output->getQuality() === 95,
+            && $options->output()->getQuality() === 95,
     );
 });
 
@@ -178,24 +178,24 @@ test('PDF selection copies source browser settings with independent print defaul
     $source->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 640
-            && $options->browser->getHeight() === 480
-            && $options->browser->getJavascript()
-            && $options->browser->getSocket() === 'shared'
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 4000
-            && $options->browser->getFailOnTimeout()
-            && $options->output->getPaperWidth() === 148.0,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 640
+            && $options->browser()->getHeight() === 480
+            && $options->browser()->getJavascript()
+            && $options->browser()->getSocket() === 'shared'
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 4000
+            && $options->browser()->getFailOnTimeout()
+            && $options->output()->getPaperWidth() === 148.0,
     );
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-        && $options->output->getPaperWidth() === 215.9);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+        && $options->output()->getPaperWidth() === 215.9);
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 320
-            && $options->browser->getSocket() === null
-            && ! $options->browser->getJavascript()
-            && $options->output->getMaxWidth() === 100
-            && $options->output->getQuality() === 95,
+        fn ($source, $type, $options) => $options->browser()->getWidth() === 320
+            && $options->browser()->getSocket() === null
+            && ! $options->browser()->getJavascript()
+            && $options->output()->getMaxWidth() === 100
+            && $options->output()->getQuality() === 95,
     );
 });
 
@@ -217,14 +217,14 @@ test('factories and fakes snapshot each set of configured defaults', function ()
     $fake->html('next')->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 900
-            && $options->getFormat() === OutputFormat::Jpeg
-            && $options->output->getQuality() === 85,
+        fn ($source, $type, $options) => $options->browser()->getWidth() === 900
+            && $options->format() === OutputFormat::Jpeg
+            && $options->output()->getQuality() === 85,
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 900
-            && $options->output->getPaperWidth() === 215.9,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 900
+            && $options->output()->getPaperWidth() === 215.9,
     );
     $fake->assertCapturedCount(3);
 
@@ -233,8 +233,8 @@ test('factories and fakes snapshot each set of configured defaults', function ()
     $other->html('default')->capture();
 
     $other->assertCaptured(
-        fn ($source, $type, $options) => $options->browser->getWidth() === 1024
-            && $options->getFormat() === OutputFormat::Png,
+        fn ($source, $type, $options) => $options->browser()->getWidth() === 1024
+            && $options->format() === OutputFormat::Png,
     );
 });
 
@@ -246,8 +246,8 @@ test('repeated captures use current settings without applying configuration agai
     $pending->size(900, 600)->capture();
     $pending->capture();
 
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 800);
-    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser->getWidth() === 900);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser()->getWidth() === 800);
+    $fake->assertCaptured(fn ($source, $type, $options) => $options->browser()->getWidth() === 900);
     $fake->assertCapturedCount(3);
 });
 
@@ -263,8 +263,8 @@ test('PDF layout overrides are validated against current defaults and can be cor
         ->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->output->getPaperWidth() === 30.0
-            && $options->output->getMargins()['top'] === 0.0,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->output()->getPaperWidth() === 30.0
+            && $options->output()->getMargins()['top'] === 0.0,
     );
 });

@@ -17,8 +17,8 @@ test('directly constructed PDF builders own their browser and print settings', f
     $first = new PendingPdf($capture, $options);
     $second = new PendingPdf($capture, $options);
 
-    $options->browser->setSocket('changed');
-    $options->output->setPaper(PaperSize::Legal);
+    $options->browser()->setSocket('changed');
+    $options->output()->setPaper(PaperSize::Legal);
 
     expect($first->size(800, 600))->toBe($first);
     expect($first->timeouts(load: 1000))->toBe($first);
@@ -36,28 +36,28 @@ test('directly constructed PDF builders own their browser and print settings', f
     $second->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 600
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 2000
-            && $options->browser->getJavascript()
-            && $options->browser->getFailOnTimeout()
-            && $options->browser->getSocket() === 'documents'
-            && $options->output->getPaperWidth() === 215.9,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 600
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 2000
+            && $options->browser()->getJavascript()
+            && $options->browser()->getFailOnTimeout()
+            && $options->browser()->getSocket() === 'documents'
+            && $options->output()->getPaperWidth() === 215.9,
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && ! $options->browser->getJavascript()
-            && ! $options->browser->getFailOnTimeout()
-            && $options->browser->getSocket() === null,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && ! $options->browser()->getJavascript()
+            && ! $options->browser()->getFailOnTimeout()
+            && $options->browser()->getSocket() === null,
     );
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 1024
-            && $options->browser->getSocket() === 'default'
-            && $options->output->getPaperWidth() === 210.0,
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 1024
+            && $options->browser()->getSocket() === 'default'
+            && $options->output()->getPaperWidth() === 210.0,
     );
     $fake->assertCapturedCount(3);
 });
@@ -76,12 +76,12 @@ test('invalid PDF browser changes leave current settings intact', function ($met
     $pending->capture();
 
     $fake->assertCaptured(
-        fn ($source, $type, $options) => $options->getFormat() === OutputFormat::Pdf
-            && $options->browser->getWidth() === 800
-            && $options->browser->getHeight() === 600
-            && $options->browser->getLoadTimeout() === 1000
-            && $options->browser->getBrowserTimeout() === 2000
-            && $options->browser->getSocket() === 'documents',
+        fn ($source, $type, $options) => $options->format() === OutputFormat::Pdf
+            && $options->browser()->getWidth() === 800
+            && $options->browser()->getHeight() === 600
+            && $options->browser()->getLoadTimeout() === 1000
+            && $options->browser()->getBrowserTimeout() === 2000
+            && $options->browser()->getSocket() === 'documents',
     );
 })->with([
     'size' => ['size', [400, 0]],

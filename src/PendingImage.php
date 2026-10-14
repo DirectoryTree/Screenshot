@@ -23,7 +23,7 @@ class PendingImage
      */
     public function size(int $width, int $height): static
     {
-        $this->options->browser->setSize($width, $height);
+        $this->options->browser()->setSize($width, $height);
 
         return $this;
     }
@@ -33,7 +33,7 @@ class PendingImage
      */
     public function timeouts(?int $load = null, ?int $browser = null): static
     {
-        $this->options->browser->setTimeouts($load, $browser);
+        $this->options->browser()->setTimeouts($load, $browser);
 
         return $this;
     }
@@ -43,7 +43,7 @@ class PendingImage
      */
     public function javascript(bool $value = true): static
     {
-        $this->options->browser->setJavascript($value);
+        $this->options->browser()->setJavascript($value);
 
         return $this;
     }
@@ -53,7 +53,7 @@ class PendingImage
      */
     public function failOnTimeout(bool $value = true): static
     {
-        $this->options->browser->setFailOnTimeout($value);
+        $this->options->browser()->setFailOnTimeout($value);
 
         return $this;
     }
@@ -63,7 +63,7 @@ class PendingImage
      */
     public function socket(string $key): static
     {
-        $this->options->browser->setSocket($key);
+        $this->options->browser()->setSocket($key);
 
         return $this;
     }
@@ -73,7 +73,7 @@ class PendingImage
      */
     public function withoutSocket(): static
     {
-        $this->options->browser->setSocket(null);
+        $this->options->browser()->setSocket(null);
 
         return $this;
     }
@@ -83,7 +83,7 @@ class PendingImage
      */
     public function maxSize(int $width, int $height): static
     {
-        $this->options->output->setMaxSize($width, $height);
+        $this->options->output()->setMaxSize($width, $height);
 
         return $this;
     }
@@ -93,7 +93,7 @@ class PendingImage
      */
     public function fullPage(bool $value = true): static
     {
-        $this->options->output->setFullPage($value);
+        $this->options->output()->setFullPage($value);
 
         return $this;
     }
@@ -111,7 +111,7 @@ class PendingImage
      */
     public function png(): static
     {
-        $this->options->output->setFormat(OutputFormat::Png);
+        $this->options->output()->setFormat(OutputFormat::Png);
 
         return $this;
     }
@@ -121,7 +121,7 @@ class PendingImage
      */
     public function jpeg(?int $quality = null): static
     {
-        $this->options->output->setFormat(OutputFormat::Jpeg, $quality);
+        $this->options->output()->setFormat(OutputFormat::Jpeg, $quality);
 
         return $this;
     }

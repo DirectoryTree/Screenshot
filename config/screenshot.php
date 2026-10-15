@@ -98,7 +98,8 @@ return [
     | PDF Defaults
     |--------------------------------------------------------------------------
     |
-    | Paper sizes are a3, a4, a5, letter, or legal. Margins are in millimeters.
+    | Paper sizes are a0 through a6, letter, legal, tabloid, or ledger.
+    | Margins are in millimeters.
     | Selecting PDF output copies the source's current browser settings and
     | these print defaults into an independent PDF builder.
     |

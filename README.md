@@ -218,7 +218,11 @@ Screenshot::view('invoices.preview', ['invoice' => $invoice])
     ->store(path: 'invoices/invoice.pdf', disk: 's3');
 ```
 
-PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` accepts `PaperSize::A3`, `A4`, `A5`, `Letter`, or `Legal`. Use `paperSize(width: 100, height: 150)` for custom dimensions in millimeters, `margins(top: 5, right: 5, bottom: 5, left: 5)` to set margins, and `background(false)` to omit backgrounds. `preferCssPageSize()` gives CSS `@page` sizes precedence over the selected paper size.
+PDFs default to A4 portrait, 10 mm margins, and printed backgrounds. `paper()` accepts `PaperSize::A0` through `A6`, `Letter`, `Legal`, `Tabloid`, or `Ledger`. The corresponding configuration values are `a0` through `a6`, `letter`, `legal`, `tabloid`, and `ledger`.
+
+Tabloid is 279.4 × 431.8 mm (11 × 17 inches); Ledger is 431.8 × 279.4 mm (17 × 11 inches). Ledger already uses the wider layout without calling `landscape()`.
+
+Use `paperSize(width: 100, height: 150)` for custom dimensions in millimeters, `margins(top: 5, right: 5, bottom: 5, left: 5)` to set margins, and `background(false)` to omit backgrounds. `preferCssPageSize()` gives CSS `@page` sizes precedence over the selected paper size.
 
 PDFs use Chrome's print layout, including print styles and page breaks. Screenshot viewport settings do not set the paper size; image format, quality, full-page mode, and `maxSize()` do not apply to PDF output.
 

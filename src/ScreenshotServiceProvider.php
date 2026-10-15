@@ -17,12 +17,11 @@ class ScreenshotServiceProvider extends ServiceProvider
     {
         $this->replaceConfigRecursivelyFrom(__DIR__.'/../config/screenshot.php', 'screenshot');
 
-        $this->app->singleton(ChromeInstaller::class, fn (Application $app): ChromeInstaller => new ChromeInstaller(
-            $app['config']->get('screenshot.browser.directory'),
-        ));
-
         $this->app->singleton(ScreenshotManager::class);
         $this->app->alias(ScreenshotManager::class, Factory::class);
+        $this->app->singleton(ChromeInstaller::class, function (Application $app): ChromeInstaller {
+            return new ChromeInstaller($app['config']->get('screenshot.browser.directory'));
+        });
     }
 
     /**

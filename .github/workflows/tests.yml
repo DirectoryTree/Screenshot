@@ -65,6 +65,43 @@ jobs:
       - run: composer install --prefer-dist --no-interaction
       - run: composer audit
 
+  gotenberg:
+    name: Gotenberg
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      gotenberg:
+        image: gotenberg/gotenberg:8.38.1
+        ports:
+          - 3000:3000
+        env:
+          API_ENABLE_BASIC_AUTH: 'true'
+          GOTENBERG_API_BASIC_AUTH_USERNAME: screenshot
+          GOTENBERG_API_BASIC_AUTH_PASSWORD: screenshot-test
+      gotenberg-nojs:
+        image: gotenberg/gotenberg:8.38.1
+        ports:
+          - 3001:3000
+        env:
+          CHROMIUM_DISABLE_JAVASCRIPT: 'true'
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip, gd
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - name: Execute Gotenberg integration tests
+        env:
+          SCREENSHOT_GOTENBERG_URL: http://localhost:3000
+          SCREENSHOT_GOTENBERG_NOJS_URL: http://localhost:3001
+          SCREENSHOT_GOTENBERG_USERNAME: screenshot
+          SCREENSHOT_GOTENBERG_PASSWORD: screenshot-test
+        run: composer test-gotenberg
+
   installer:
     name: Chrome installer / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

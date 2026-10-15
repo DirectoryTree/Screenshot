@@ -5,6 +5,7 @@ namespace DirectoryTree\Screenshot;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Contracts\Factory;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
@@ -62,6 +63,18 @@ class ScreenshotManager extends Manager implements Factory
             $this->config->get('screenshot.browser.options', []),
             $this->config->get('screenshot.sockets.directory'),
             $this->config->get('screenshot.sockets.lock_timeout', 60000),
+        );
+    }
+
+    /**
+     * Create the Gotenberg capture driver.
+     */
+    protected function createGotenbergDriver(): GotenbergDriver
+    {
+        return new GotenbergDriver(
+            $this->config->get('screenshot.gotenberg.url', 'http://localhost:3000'),
+            $this->config->get('screenshot.gotenberg.options', []),
+            $this->config->get('screenshot.gotenberg.javascript', true),
         );
     }
 

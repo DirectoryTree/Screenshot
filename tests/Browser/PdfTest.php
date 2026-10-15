@@ -21,13 +21,6 @@ function pdfScreenshot(): Screenshot
     );
 }
 
-function pdfPageSize(string $contents): array
-{
-    preg_match('~/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]~', $contents, $matches);
-
-    return [(float) ($matches[1] ?? 0), (float) ($matches[2] ?? 0)];
-}
-
 test('real Chrome prints a paginated PDF using the source viewport', function () {
     $result = pdfScreenshot()->html(file_get_contents(__DIR__.'/../Fixtures/document-pdf.html'))
         ->size(320, 240)

@@ -7,8 +7,8 @@ return [
     | Default Driver
     |--------------------------------------------------------------------------
     |
-    | Captures use this driver unless one is selected explicitly. Chrome is
-    | included by default. Register custom drivers using Screenshot::extend().
+    | Captures use this driver unless one is selected explicitly. Chrome and
+    | Gotenberg are included. Register custom drivers using Screenshot::extend().
     |
     */
 
@@ -33,6 +33,22 @@ return [
         'binary' => env('SCREENSHOT_CHROME_PATH'),
         'directory' => storage_path('app/private/screenshot/browsers'),
         'options' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gotenberg
+    |--------------------------------------------------------------------------
+    |
+    | HTTP options are passed to Guzzle. The JavaScript setting must match
+    | the remote service and each capture; it does not configure Gotenberg.
+    |
+    */
+
+    'gotenberg' => [
+        'url' => env('SCREENSHOT_GOTENBERG_URL', 'http://localhost:3000'),
+        'options' => [],
+        'javascript' => env('SCREENSHOT_GOTENBERG_JAVASCRIPT', true),
     ],
 
     /*

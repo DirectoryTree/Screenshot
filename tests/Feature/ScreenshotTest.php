@@ -9,7 +9,7 @@ use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingSource;
-use DirectoryTree\Screenshot\Screenshot as Factory;
+use DirectoryTree\Screenshot\ScreenshotManager;
 use DirectoryTree\Screenshot\ScreenshotServiceProvider;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use Illuminate\Filesystem\Filesystem;
@@ -24,20 +24,21 @@ test('a service provider configures defaults with a replaceable driver', functio
         ->withArgs(fn ($source, $type, $options) => $source === 'hello' && $options->browser()->getWidth() === 900)
         ->andReturn(new ImageResult(imageFixture()));
 
-    app()->instance(Driver::class, $driver);
+    Screenshot::extend('custom', fn () => $driver);
+    config(['screenshot.default' => 'custom']);
 
     config(['screenshot.capture.width' => 900, 'screenshot.capture.height' => 600]);
 
     expect(Screenshot::html('hello')->capture()->width())->toBe(1);
 });
 
-test('the facade fake replaces the container factory and renders escaped Blade views', function () {
+test('the facade fake replaces the container manager and renders escaped Blade views', function () {
     config(['screenshot.image.quality' => 85]);
     Screenshot::fake();
 
     Screenshot::assertNothingCaptured();
 
-    app()->make(Factory::class)
+    app()->make(ScreenshotManager::class)
         ->view('card', ['name' => '<Steve>'])
         ->jpeg()
         ->capture();
@@ -400,10 +401,10 @@ test('PDF defaults validate paper orientation and margins together', function ()
     );
 });
 
-test('invalid configured defaults fail when the factory is resolved', function ($key, $value) {
+test('invalid configured defaults fail when a driver is resolved', function ($key, $value) {
     config([$key => $value]);
 
-    expect(fn () => app(Factory::class))->toThrow(InvalidArgumentException::class);
+    expect(fn () => app(ScreenshotManager::class)->driver())->toThrow(InvalidArgumentException::class);
 })->with([
     'browser dimensions' => ['screenshot.capture.width', 0],
     'browser timeout' => ['screenshot.capture.browser_timeout', 0],

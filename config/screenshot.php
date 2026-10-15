@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default Driver
+    |--------------------------------------------------------------------------
+    |
+    | Captures use this driver unless one is selected explicitly. Chrome is
+    | included by default. Register custom drivers using Screenshot::extend().
+    |
+    */
+
+    'default' => env('SCREENSHOT_DRIVER', 'chrome'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Chrome / Chromium
     |--------------------------------------------------------------------------
     |

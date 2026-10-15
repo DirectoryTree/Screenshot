@@ -60,8 +60,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Browser settings are shared by images and PDFs. Each pending capture
-    | receives its own copy of these defaults. Fluent options override them.
-    | Dimensions are in pixels and timeouts are in milliseconds.
+    | receives its own copy of these defaults. Fluent options override
+    | them. Dimensions are in pixels and timeouts are in milliseconds.
     |
     */
 
@@ -98,10 +98,9 @@ return [
     | PDF Defaults
     |--------------------------------------------------------------------------
     |
-    | Paper sizes are a0 through a6, letter, legal, tabloid, or ledger.
-    | Margins are in millimeters.
-    | Selecting PDF output copies the source's current browser settings and
-    | these print defaults into an independent PDF builder.
+    | Here you may configure the default paper size, orientation, and margins
+    | for PDF captures. Paper sizes are a0 through a6, letter, legal,
+    | tabloid, or ledger. All margins are measured in millimeters.
     |
     */
 

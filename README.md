@@ -425,6 +425,39 @@ Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output 
 
 `$options->format()` returns `OutputFormat::Png`, `OutputFormat::Jpeg`, or `OutputFormat::Pdf`. Return an `ImageResult` for images or a `PdfResult` for PDFs. Each driver call receives an independent snapshot of both option objects.
 
+### Extending Chrome
+
+Extend `ChromeDriver` to customize Chrome while keeping its capture and cleanup behavior. Register the subclass through `Screenshot::extend()` like any other driver.
+
+The driver provides these protected methods:
+
+- `createBrowserFactory()` supplies the factory used to start Chrome.
+- `getBrowserOptions(BrowserOptions $options)` prepares launch options, such as flags and the browser profile.
+- `getConnectionOptions(?BrowserOptions $options = null)` prepares options used for startup, shared-browser reconnection, and shutdown. Shared captures also apply its HTTP headers to the connection before creating a page.
+- `createPageCapture(Browser $browser, CaptureOptions $options, bool $shared = false)` supplies the `PageCapture` instance. Subclass `PageCapture` to override `configurePage()`, `loadPage()`, or `newCapture()`.
+- `createSocket(string $key)` supplies the `BrowserSocket` used for both shared captures and `close()`.
+
+For example, apply custom headers to both dedicated and shared captures:
+
+```php
+use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+
+class CustomChromeDriver extends ChromeDriver
+{
+    protected function getConnectionOptions(?BrowserOptions $options = null): array
+    {
+        $options = parent::getConnectionOptions($options);
+
+        $options['headers']['X-Renderer'] = 'invoices';
+
+        return $options;
+    }
+}
+```
+
+`getBrowserOptions()` includes `getConnectionOptions()` by default. Override `getConnectionOptions()` for settings that must also apply when reusing a browser; launch-only overrides do not run on reconnection. During `close()`, no capture options are available, so the base method retains the driver's configured connection timeout.
+
 ## Testing
 
 Use the facade fake to test your application without starting Chrome:

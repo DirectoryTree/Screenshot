@@ -38,7 +38,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
             return $socket->run(
                 fn () => $this->createBrowser($options->browser()),
                 fn (Browser $browser) => $this->capturePage($browser, $source, $type, $options, shared: true),
-                array_merge($this->browserOptions, ['sendSyncDefaultTimeout' => $options->browser()->getBrowserTimeout()]),
+                $this->getConnectionOptions($options->browser()),
             );
         }
 
@@ -53,11 +53,15 @@ class ChromeDriver implements Driver, ManagesBrowsers
         $failed = true;
 
         try {
-            if ($shared && isset($this->browserOptions['headers'])) {
-                $browser->getConnection()->setConnectionHttpHeaders($this->browserOptions['headers']);
+            if ($shared) {
+                $connectionOptions = $this->getConnectionOptions($options->browser());
+
+                if (isset($connectionOptions['headers'])) {
+                    $browser->getConnection()->setConnectionHttpHeaders($connectionOptions['headers']);
+                }
             }
 
-            $result = (new PageCapture($browser, $options, $shared))->capture($source, $type);
+            $result = $this->createPageCapture($browser, $options, $shared)->capture($source, $type);
 
             $failed = false;
 
@@ -73,6 +77,14 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 }
             }
         }
+    }
+
+    /**
+     * Create the capture used to prepare and render a browser page.
+     */
+    protected function createPageCapture(Browser $browser, CaptureOptions $options, bool $shared = false): PageCapture
+    {
+        return new PageCapture($browser, $options, $shared);
     }
 
     /**
@@ -100,7 +112,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
     {
         $socket = $this->socket($options);
 
-        $browserOptions = $this->browserOptions;
+        $browserOptions = $this->getConnectionOptions($options);
 
         if ($socket && empty($browserOptions['userDataDir'])) {
             $browserOptions['userDataDir'] = $socket->path().'.profile';
@@ -108,9 +120,18 @@ class ChromeDriver implements Driver, ManagesBrowsers
 
         return array_merge($browserOptions, [
             'windowSize' => [$options->getWidth(), $options->getHeight()],
-            'sendSyncDefaultTimeout' => $options->getBrowserTimeout(),
             'keepAlive' => $socket !== null,
         ]);
+    }
+
+    /**
+     * Prepare connection settings, using capture timeouts when available.
+     */
+    protected function getConnectionOptions(?BrowserOptions $options = null): array
+    {
+        return array_merge($this->browserOptions, $options ? [
+            'sendSyncDefaultTimeout' => $options->getBrowserTimeout(),
+        ] : []);
     }
 
     /**
@@ -122,6 +143,14 @@ class ChromeDriver implements Driver, ManagesBrowsers
             return null;
         }
 
+        return $this->createSocket($key);
+    }
+
+    /**
+     * Create the socket used to capture with or close a shared browser.
+     */
+    protected function createSocket(string $key): BrowserSocket
+    {
         return BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout);
     }
 
@@ -130,6 +159,6 @@ class ChromeDriver implements Driver, ManagesBrowsers
      */
     public function close(string $key): void
     {
-        BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout)->close($this->browserOptions);
+        $this->createSocket($key)->close($this->getConnectionOptions());
     }
 }

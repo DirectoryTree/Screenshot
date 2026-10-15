@@ -2,11 +2,15 @@
 
 use DirectoryTree\Screenshot\BrowserOptions;
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Drivers\Chrome\PageCapture;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
+use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\Support\BrowserSocket;
 use HeadlessChromium\Browser;
+use HeadlessChromium\Browser\ProcessAwareBrowser;
+use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Clip;
 use HeadlessChromium\Communication\Connection;
 use HeadlessChromium\Communication\Message;
@@ -290,3 +294,109 @@ test('source strings are rejected before starting a browser', function ($type) {
         fn () => (new ChromeDriver)->capture('invoice', $type, new CaptureOptions(new BrowserOptions, new ImageOptions)),
     )->toThrow(TypeError::class);
 })->with(['html', 'url', 'invalid']);
+
+test('driver factories and connection options apply throughout the browser lifecycle', function ($mode) {
+    $shared = $mode !== 'dedicated';
+    $browser = Mockery::mock(ProcessAwareBrowser::class);
+    $factory = Mockery::mock(BrowserFactory::class);
+    $socket = Mockery::mock(BrowserSocket::class);
+    $pageCapture = Mockery::mock(PageCapture::class);
+    $result = new ImageResult(imageFixture());
+    $connectionOptions = [
+        'customFlags' => ['--disable-gpu'],
+        'headers' => ['X-Capture' => 'custom'],
+        'sendSyncDefaultTimeout' => 4321,
+        'connectionDelay' => 0.01,
+    ];
+
+    if ($mode === 'reused') {
+        $factory->shouldNotReceive('createBrowser');
+    } else {
+        $launchOptions = $connectionOptions;
+
+        if ($shared) {
+            $socket->shouldReceive('path')->once()->andReturn('/tmp/custom-browser.socket');
+            $launchOptions['userDataDir'] = '/tmp/custom-browser.socket.profile';
+        }
+
+        $factory->shouldReceive('createBrowser')->once()->with(array_merge($launchOptions, [
+            'windowSize' => [800, 600],
+            'keepAlive' => $shared,
+        ]))->andReturn($browser);
+    }
+
+    if ($shared) {
+        $socket->shouldReceive('run')->once()
+            ->with(Mockery::type('callable'), Mockery::type('callable'), $connectionOptions)
+            ->andReturnUsing(fn ($create, $capture) => $capture($mode === 'reused' ? $browser : $create()));
+
+        $socket->shouldReceive('close')->once()->with($connectionOptions);
+
+        $connection = Mockery::mock(Connection::class);
+        $browser->shouldReceive('getConnection')->once()->andReturn($connection);
+        $connection->shouldReceive('setConnectionHttpHeaders')->once()->with(['X-Capture' => 'custom']);
+        $browser->shouldNotReceive('close');
+    } else {
+        $browser->shouldReceive('close')->once();
+    }
+
+    $pageCapture->shouldReceive('capture')->once()->with('hello', SourceType::Html)->andReturn($result);
+
+    $driver = new class($factory, $socket, $pageCapture, $browser, $shared) extends ChromeDriver
+    {
+        public function __construct(
+            protected BrowserFactory $factory,
+            protected BrowserSocket $browserSocket,
+            protected PageCapture $pageCapture,
+            protected Browser $browser,
+            protected bool $shared,
+        ) {
+            parent::__construct(browserOptions: [
+                'customFlags' => ['--disable-gpu'],
+                'headers' => ['X-Capture' => 'original'],
+                'sendSyncDefaultTimeout' => 999,
+            ]);
+        }
+
+        protected function createBrowserFactory(): BrowserFactory
+        {
+            return $this->factory;
+        }
+
+        protected function createSocket(string $key): BrowserSocket
+        {
+            expect($key)->toBe('custom');
+
+            return $this->browserSocket;
+        }
+
+        protected function createPageCapture(Browser $browser, CaptureOptions $options, bool $shared = false): PageCapture
+        {
+            expect($browser)->toBe($this->browser);
+            expect($options->browser()->getWidth())->toBe(800);
+            expect($shared)->toBe($this->shared);
+
+            return $this->pageCapture;
+        }
+
+        protected function getConnectionOptions(?BrowserOptions $options = null): array
+        {
+            return array_merge(parent::getConnectionOptions($options), [
+                'headers' => ['X-Capture' => 'custom'],
+                'sendSyncDefaultTimeout' => 4321,
+                'connectionDelay' => 0.01,
+            ]);
+        }
+    };
+
+    $options = new CaptureOptions(
+        (new BrowserOptions)->setSize(800, 600)->setTimeouts(2000, 1234)->setSocket($shared ? 'custom' : null),
+        new ImageOptions,
+    );
+
+    expect($driver->capture('hello', SourceType::Html, $options))->toBe($result);
+
+    if ($shared) {
+        $driver->close('custom');
+    }
+})->with(['dedicated', 'shared', 'reused']);

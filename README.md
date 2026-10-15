@@ -362,7 +362,56 @@ Pass `BrowserOptions`, `ImageOptions`, or `PdfOptions` objects through the `brow
 
 ### Custom Drivers
 
-Chrome is the built-in driver. To supply your own, implement [`Driver`](src/Contracts/Driver.php) and bind it in your service provider's `register()` method, or pass it to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
+The facade uses `ScreenshotManager` to resolve named drivers. Chrome is included as `chrome` and is the default. Calls such as `Screenshot::html()` are forwarded to the configured default driver:
+
+```php
+Screenshot::html('<h1>Hello!</h1>')->capture();
+Screenshot::driver('chrome')->html('<h1>Hello!</h1>')->capture();
+```
+
+To register another driver, implement [`Driver`](src/Contracts/Driver.php) and call `extend()` in your service provider's `boot()` method:
+
+```php
+use App\Screenshots\RemoteDriver;
+use DirectoryTree\Screenshot\Facades\Screenshot;
+use Illuminate\Contracts\Foundation\Application;
+
+public function boot(): void
+{
+    Screenshot::extend('remote', function (Application $app) {
+        return $app->make(RemoteDriver::class);
+    });
+}
+```
+
+Select it for an individual capture:
+
+```php
+Screenshot::driver('remote')->url('https://example.com')->pdf()->capture();
+```
+
+Set `SCREENSHOT_DRIVER=remote` or `screenshot.default` to use it by default. Drivers are created on first use and cached by name. Every driver uses the same fluent builders and configured capture, image, and PDF defaults; custom drivers only implement the capture operation.
+
+Inject `DirectoryTree\Screenshot\Contracts\Factory` when using the container directly. Both the manager and its fake implement this contract:
+
+```php
+use DirectoryTree\Screenshot\Contracts\Factory;
+use DirectoryTree\Screenshot\ImageResult;
+
+class InvoiceScreenshot
+{
+    public function __construct(
+        protected Factory $screenshots,
+    ) {}
+
+    public function capture(string $html): ImageResult
+    {
+        return $this->screenshots->driver()->html($html)->capture();
+    }
+}
+```
+
+Outside Laravel, pass a driver to the standalone `Screenshot` constructor. Drivers supporting `close()` should also implement [`ManagesBrowsers`](src/Contracts/ManagesBrowsers.php).
 
 Drivers receive `SourceType::Html` or `SourceType::Url` and handle every output through `capture(string $source, SourceType $type, CaptureOptions $options)`. Blade views are rendered to HTML first. `CaptureOptions` contains:
 
@@ -392,6 +441,10 @@ Screenshot::assertCaptured(function (string $source, SourceType $type, CaptureOp
     return $source === '<h1>Invoice</h1>' && $options->browser()->getWidth() === 800;
 });
 ```
+
+`Screenshot::fake()` intercepts both the default driver and explicit `driver()` selections without creating real drivers. Assertions collect captures and shutdown requests across all driver names.
+
+`Screenshot::fake()` also replaces the `Contracts\Factory` container binding. Services resolved after faking receive the same recorder as the facade. Use this contract for constructor injection; the fake does not extend the concrete `ScreenshotManager` class.
 
 `assertCaptured()` and `assertCapturedCount()` include PNG, JPEG, and PDF captures. Use `assertNothingCaptured()` when no captures should occur. Assert browser shutdown requests with `assertClosed($key)`, `assertNotClosed($key)`, and `assertNothingClosed()`.
 

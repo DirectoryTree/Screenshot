@@ -1,6 +1,6 @@
 <?php
 
-use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Facades\Screenshot;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
 
 use function Pest\Laravel\artisan;
@@ -113,7 +113,8 @@ test('the driver uses installed Chrome unless the application explicitly configu
         ->andReturn('/installed/chrome');
 
     app()->instance(ChromeInstaller::class, $installer);
-    $driver = app()->make(Driver::class);
+    $factory = Screenshot::driver('chrome');
+    $driver = (new ReflectionProperty($factory, 'driver'))->getValue($factory);
 
     expect((new ReflectionProperty($driver, 'binary'))->getValue($driver))->toBe($expected);
 })->with([

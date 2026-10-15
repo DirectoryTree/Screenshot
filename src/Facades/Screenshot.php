@@ -2,14 +2,18 @@
 
 namespace DirectoryTree\Screenshot\Facades;
 
+use Closure;
 use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\PdfResult;
 use DirectoryTree\Screenshot\PendingSource;
 use DirectoryTree\Screenshot\Screenshot as Factory;
-use DirectoryTree\Screenshot\Testing\ScreenshotFake;
+use DirectoryTree\Screenshot\ScreenshotManager;
+use DirectoryTree\Screenshot\Testing\ScreenshotManagerFake;
 use Illuminate\Support\Facades\Facade;
 
 /**
+ * @method static Factory driver(?string $driver = null)
+ * @method static ScreenshotManager extend(string $driver, Closure $callback)
  * @method static PendingSource html(string $html)
  * @method static PendingSource url(string $url)
  * @method static PendingSource view(string $view, array $data = [])
@@ -21,19 +25,16 @@ use Illuminate\Support\Facades\Facade;
  * @method static void assertNotClosed(string $key)
  * @method static void assertNothingClosed()
  *
- * @see Factory
+ * @see ScreenshotManager
  */
 class Screenshot extends Facade
 {
     /**
-     * Replace the screenshot factory with a recording fake.
+     * Replace the screenshot manager with a recording fake.
      */
-    public static function fake(ImageResult|PdfResult|null $result = null): ScreenshotFake
+    public static function fake(ImageResult|PdfResult|null $result = null): ScreenshotManagerFake
     {
-        static::swap($fake = ScreenshotFake::from(
-            factory: static::getFacadeRoot(),
-            result: $result,
-        ));
+        static::swap($fake = static::getFacadeRoot()->fake($result));
 
         return $fake;
     }
@@ -43,6 +44,6 @@ class Screenshot extends Facade
      */
     protected static function getFacadeAccessor(): string
     {
-        return Factory::class;
+        return ScreenshotManager::class;
     }
 }

@@ -80,18 +80,37 @@ class ChromeDriver implements Driver, ManagesBrowsers
      */
     protected function createBrowser(BrowserOptions $options): Browser
     {
+        return $this->createBrowserFactory()->createBrowser(
+            $this->getBrowserOptions($options),
+        );
+    }
+
+    /**
+     * Create the factory used to start Chrome.
+     */
+    protected function createBrowserFactory(): BrowserFactory
+    {
+        return new BrowserFactory($this->binary);
+    }
+
+    /**
+     * Prepare the options used to start a dedicated or shared browser.
+     */
+    protected function getBrowserOptions(BrowserOptions $options): array
+    {
         $socket = $this->socket($options);
+
         $browserOptions = $this->browserOptions;
 
         if ($socket && empty($browserOptions['userDataDir'])) {
             $browserOptions['userDataDir'] = $socket->path().'.profile';
         }
 
-        return (new BrowserFactory($this->binary))->createBrowser(array_merge($browserOptions, [
+        return array_merge($browserOptions, [
             'windowSize' => [$options->getWidth(), $options->getHeight()],
             'sendSyncDefaultTimeout' => $options->getBrowserTimeout(),
             'keepAlive' => $socket !== null,
-        ]));
+        ]);
     }
 
     /**
@@ -99,9 +118,11 @@ class ChromeDriver implements Driver, ManagesBrowsers
      */
     protected function socket(BrowserOptions $options): ?BrowserSocket
     {
-        return $options->getSocket() !== null
-            ? BrowserSocket::named($options->getSocket(), $this->socketDirectory, $this->lockTimeout)
-            : null;
+        if (is_null($key = $options->getSocket())) {
+            return null;
+        }
+
+        return BrowserSocket::named($key, $this->socketDirectory, $this->lockTimeout);
     }
 
     /**

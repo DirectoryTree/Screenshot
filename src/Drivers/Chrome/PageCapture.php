@@ -3,6 +3,7 @@
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageResult;
@@ -22,6 +23,7 @@ class PageCapture
      * Prepare to capture a page within the given browser.
      */
     public function __construct(
+        protected ChromeDriver $driver,
         protected Browser $browser,
         protected CaptureOptions $options,
         protected bool $shared = false,
@@ -42,6 +44,8 @@ class PageCapture
 
             $this->configurePage($page);
             $this->loadPage($page, $source, $type);
+
+            $this->options->prepare(new ChromeCaptureContext($this->driver, $page));
 
             $result = $this->newCapture()->capture($page);
             $failed = false;

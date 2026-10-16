@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use Closure;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 
 class PendingImage
@@ -16,6 +17,16 @@ class PendingImage
         protected CaptureOptions $options,
     ) {
         $this->options = clone $options;
+    }
+
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->options->before($callback);
+
+        return $this;
     }
 
     /**

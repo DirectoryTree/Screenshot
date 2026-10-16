@@ -35,6 +35,7 @@
         "pestphp/pest-plugin-laravel": "^3.0|^4.0"
     },
     "suggest": {
+        "ext-gd": "Required to crop Gotenberg images that exceed the configured maximum dimensions.",
         "ext-zip": "Required to download Chrome using screenshot:install."
     },
     "autoload": {

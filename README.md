@@ -23,7 +23,7 @@
 
 ---
 
-Screenshot captures HTML, Blade views, and web pages as PNG, JPEG, or PDF files using Chrome. Save captures locally or store them on any Laravel filesystem disk:
+Screenshot captures HTML, Blade views, and web pages as PNG, JPEG, or PDF files using local Chrome or a remote Gotenberg service. Save captures locally or store them on any Laravel filesystem disk:
 
 ```php
 use DirectoryTree\Screenshot\Facades\Screenshot;
@@ -37,9 +37,9 @@ Screenshot::view('invoices.preview', data: ['invoice' => $invoice])
 ## Requirements
 
 - PHP 8.2+ and Laravel 12 or 13 for Laravel integration (PHP 8.3+ with Laravel 13)
-- Chrome or Chromium, installable with `php artisan screenshot:install`
+- Chrome or Chromium, installable with `php artisan screenshot:install`, or Gotenberg 8.38+
 
-Screenshot uses [Chrome PHP](https://github.com/chrome-php/chrome). Node.js and Puppeteer are not required.
+The Chrome driver uses [Chrome PHP](https://github.com/chrome-php/chrome). Node.js and Puppeteer are not required. The Gotenberg driver uses Guzzle to send captures to your Gotenberg service.
 
 ## Installation
 
@@ -364,9 +364,75 @@ $screenshot->html('<h1>Hello, world!</h1>')
 
 Pass `BrowserOptions`, `ImageOptions`, or `PdfOptions` objects through the `browser`, `image`, or `pdf` constructor arguments to set defaults. `view()` requires an injected Laravel view factory; `store()` requires a booted Laravel filesystem.
 
+### Gotenberg
+
+Use [Gotenberg](https://gotenberg.dev) 8.38 or later to render PNG, JPEG, and PDF captures on a separate service. Local Chrome installation is unnecessary when using this driver.
+
+Start a service with JavaScript enabled (Gotenberg's default):
+
+```bash
+docker run --rm -p 3000:3000 gotenberg/gotenberg:8.38.1
+```
+
+Configure the service URL and optionally make it the default driver:
+
+```dotenv
+SCREENSHOT_DRIVER=gotenberg
+SCREENSHOT_GOTENBERG_URL=http://localhost:3000
+```
+
+Captures must opt into JavaScript to match this service:
+
+```php
+Screenshot::driver('gotenberg')
+    ->view('invoices.preview', ['invoice' => $invoice])
+    ->javascript()
+    ->pdf()
+    ->save(storage_path('app/invoice.pdf'));
+
+Screenshot::driver('gotenberg')
+    ->url('https://example.com')
+    ->javascript()
+    ->size(1200, 800)
+    ->jpeg(85)
+    ->viewport()
+    ->capture();
+```
+
+Alternatively, publish the configuration and set `capture.javascript` to `true` for all captures. Gotenberg cannot toggle JavaScript per request: `gotenberg.javascript` describes the remote service's setting, and captures with a different setting are rejected before sending content. To keep JavaScript disabled, start Gotenberg with `--chromium-disable-javascript`, set `SCREENSHOT_GOTENBERG_JAVASCRIPT=false`, and retain the default `capture.javascript=false`.
+
+Pass Guzzle options through `gotenberg.options`, for example to authenticate to the service:
+
+```php
+'gotenberg' => [
+    'url' => env('SCREENSHOT_GOTENBERG_URL', 'http://localhost:3000'),
+    'javascript' => true,
+    'options' => [
+        'auth' => [env('GOTENBERG_USERNAME'), env('GOTENBERG_PASSWORD')],
+        'connect_timeout' => 5,
+    ],
+],
+```
+
+Outside Laravel, use the same driver directly:
+
+```php
+use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
+use DirectoryTree\Screenshot\Screenshot;
+
+$screenshot = new Screenshot(new GotenbergDriver(url: 'http://localhost:3000'));
+$screenshot->html('<h1>Hello!</h1>')->javascript()->png()->capture();
+```
+
+The driver supports image viewport dimensions, full-page and viewport captures, image element selectors, JPEG quality, and the existing PDF paper, margin, orientation, background, and CSS page-size settings. `maxSize()` crops the returned image from the top-left without changing the layout viewport; install PHP's GD extension when images can exceed these limits. Gotenberg renders and transfers the complete image before this crop, and cropped JPEGs are re-encoded at the selected quality.
+
+The remote service must be able to reach URL sources and absolute asset URLs. Local application files and Docker host `localhost` addresses are not automatically accessible from Gotenberg.
+
+Gotenberg manages browser lifetime; shared socket keys and element selection for PDFs are unsupported and throw exceptions. `timeouts(browser: ...)` limits the entire HTTP request in milliseconds. The separate load timeout and `failOnTimeout()` setting do not control Gotenberg: service-side timeouts still apply, and a timed-out request always fails instead of returning partial content. PDF viewport dimensions are managed by Gotenberg. HTTP errors include Gotenberg's response and trace identifier, and redirects are rejected.
+
 ### Custom Drivers
 
-The facade uses `ScreenshotManager` to resolve named drivers. Chrome is included as `chrome` and is the default. Calls such as `Screenshot::html()` are forwarded to the configured default driver:
+The facade uses `ScreenshotManager` to resolve named drivers. Chrome (`chrome`) is the default, and Gotenberg is available as `gotenberg`. Calls such as `Screenshot::html()` are forwarded to the configured default driver:
 
 ```php
 Screenshot::html('<h1>Hello!</h1>')->capture();

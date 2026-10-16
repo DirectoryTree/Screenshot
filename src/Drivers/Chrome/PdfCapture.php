@@ -2,7 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
-use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\PdfOptions;
 use DirectoryTree\Screenshot\PdfResult;
 use HeadlessChromium\Page;
@@ -12,11 +12,11 @@ class PdfCapture implements CapturesPage
 {
     /**
      * Create a PDF capture strategy.
+     *
+     * @param  CaptureOptions<PdfOptions>  $options
      */
     public function __construct(
-        protected BrowserOptions $browser,
-        protected PdfOptions $options,
-        protected ?string $element = null,
+        protected CaptureOptions $options,
     ) {}
 
     /**
@@ -24,15 +24,15 @@ class PdfCapture implements CapturesPage
      */
     public function capture(Page $page): PdfResult
     {
-        if ($this->element !== null) {
+        if ($this->options->element() !== null) {
             $this->isolateElement($page);
         }
 
         return new PdfResult(
             $page->pdf(
-                $this->options->toArray()
+                $this->options->output()->toArray()
             )->getBase64(
-                $this->browser->getBrowserTimeout()
+                $this->options->browser()->getBrowserTimeout()
             )
         );
     }
@@ -42,7 +42,9 @@ class PdfCapture implements CapturesPage
      */
     protected function isolateElement(Page $page): void
     {
-        $selector = json_encode($this->element, JSON_THROW_ON_ERROR);
+        $element = $this->options->element();
+
+        $selector = json_encode($element, JSON_THROW_ON_ERROR);
 
         $found = $page->evaluate(<<<JS
             (() => {
@@ -59,10 +61,10 @@ class PdfCapture implements CapturesPage
 
                 return true;
             })()
-            JS)->getReturnValue($this->browser->getBrowserTimeout());
+            JS)->getReturnValue($this->options->browser()->getBrowserTimeout());
 
         if (! $found) {
-            throw new RuntimeException("No element matches the selector [{$this->element}].");
+            throw new RuntimeException("No element matches the selector [{$element}].");
         }
     }
 }

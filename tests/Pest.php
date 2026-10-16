@@ -14,6 +14,16 @@ function imageFixture(): string
 }
 
 /**
+ * Get the dimensions of the first PDF page in points.
+ */
+function pdfPageSize(string $contents): array
+{
+    preg_match('~/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]~', $contents, $matches);
+
+    return [(float) ($matches[1] ?? 0), (float) ($matches[2] ?? 0)];
+}
+
+/**
  * Get a path within an isolated temporary directory for the current test.
  */
 function temporaryDirectory(string $path = ''): string

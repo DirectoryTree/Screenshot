@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
@@ -159,7 +160,9 @@ test('PDF isolation preserves document stylesheets and element state without cor
             HTML);
         $page->evaluate("document.querySelector('input').value = 'Current value'")->getReturnValue();
 
-        (new PdfCapture(new BrowserOptions, new PdfOptions, '#invoice'))->capture($page);
+        $capture = new PdfCapture(new CaptureOptions(new BrowserOptions, new PdfOptions, '#invoice'));
+
+        $capture->capture($page);
 
         $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', ['media' => 'print']));
         $layout = $page->evaluate(<<<'JS'

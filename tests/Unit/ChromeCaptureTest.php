@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\Chrome\ImageCapture;
 use DirectoryTree\Screenshot\Drivers\Chrome\PdfCapture;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
@@ -59,7 +60,9 @@ test('image captures use the configured bounds timeout format and quality', func
         ->with(1234)
         ->andReturn(imageFixture());
 
-    expect((new ImageCapture($browser, $options))->capture($page))->toBeInstanceOf(ImageResult::class);
+    $capture = new ImageCapture(new CaptureOptions($browser, $options));
+
+    expect($capture->capture($page))->toBeInstanceOf(ImageResult::class);
 })->with([
     'PNG' => OutputFormat::Png,
     'JPEG' => OutputFormat::Jpeg,
@@ -98,7 +101,9 @@ test('the PDF strategy prints its layout without screenshot clipping', function 
         ->with(4321)
         ->andReturn(base64_encode(file_get_contents(__DIR__.'/../../resources/blank.pdf')));
 
-    expect((new PdfCapture($browser, $options))->capture($page))->toBeInstanceOf(PdfResult::class);
+    $capture = new PdfCapture(new CaptureOptions($browser, $options));
+
+    expect($capture->capture($page))->toBeInstanceOf(PdfResult::class);
 });
 
 test('element image bounds retain their document coordinates when capped', function ($fullPage) {
@@ -127,5 +132,7 @@ test('element image bounds retain their document coordinates when capped', funct
         })->andReturn($image);
     $image->shouldReceive('getBase64')->once()->with(1234)->andReturn(imageFixture());
 
-    expect((new ImageCapture($browser, $options, '#invoice'))->capture($page))->toBeInstanceOf(ImageResult::class);
+    $capture = new ImageCapture(new CaptureOptions($browser, $options, '#invoice'));
+
+    expect($capture->capture($page))->toBeInstanceOf(ImageResult::class);
 })->with(['full page' => true, 'viewport' => false]);

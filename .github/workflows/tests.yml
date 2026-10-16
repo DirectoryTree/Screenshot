@@ -89,16 +89,32 @@ jobs:
         run: vendor/bin/pest tests/Browser/InstallTest.php
 
   browser:
-    name: Chromium
+    name: Chrome / Gotenberg
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    services:
+      gotenberg:
+        image: gotenberg/gotenberg:8.38.1
+        ports:
+          - 3000:3000
+        env:
+          API_ENABLE_BASIC_AUTH: 'true'
+          GOTENBERG_API_BASIC_AUTH_USERNAME: screenshot
+          GOTENBERG_API_BASIC_AUTH_PASSWORD: screenshot-test
+      gotenberg-nojs:
+        image: gotenberg/gotenberg:8.38.1
+        ports:
+          - 3001:3000
+        env:
+          CHROMIUM_DISABLE_JAVASCRIPT: 'true'
 
     steps:
       - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip, gd
           coverage: none
       - run: composer install --prefer-dist --no-interaction
       - name: Execute browser tests
@@ -106,4 +122,8 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
           SCREENSHOT_NO_SANDBOX: '1'
           SCREENSHOT_TEST_INSTALL: '1'
+          SCREENSHOT_GOTENBERG_URL: http://localhost:3000
+          SCREENSHOT_GOTENBERG_NOJS_URL: http://localhost:3001
+          SCREENSHOT_GOTENBERG_USERNAME: screenshot
+          SCREENSHOT_GOTENBERG_PASSWORD: screenshot-test
         run: composer test-browser

@@ -9,6 +9,47 @@ use DirectoryTree\Screenshot\ImageResult;
 use DirectoryTree\Screenshot\ScreenshotManager;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+
+test('the built-in Gotenberg driver renders views with configured defaults without resolving Chrome', function () {
+    $installer = Mockery::mock(ChromeInstaller::class);
+    $installer->shouldNotReceive('path');
+    app()->instance(ChromeInstaller::class, $installer);
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], file_get_contents(__DIR__.'/../../resources/blank.pdf')),
+        new Response(200, [], base64_decode(imageFixture())),
+    ]);
+    $stack = HandlerStack::create($mock);
+
+    $stack->push(Middleware::history($history));
+
+    config([
+        'screenshot.default' => 'gotenberg',
+        'screenshot.gotenberg.url' => 'https://gotenberg.example.test',
+        'screenshot.gotenberg.options' => ['handler' => $stack],
+        'screenshot.gotenberg.javascript' => false,
+        'screenshot.capture.width' => 900,
+    ]);
+
+    $manager = app(ScreenshotManager::class);
+
+    expect($manager->getDrivers())->toBe([]);
+
+    Screenshot::view('card', ['name' => '<Steve>'])
+        ->pdf()
+        ->capture();
+    Screenshot::driver('gotenberg')
+        ->html('image')
+        ->capture();
+
+    expect($manager->driver())->toBe($manager->driver('gotenberg'));
+    expect((string) $history[0]['request']->getBody())->toContain('&lt;Steve&gt;');
+    expect((string) $history[1]['request']->getBody())->toContain("\r\n900\r\n");
+});
 
 test('Chrome is the default driver and is resolved lazily', function () {
     $installer = Mockery::mock(ChromeInstaller::class);

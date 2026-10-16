@@ -57,7 +57,7 @@ class ChromeDriver implements Driver, ManagesBrowsers
                 $browser->getConnection()->setConnectionHttpHeaders($this->browserOptions['headers']);
             }
 
-            $result = (new PageCapture($browser, $options, $shared))->capture($source, $type);
+            $result = (new PageCapture($browser, $options, $shared, $this))->capture($source, $type);
 
             $failed = false;
 

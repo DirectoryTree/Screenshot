@@ -175,6 +175,40 @@ PDFs move the selected element directly into the document body and print it usin
 
 Selection works with JavaScript disabled. Missing elements and invalid selectors throw exceptions. Images require an element with nonzero layout bounds; PDFs follow the document's print styles. Each output builder keeps the selector chosen when it was created.
 
+### Customizing a Capture
+
+Use `before()` on a source, image, or PDF builder to customize the prepared driver resource. Each callback receives a `CaptureContext` containing the actual driver instance:
+
+```php
+use DirectoryTree\Screenshot\CaptureContext;
+use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
+use DirectoryTree\Screenshot\Facades\Screenshot;
+
+Screenshot::url('https://example.com')
+    ->javascript()
+    ->before(function (CaptureContext $context) {
+        match (true) {
+            $context->driver instanceof ChromeDriver => $context->page()
+                ->evaluate('document.querySelector("#banner")?.remove()')
+                ->getReturnValue(),
+            $context->driver instanceof GotenbergDriver => $context->request()
+                ->set('waitForExpression', 'window.ready === true'),
+            default => null,
+        };
+    })
+    ->png()
+    ->capture();
+```
+
+Chrome invokes callbacks after the source loads and before image bounds are measured or PDF preparation begins. `page()` returns the live `HeadlessChromium\Page`, allowing JavaScript execution, application-specific readiness waits, and viewport changes. Enable `javascript()` when your callback needs to execute JavaScript.
+
+Gotenberg invokes callbacks immediately before sending its HTTP request. `request()` returns a mutable `DirectoryTree\Screenshot\Drivers\Gotenberg\Request`. Use `set()` to add or replace a multipart field. Its public `url` and `options` properties expose the destination and Guzzle request options, including headers and multipart files. This does not provide access to Gotenberg's remote browser page.
+
+Calling `page()` or `request()` when that resource is unavailable throws a `LogicException`. Callbacks run in registration order, their return values are ignored, and exceptions propagate through the driver's existing cleanup. A callback added to a source is copied into subsequently created output builders; callbacks added to an output affect only that builder. Callbacks run for every actual capture, including captures triggered by `save()` and `store()`.
+
+The screenshot fake records capture options without executing callbacks. Custom drivers can invoke registered callbacks through `$options->prepare($context)` when they provide a supported resource.
+
 ### Saving and Reading Captures
 
 Call `save()` or `store()` on a source or output builder, or capture once and reuse the result:

@@ -2,12 +2,31 @@
 
 namespace DirectoryTree\Screenshot;
 
+use Closure;
+
 class PendingSource
 {
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->callbacks[] = $callback;
+
+        return $this;
+    }
+
     /**
      * The CSS selector to capture from the source.
      */
     protected ?string $element = null;
+
+    /**
+     * The callbacks invoked before capturing.
+     *
+     * @var array<Closure>
+     */
+    protected array $callbacks = [];
 
     /**
      * Prepare a source with independent browser settings and shared output defaults.
@@ -161,6 +180,6 @@ class PendingSource
      */
     protected function newCaptureOptions(ImageOptions|PdfOptions $output): CaptureOptions
     {
-        return new CaptureOptions($this->browser, $output, $this->element);
+        return new CaptureOptions($this->browser, $output, $this->element, $this->callbacks);
     }
 }

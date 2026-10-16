@@ -2,10 +2,21 @@
 
 namespace DirectoryTree\Screenshot;
 
+use Closure;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 
 class PendingImage
 {
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->options->before($callback);
+
+        return $this;
+    }
+
     /**
      * Create an image builder with independent settings.
      *

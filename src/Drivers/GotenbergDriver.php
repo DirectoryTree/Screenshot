@@ -2,11 +2,13 @@
 
 namespace DirectoryTree\Screenshot\Drivers;
 
+use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\ImageOutput;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\Output;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\PdfOutput;
+use DirectoryTree\Screenshot\Drivers\Gotenberg\Request;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageResult;
@@ -62,12 +64,16 @@ class GotenbergDriver implements Driver
     {
         $route = $output->route();
 
-        $response = $this->http->request('POST', rtrim($this->url, '/')."/forms/chromium/{$route}/{$type->value}", [
+        $request = new Request(rtrim($this->url, '/')."/forms/chromium/{$route}/{$type->value}", [
             'multipart' => $this->getMultipart($source, $type, $output->fields()),
             'timeout' => $options->browser()->getBrowserTimeout() / 1000,
             'http_errors' => false,
             'allow_redirects' => false,
         ]);
+
+        $options->prepare(new CaptureContext($this, $request));
+
+        $response = $this->http->request('POST', $request->url, $request->options);
 
         if ($response->getStatusCode() !== 200) {
             throw new RuntimeException(sprintf(

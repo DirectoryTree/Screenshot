@@ -1,9 +1,11 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
 use DirectoryTree\Screenshot\Drivers\Chrome\PageCapture;
+use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageOptions;
@@ -599,3 +601,30 @@ test('shared page cleanup reports its failure without replacing a capture error'
         $captureFails ? 'capture failure' : 'Unable to close the screenshot page: target rejected',
     );
 })->with([false, true]);
+
+test('before callbacks run after loading and failures still close the page', function () {
+    $browser = Mockery::mock(Browser::class);
+    $page = Mockery::mock(Page::class);
+    $session = Mockery::mock(Session::class);
+    $driver = new ChromeDriver;
+    $loaded = false;
+    $options = new CaptureOptions(new BrowserOptions, new ImageOptions);
+    $options->before(function (CaptureContext $context) use ($page, $driver, &$loaded) {
+        expect($loaded)->toBeTrue();
+        expect($context->driver)->toBe($driver);
+        expect($context->page())->toBe($page);
+        throw new RuntimeException('preparation failed');
+    });
+
+    $browser->shouldReceive('createPage')->once()->andReturn($page);
+    $page->shouldReceive('getSession')->andReturn($session);
+    $session->shouldReceive('sendMessageSync')->once()->andReturn(new Response([], new Message('test')));
+    $page->shouldReceive('setHtml')->once()->andReturnUsing(function () use (&$loaded) {
+        $loaded = true;
+    });
+    $page->shouldReceive('close')->once();
+    $page->shouldNotReceive('screenshot');
+
+    expect(fn () => (new PageCapture($browser, $options, driver: $driver))->capture('hello', SourceType::Html))
+        ->toThrow(RuntimeException::class, 'preparation failed');
+});

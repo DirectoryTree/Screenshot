@@ -1,6 +1,7 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageOptions;
@@ -126,4 +127,19 @@ test('real Chromium captures local URLs and handles slow resources', function ()
     } finally {
         $server->stop();
     }
+});
+
+test('before callbacks customize a loaded Chrome page before element capture', function () {
+    $image = realScreenshot()->html('<style>body{margin:0}#card{width:100px;height:100px}</style><div id="card"></div>')
+        ->javascript()
+        ->before(function (CaptureContext $context) {
+            expect($context->driver)->toBeInstanceOf(ChromeDriver::class);
+            $context->page()->evaluate('document.querySelector("#card").style.width = "350px"; document.querySelector("#card").style.height = "250px";')->getReturnValue();
+        })
+        ->element('#card')
+        ->png()
+        ->capture();
+
+    expect($image->width())->toBe(350);
+    expect($image->height())->toBe(250);
 });

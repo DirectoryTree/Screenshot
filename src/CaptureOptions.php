@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\Screenshot;
 
+use Closure;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 
 /**
@@ -18,6 +19,7 @@ class CaptureOptions
         protected BrowserOptions $browser,
         protected ImageOptions|PdfOptions $output,
         protected ?string $element = null,
+        protected array $callbacks = [],
     ) {}
 
     /**
@@ -61,6 +63,26 @@ class CaptureOptions
     public function format(): OutputFormat
     {
         return $this->output->getFormat();
+    }
+
+    /**
+     * Register a callback to customize the driver before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->callbacks[] = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Invoke the callbacks with the prepared driver context.
+     */
+    public function prepare(CaptureContext $context): void
+    {
+        foreach ($this->callbacks as $callback) {
+            $callback($context);
+        }
     }
 
     /**

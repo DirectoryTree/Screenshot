@@ -1,7 +1,9 @@
 <?php
 
 use DirectoryTree\Screenshot\Contracts\CaptureContext;
+use DirectoryTree\Screenshot\Drivers\Chrome\ChromeCaptureContext;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Drivers\Gotenberg\GotenbergCaptureContext;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\Request;
 use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Screenshot;
@@ -68,7 +70,7 @@ test('callbacks on an output do not leak into its source or sibling outputs', fu
 test('each driver context implements the shared contract and exposes its resource', function () {
     $driver = new ChromeDriver;
     $page = Mockery::mock(Page::class);
-    $context = new DirectoryTree\Screenshot\Drivers\Chrome\CaptureContext($driver, $page);
+    $context = new ChromeCaptureContext($driver, $page);
 
     expect($context)->toBeInstanceOf(CaptureContext::class);
     expect($context->driver())->toBe($driver);
@@ -76,7 +78,7 @@ test('each driver context implements the shared contract and exposes its resourc
 
     $driver = new GotenbergDriver;
     $request = new Request('http://localhost:3000', ['multipart' => []]);
-    $context = new DirectoryTree\Screenshot\Drivers\Gotenberg\CaptureContext($driver, $request);
+    $context = new GotenbergCaptureContext($driver, $request);
 
     expect($context)->toBeInstanceOf(CaptureContext::class);
     expect($context->driver())->toBe($driver);

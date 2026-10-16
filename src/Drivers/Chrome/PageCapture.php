@@ -45,7 +45,7 @@ class PageCapture
             $this->configurePage($page);
             $this->loadPage($page, $source, $type);
 
-            $this->options->prepare(new CaptureContext($this->driver, $page));
+            $this->options->prepare(new ChromeCaptureContext($this->driver, $page));
 
             $result = $this->newCapture()->capture($page);
             $failed = false;

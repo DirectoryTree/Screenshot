@@ -4,7 +4,7 @@ namespace DirectoryTree\Screenshot\Drivers;
 
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
-use DirectoryTree\Screenshot\Drivers\Gotenberg\CaptureContext;
+use DirectoryTree\Screenshot\Drivers\Gotenberg\GotenbergCaptureContext;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\ImageOutput;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\Output;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\PdfOutput;
@@ -71,7 +71,7 @@ class GotenbergDriver implements Driver
             'allow_redirects' => false,
         ]);
 
-        $options->prepare(new CaptureContext($this, $request));
+        $options->prepare(new GotenbergCaptureContext($this, $request));
 
         $response = $this->http->request('POST', $request->url, $request->options);
 

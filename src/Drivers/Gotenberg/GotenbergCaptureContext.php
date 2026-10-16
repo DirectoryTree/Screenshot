@@ -2,10 +2,10 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Gotenberg;
 
-use DirectoryTree\Screenshot\Contracts\CaptureContext as CaptureContextContract;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 
-class CaptureContext implements CaptureContextContract
+class GotenbergCaptureContext implements CaptureContext
 {
     /**
      * Create a context for the prepared request.

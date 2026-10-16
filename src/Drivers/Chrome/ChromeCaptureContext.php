@@ -2,11 +2,11 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
-use DirectoryTree\Screenshot\Contracts\CaptureContext as CaptureContextContract;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use HeadlessChromium\Page;
 
-class CaptureContext implements CaptureContextContract
+class ChromeCaptureContext implements CaptureContext
 {
     /**
      * Create a context for the prepared page.

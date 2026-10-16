@@ -10,28 +10,26 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 
-beforeEach(function () {
-    $this->history = [];
-    $this->mock = new MockHandler;
-    $stack = HandlerStack::create($this->mock);
+test('Gotenberg sends HTML as an in-memory multipart file and preserves PDF layout', function () {
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], file_get_contents(__DIR__.'/../../resources/blank.pdf')),
+    ]);
+    $stack = HandlerStack::create($mock);
 
-    $stack->push(Middleware::history($this->history));
+    $stack->push(Middleware::history($history));
 
-    $this->factory = new Screenshot(
+    $factory = new Screenshot(
         new GotenbergDriver(
             url: 'https://gotenberg.example.test/api/',
-            httpOptions: [
+            http: new Client([
                 'handler' => $stack,
                 'auth' => ['user', 'password'],
-            ],
+            ]),
         ),
     );
-});
 
-test('Gotenberg sends HTML as an in-memory multipart file and preserves PDF layout', function () {
-    $this->mock->append(new Response(200, [], file_get_contents(__DIR__.'/../../resources/blank.pdf')));
-
-    $result = $this->factory->html('<h1>Invoice</h1>')
+    $result = $factory->html('<h1>Invoice</h1>')
         ->javascript()
         ->pdf()
         ->paperSize(100, 200)
@@ -43,7 +41,7 @@ test('Gotenberg sends HTML as an in-memory multipart file and preserves PDF layo
 
     expect($result->mimeType())->toBe('application/pdf');
 
-    $request = $this->history[0]['request'];
+    $request = $history[0]['request'];
     $body = (string) $request->getBody();
 
     expect($request->getMethod())->toBe('POST');
@@ -70,9 +68,19 @@ test('Gotenberg sends HTML as an in-memory multipart file and preserves PDF layo
 });
 
 test('Gotenberg selects the URL screenshot route with the original viewport', function () {
-    $this->mock->append(new Response(200, [], base64_decode(imageFixture())));
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], base64_decode(imageFixture())),
+    ]);
+    $stack = HandlerStack::create($mock);
 
-    $result = $this->factory->url('https://example.com/report')
+    $stack->push(Middleware::history($history));
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $stack])),
+    );
+
+    $result = $factory->url('https://example.com/report')
         ->javascript()
         ->size(640, 480)
         ->png()
@@ -82,80 +90,132 @@ test('Gotenberg selects the URL screenshot route with the original viewport', fu
 
     expect($result->mimeType())->toBe('image/png');
     expect($result->width())->toBe(1);
-    expect((string) $this->history[0]['request']->getUri())->toEndWith('/forms/chromium/screenshot/url');
+    expect((string) $history[0]['request']->getUri())->toEndWith('/forms/chromium/screenshot/url');
 
-    $body = (string) $this->history[0]['request']->getBody();
+    $body = (string) $history[0]['request']->getBody();
 
     expect($body)->toContain('https://example.com/report', 'name="width"', "\r\n640\r\n", "\r\n480\r\n", "\r\ntrue\r\n");
     expect($body)->not->toContain('filename=', 'name="quality"', 'name="selector"');
 });
 
 test('Gotenberg selects the URL PDF route', function () {
-    $this->mock->append(new Response(200, [], file_get_contents(__DIR__.'/../../resources/blank.pdf')));
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], file_get_contents(__DIR__.'/../../resources/blank.pdf')),
+    ]);
+    $stack = HandlerStack::create($mock);
 
-    $this->factory->url('https://example.com/report')
+    $stack->push(Middleware::history($history));
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $stack])),
+    );
+
+    $factory->url('https://example.com/report')
         ->javascript()
         ->pdf()
         ->capture();
 
-    expect((string) $this->history[0]['request']->getUri())->toEndWith('/forms/chromium/convert/url');
+    expect((string) $history[0]['request']->getUri())->toEndWith('/forms/chromium/convert/url');
 });
 
 test('Gotenberg forwards image selectors and rejects unexpected output formats', function () {
-    $this->mock->append(new Response(200, [], base64_decode(imageFixture())));
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], base64_decode(imageFixture())),
+    ]);
+    $stack = HandlerStack::create($mock);
+
+    $stack->push(Middleware::history($history));
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $stack])),
+    );
 
     expect(
-        fn () => $this->factory->html('<div id="card">Card</div>')
+        fn () => $factory->html('<div id="card">Card</div>')
             ->javascript()
             ->element('#card')
             ->jpeg(73)
             ->capture(),
     )->toThrow(RuntimeException::class, 'unexpected image format');
 
-    $body = (string) $this->history[0]['request']->getBody();
+    $body = (string) $history[0]['request']->getBody();
 
     expect($body)->toContain('name="selector"', "\r\n#card\r\n", "\r\njpeg\r\n", "\r\n73\r\n");
 });
 
 test('Gotenberg uses the browser timeout for the entire request', function () {
-    $this->mock->append(new Response(200, [], base64_decode(imageFixture())));
+    $history = [];
+    $mock = new MockHandler([
+        new Response(200, [], base64_decode(imageFixture())),
+    ]);
+    $stack = HandlerStack::create($mock);
 
-    $this->factory->html('content')
+    $stack->push(Middleware::history($history));
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $stack])),
+    );
+
+    $factory->html('content')
         ->javascript()
         ->timeouts(browser: 1250)
         ->capture();
 
-    expect($this->history[0]['options']['timeout'])->toBe(1.25);
-    expect($this->history[0]['options']['http_errors'])->toBeFalse();
-    expect($this->history[0]['options']['allow_redirects'])->toBeFalse();
+    expect($history[0]['options']['timeout'])->toBe(1.25);
+    expect($history[0]['options']['http_errors'])->toBeFalse();
+    expect($history[0]['options']['allow_redirects'])->toBeFalse();
 });
 
 test('Gotenberg reports HTTP errors and the remote trace', function (int $status) {
-    $this->mock->append(new Response($status, ['Gotenberg-Trace' => 'trace-id'], 'conversion failed'));
+    $mock = new MockHandler([
+        new Response($status, ['Gotenberg-Trace' => 'trace-id'], 'conversion failed'),
+    ]);
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $mock])),
+    );
 
     expect(
-        fn () => $this->factory->html('content')
+        fn () => $factory->html('content')
             ->javascript()
             ->capture(),
     )->toThrow(RuntimeException::class, "Gotenberg capture failed (HTTP {$status}, trace: trace-id): conversion failed");
 })->with([302, 400, 401, 503]);
 
 test('Gotenberg preserves connection and timeout errors', function () {
-    $this->mock->append(new ConnectException(
-        'Connection timed out',
-        new Request('POST', 'https://gotenberg.example.test'),
-    ));
+    $mock = new MockHandler([
+        new ConnectException(
+            'Connection timed out',
+            new Request('POST', 'https://gotenberg.example.test'),
+        ),
+    ]);
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $mock])),
+    );
 
     expect(
-        fn () => $this->factory->html('content')
+        fn () => $factory->html('content')
             ->javascript()
             ->capture(),
     )->toThrow(ConnectException::class, 'Connection timed out');
 });
 
 test('Gotenberg rejects unsupported settings before sending requests', function (Closure $capture, string $message) {
-    expect(fn () => $capture($this->factory))->toThrow(InvalidArgumentException::class, $message);
-    expect($this->history)->toBe([]);
+    $history = [];
+    $mock = new MockHandler;
+    $stack = HandlerStack::create($mock);
+
+    $stack->push(Middleware::history($history));
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $stack])),
+    );
+
+    expect(fn () => $capture($factory))->toThrow(InvalidArgumentException::class, $message);
+    expect($history)->toBe([]);
 })->with([
     'JavaScript mismatch' => [fn ($factory) => $factory->html('content')->capture(), 'JavaScript setting must match'],
     'sockets' => [
@@ -176,10 +236,13 @@ test('Gotenberg rejects unsupported settings before sending requests', function 
 ]);
 
 test('Gotenberg supports services configured with JavaScript disabled', function () {
-    $this->mock->append(new Response(200, [], base64_decode(imageFixture())));
+    $mock = new MockHandler([
+        new Response(200, [], base64_decode(imageFixture())),
+    ]);
+
     $driver = new GotenbergDriver(
         javascript: false,
-        http: new Client(['handler' => $this->mock]),
+        http: new Client(['handler' => $mock]),
     );
     $factory = new Screenshot($driver);
 
@@ -187,8 +250,15 @@ test('Gotenberg supports services configured with JavaScript disabled', function
 });
 
 test('Gotenberg validates successful response bodies', function (string $body, bool $pdf) {
-    $this->mock->append(new Response(200, [], $body));
-    $source = $this->factory->html('content')->javascript();
+    $mock = new MockHandler([
+        new Response(200, [], $body),
+    ]);
+
+    $factory = new Screenshot(
+        new GotenbergDriver(http: new Client(['handler' => $mock])),
+    );
+
+    $source = $factory->html('content')->javascript();
 
     expect(fn () => ($pdf ? $source->pdf() : $source->png())->capture())
         ->toThrow(InvalidArgumentException::class);

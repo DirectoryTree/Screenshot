@@ -2,7 +2,7 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
-use DirectoryTree\Screenshot\BrowserOptions;
+use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\ImageOptions;
 use DirectoryTree\Screenshot\ImageResult;
@@ -14,11 +14,11 @@ class ImageCapture implements CapturesPage
 {
     /**
      * Create an image capture strategy.
+     *
+     * @param  CaptureOptions<ImageOptions>  $options
      */
     public function __construct(
-        protected BrowserOptions $browser,
-        protected ImageOptions $options,
-        protected ?string $element = null,
+        protected CaptureOptions $options,
     ) {}
 
     /**
@@ -26,25 +26,27 @@ class ImageCapture implements CapturesPage
      */
     public function capture(Page $page): ImageResult
     {
+        $options = $this->options->output();
+
         $clip = $this->clip($page);
 
         $parameters = [
-            'format' => $this->options->getFormat()->value,
+            'format' => $options->getFormat()->value,
             'captureBeyondViewport' => true,
             'clip' => new Clip(
                 $clip->getX(), $clip->getY(),
-                max(1, min($clip->getWidth(), $this->options->getMaxWidth())),
-                max(1, min($clip->getHeight(), $this->options->getMaxHeight())),
+                max(1, min($clip->getWidth(), $options->getMaxWidth())),
+                max(1, min($clip->getHeight(), $options->getMaxHeight())),
             ),
         ];
 
-        if ($this->options->getFormat() === OutputFormat::Jpeg) {
-            $parameters['quality'] = $this->options->getQuality();
+        if ($options->getFormat() === OutputFormat::Jpeg) {
+            $parameters['quality'] = $options->getQuality();
         }
 
         return new ImageResult(
             $page->screenshot($parameters)->getBase64(
-                $this->browser->getBrowserTimeout()
+                $this->options->browser()->getBrowserTimeout()
             )
         );
     }
@@ -54,15 +56,17 @@ class ImageCapture implements CapturesPage
      */
     protected function clip(Page $page): Clip
     {
-        if ($this->element !== null) {
+        if ($this->options->element() !== null) {
             return $this->getElementClip($page);
         }
 
-        if ($this->options->getFullPage()) {
-            return $page->getFullPageClip($this->browser->getBrowserTimeout());
+        $browser = $this->options->browser();
+
+        if ($this->options->output()->getFullPage()) {
+            return $page->getFullPageClip($browser->getBrowserTimeout());
         }
 
-        return new Clip(0, 0, $this->browser->getWidth(), $this->browser->getHeight());
+        return new Clip(0, 0, $browser->getWidth(), $browser->getHeight());
     }
 
     /**
@@ -70,13 +74,15 @@ class ImageCapture implements CapturesPage
      */
     protected function getElementClip(Page $page): Clip
     {
-        $element = $page->dom()->querySelector($this->element)
-            ?? throw new RuntimeException("No element matches the selector [{$this->element}].");
+        $selector = $this->options->element();
+
+        $element = $page->dom()->querySelector($selector)
+            ?? throw new RuntimeException("No element matches the selector [{$selector}].");
 
         $position = $element->getPosition('border');
 
         if (! $position || $position->getWidth() <= 0 || $position->getHeight() <= 0) {
-            throw new RuntimeException("The element [{$this->element}] has no layout bounds.");
+            throw new RuntimeException("The element [{$selector}] has no layout bounds.");
         }
 
         return new Clip($position->getX(), $position->getY(), $position->getWidth(), $position->getHeight());

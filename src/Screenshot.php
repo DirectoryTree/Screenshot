@@ -7,6 +7,7 @@ use DirectoryTree\Screenshot\Contracts\ManagesBrowsers;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
 
@@ -40,7 +41,7 @@ class Screenshot
      */
     public function url(string $url): PendingSource
     {
-        if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true)) {
+        if (! Str::isUrl($url, ['http', 'https'])) {
             throw new InvalidArgumentException('The screenshot URL must be a valid HTTP or HTTPS URL.');
         }
 

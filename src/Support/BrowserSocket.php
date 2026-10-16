@@ -6,6 +6,7 @@ use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Exception\BrowserConnectionFailed;
 use HeadlessChromium\Exception\OperationTimedOut;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
@@ -224,11 +225,8 @@ class BrowserSocket
         }
 
         $uri = trim($contents);
-        $parts = parse_url($uri);
 
-        return $parts && in_array($parts['scheme'] ?? '', ['ws', 'wss'], true) && ! empty($parts['host'])
-            ? $uri
-            : null;
+        return Str::isUrl($uri, ['ws', 'wss']) ? $uri : null;
     }
 
     /**

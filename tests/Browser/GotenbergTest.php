@@ -2,17 +2,12 @@
 
 use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Screenshot;
+use GuzzleHttp\Client;
 
 uses()->group('gotenberg');
 
 function gotenbergScreenshot(bool $authenticate = true): Screenshot
 {
-    $url = getenv('SCREENSHOT_GOTENBERG_URL');
-
-    if (! $url) {
-        test()->markTestSkipped('Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.');
-    }
-
     $httpOptions = [];
 
     if ($authenticate && ($username = getenv('SCREENSHOT_GOTENBERG_USERNAME'))) {
@@ -20,7 +15,7 @@ function gotenbergScreenshot(bool $authenticate = true): Screenshot
     }
 
     return new Screenshot(
-        new GotenbergDriver($url, $httpOptions),
+        new GotenbergDriver(getenv('SCREENSHOT_GOTENBERG_URL'), new Client($httpOptions)),
     );
 }
 
@@ -42,13 +37,12 @@ test('real Gotenberg renders full-page PNG and viewport JPEG captures', function
     expect($viewport->mimeType())->toBe('image/jpeg');
     expect($viewport->width())->toBe(640);
     expect($viewport->height())->toBe(480);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+);
 
 test('real Gotenberg crops images without changing responsive layout', function (string $format) {
-    if (! extension_loaded('gd')) {
-        $this->markTestSkipped('Cropping requires GD.');
-    }
-
     $result = gotenbergScreenshot()->html(<<<'HTML'
         <style>
             html, body { margin: 0; width: 900px; height: 1200px; background: rgb(255, 0, 0); }
@@ -77,19 +71,16 @@ test('real Gotenberg crops images without changing responsive layout', function 
     $marker = imagecolorsforindex($image, imagecolorat($image, 90, 10));
 
     expect($marker['green'])->toBeLessThan(5);
-})->with(['png', 'jpeg']);
+})->with(['png', 'jpeg'])->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+)->skip(fn () => ! extension_loaded('gd'), 'Cropping requires GD.');
 
 test('real Gotenberg applies the configured service JavaScript setting', function () {
-    $url = getenv('SCREENSHOT_GOTENBERG_NOJS_URL');
-
-    if (! $url) {
-        $this->markTestSkipped('Set SCREENSHOT_GOTENBERG_NOJS_URL to test a service with JavaScript disabled.');
-    }
-
     $html = '<style>html,body{margin:0}div{height:200px}</style><div id="content"></div>'
         .'<script>document.getElementById("content").style.height="900px"</script>';
     $factory = new Screenshot(
-        new GotenbergDriver(url: $url, javascript: false),
+        new GotenbergDriver(url: getenv('SCREENSHOT_GOTENBERG_NOJS_URL'), javascript: false),
     );
     $disabled = $factory->html($html)
         ->size(400, 300)
@@ -101,13 +92,15 @@ test('real Gotenberg applies the configured service JavaScript setting', functio
 
     expect($disabled->height())->toBe(300);
     expect($enabled->height())->toBe(900);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+)->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_NOJS_URL'),
+    'Set SCREENSHOT_GOTENBERG_NOJS_URL to test a service with JavaScript disabled.',
+);
 
 test('real Gotenberg rejects requests without the configured service authentication', function () {
-    if (! getenv('SCREENSHOT_GOTENBERG_USERNAME')) {
-        $this->markTestSkipped('Configure service authentication to test unauthorized requests.');
-    }
-
     $factory = gotenbergScreenshot(authenticate: false);
 
     expect(
@@ -116,13 +109,15 @@ test('real Gotenberg rejects requests without the configured service authenticat
             ->pdf()
             ->capture(),
     )->toThrow(RuntimeException::class, 'HTTP 401');
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+)->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_USERNAME'),
+    'Configure service authentication to test unauthorized requests.',
+);
 
 test('real Gotenberg crops selected elements to the maximum dimensions', function () {
-    if (! extension_loaded('gd')) {
-        $this->markTestSkipped('Cropping requires GD.');
-    }
-
     $result = gotenbergScreenshot()->html(<<<'HTML'
         <style>
             body { margin: 0; }
@@ -138,7 +133,10 @@ test('real Gotenberg crops selected elements to the maximum dimensions', functio
 
     expect($result->width())->toBe(120);
     expect($result->height())->toBe(70);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+)->skip(fn () => ! extension_loaded('gd'), 'Cropping requires GD.');
 
 test('real Gotenberg renders a URL reachable from the service', function () {
     $result = gotenbergScreenshot()->url('http://localhost:3000/health')
@@ -151,7 +149,10 @@ test('real Gotenberg renders a URL reachable from the service', function () {
     expect($result->mimeType())->toBe('image/png');
     expect($result->width())->toBe(400);
     expect($result->height())->toBe(300);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+);
 
 test('real Gotenberg prints PDFs with custom dimensions', function () {
     $result = gotenbergScreenshot()->html('<h1>Invoice</h1>')
@@ -169,7 +170,10 @@ test('real Gotenberg prints PDFs with custom dimensions', function () {
 
     expect($width)->toEqualWithDelta(200 / 25.4 * 72, 1);
     expect($height)->toEqualWithDelta(100 / 25.4 * 72, 1);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+);
 
 test('real Gotenberg honors CSS page sizes', function () {
     $result = gotenbergScreenshot()->html('<style>@page { size: 120mm 180mm; margin: 0 }</style><h1>CSS paper</h1>')
@@ -182,7 +186,10 @@ test('real Gotenberg honors CSS page sizes', function () {
 
     expect($width)->toEqualWithDelta(120 / 25.4 * 72, 1);
     expect($height)->toEqualWithDelta(180 / 25.4 * 72, 1);
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+);
 
 test('real Gotenberg reports selectors that match no element', function () {
     expect(
@@ -191,4 +198,7 @@ test('real Gotenberg reports selectors that match no element', function () {
             ->element('#missing')
             ->capture(),
     )->toThrow(RuntimeException::class, 'HTTP 400');
-});
+})->skip(
+    fn () => ! getenv('SCREENSHOT_GOTENBERG_URL'),
+    'Set SCREENSHOT_GOTENBERG_URL to run Gotenberg integration tests.',
+);

@@ -11,6 +11,7 @@ use DirectoryTree\Screenshot\Enums\PaperSize;
 use DirectoryTree\Screenshot\Support\ChromeInstaller;
 use DirectoryTree\Screenshot\Testing\ScreenshotFake;
 use DirectoryTree\Screenshot\Testing\ScreenshotManagerFake;
+use GuzzleHttp\Client;
 use Illuminate\Support\Manager;
 
 /**
@@ -73,7 +74,7 @@ class ScreenshotManager extends Manager implements Factory
     {
         return new GotenbergDriver(
             $this->config->get('screenshot.gotenberg.url', 'http://localhost:3000'),
-            $this->config->get('screenshot.gotenberg.options', []),
+            new Client($this->config->get('screenshot.gotenberg.options', [])),
             $this->config->get('screenshot.gotenberg.javascript', true),
         );
     }

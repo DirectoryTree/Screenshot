@@ -75,7 +75,7 @@ test('load timeouts stop loading and capture bounded content', function () {
     $browser->shouldNotReceive('close');
 
     expect(
-        (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html)->width(),
+        (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html)->width(),
     )->toBe(1);
 });
 
@@ -104,6 +104,7 @@ test('strict load timeouts propagate and close the page', function () {
 
     expect(
         fn () => (new PageCapture(
+            new ChromeDriver,
             $browser,
             new CaptureOptions((new BrowserOptions)->setFailOnTimeout(true), new ImageOptions),
         ))->capture('hello', SourceType::Html),
@@ -151,7 +152,7 @@ test('failed page cleanup falls back to closing its target', function () {
     $browser->shouldNotReceive('close');
 
     expect(
-        fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
+        fn () => (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
     )->toThrow(RuntimeException::class, 'capture failure');
 });
 
@@ -185,7 +186,7 @@ test('capture failures still close the page', function () {
     $browser->shouldNotReceive('close');
 
     expect(
-        fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
+        fn () => (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
     )->toThrow(RuntimeException::class, 'screenshot failure');
 });
 
@@ -234,7 +235,7 @@ test('a shared capture failure closes its page without closing other workers bro
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
+    $capture = new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(RuntimeException::class, 'capture failure');
 });
@@ -282,7 +283,7 @@ test('shared page initialization failures close only the owned target and preser
         $connection->shouldReceive('readData')->once();
     }
 
-    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
+    $capture = new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(OperationTimedOut::class, 'initialization failure');
 })->with([false, true]);
@@ -323,6 +324,7 @@ test('PDF rendering receives print options and timeout and closes the page', fun
     $browser->shouldNotReceive('close');
 
     $result = (new PageCapture(
+        new ChromeDriver,
         $browser,
         new CaptureOptions(
             (new BrowserOptions)->setTimeouts(load: 15000, browser: 12345),
@@ -363,7 +365,7 @@ test('PDF printing failures preserve the error during page cleanup', function ()
     $browser->shouldNotReceive('close');
 
     expect(
-        fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new PdfOptions)))->capture('invoice', SourceType::Html),
+        fn () => (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new PdfOptions)))->capture('invoice', SourceType::Html),
     )->toThrow(RuntimeException::class, 'print failure');
 });
 
@@ -414,6 +416,7 @@ test('the output enum selects Chrome image format and JPEG quality', function (O
 
     expect(
         (new PageCapture(
+            new ChromeDriver,
             $browser,
             new CaptureOptions(new BrowserOptions, (new ImageOptions)->setFormat($format, 91)),
         ))->capture('image', SourceType::Html),
@@ -443,7 +446,7 @@ test('capture creation failures still close the page', function () {
     $page->shouldReceive('close')->once();
     $browser->shouldNotReceive('close');
 
-    $capture = new class($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)) extends PageCapture
+    $capture = new class(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)) extends PageCapture
     {
         protected function newCapture(): CapturesPage
         {
@@ -479,7 +482,7 @@ test('page configuration failures release resources before loading or rendering'
     $browser->shouldNotReceive('close');
 
     expect(
-        fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
+        fn () => (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
     )->toThrow(RuntimeException::class, 'Unable to configure JavaScript execution: configuration rejected');
 });
 
@@ -513,7 +516,7 @@ test('failed stop-loading commands release resources without rendering partial c
     $browser->shouldNotReceive('close');
 
     expect(
-        fn () => (new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
+        fn () => (new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions)))->capture('hello', SourceType::Html),
     )->toThrow(RuntimeException::class, 'Unable to stop page loading: stop rejected');
 });
 
@@ -594,7 +597,7 @@ test('shared page cleanup reports its failure without replacing a capture error'
         )
         ->andReturn(new Response(['error' => ['message' => 'target rejected']], new Message('test')));
 
-    $capture = new PageCapture($browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
+    $capture = new PageCapture(new ChromeDriver, $browser, new CaptureOptions(new BrowserOptions, new ImageOptions), shared: true);
 
     expect(fn () => $capture->capture('hello', SourceType::Html))->toThrow(
         RuntimeException::class,
@@ -625,6 +628,6 @@ test('before callbacks run after loading and failures still close the page', fun
     $page->shouldReceive('close')->once();
     $page->shouldNotReceive('screenshot');
 
-    expect(fn () => (new PageCapture($browser, $options, driver: $driver))->capture('hello', SourceType::Html))
+    expect(fn () => (new PageCapture($driver, $browser, $options))->capture('hello', SourceType::Html))
         ->toThrow(RuntimeException::class, 'preparation failed');
 });

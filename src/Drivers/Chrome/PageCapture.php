@@ -23,10 +23,10 @@ class PageCapture
      * Prepare to capture a page within the given browser.
      */
     public function __construct(
+        protected ChromeDriver $driver,
         protected Browser $browser,
         protected CaptureOptions $options,
         protected bool $shared = false,
-        protected ?ChromeDriver $driver = null,
     ) {}
 
     /**
@@ -45,9 +45,7 @@ class PageCapture
             $this->configurePage($page);
             $this->loadPage($page, $source, $type);
 
-            if ($this->driver !== null) {
-                $this->options->prepare(new CaptureContext($this->driver, $page));
-            }
+            $this->options->prepare(new CaptureContext($this->driver, $page));
 
             $result = $this->newCapture()->capture($page);
             $failed = false;

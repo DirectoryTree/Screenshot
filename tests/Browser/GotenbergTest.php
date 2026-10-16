@@ -4,7 +4,7 @@ use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Screenshot;
 use GuzzleHttp\Client;
 
-uses()->group('gotenberg');
+uses()->group('browser');
 
 function gotenbergScreenshot(bool $authenticate = true): Screenshot
 {

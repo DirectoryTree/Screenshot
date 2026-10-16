@@ -65,8 +65,31 @@ jobs:
       - run: composer install --prefer-dist --no-interaction
       - run: composer audit
 
-  gotenberg:
-    name: Gotenberg
+  installer:
+    name: Chrome installer / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - name: Install Chrome and capture local HTML
+        env:
+          SCREENSHOT_TEST_INSTALL: '1'
+        run: vendor/bin/pest tests/Browser/InstallTest.php
+
+  browser:
+    name: Chrome / Gotenberg
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -94,53 +117,13 @@ jobs:
           extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip, gd
           coverage: none
       - run: composer install --prefer-dist --no-interaction
-      - name: Execute Gotenberg integration tests
-        env:
-          SCREENSHOT_GOTENBERG_URL: http://localhost:3000
-          SCREENSHOT_GOTENBERG_NOJS_URL: http://localhost:3001
-          SCREENSHOT_GOTENBERG_USERNAME: screenshot
-          SCREENSHOT_GOTENBERG_PASSWORD: screenshot-test
-        run: composer test-gotenberg
-
-  installer:
-    name: Chrome installer / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip
-          coverage: none
-      - run: composer install --prefer-dist --no-interaction
-      - name: Install Chrome and capture local HTML
-        env:
-          SCREENSHOT_TEST_INSTALL: '1'
-        run: vendor/bin/pest tests/Browser/InstallTest.php
-
-  browser:
-    name: Chromium
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, dom, fileinfo, pdo_sqlite, sockets, zip
-          coverage: none
-      - run: composer install --prefer-dist --no-interaction
       - name: Execute browser tests
         env:
           CHROME_PATH: /usr/bin/google-chrome
           SCREENSHOT_NO_SANDBOX: '1'
           SCREENSHOT_TEST_INSTALL: '1'
+          SCREENSHOT_GOTENBERG_URL: http://localhost:3000
+          SCREENSHOT_GOTENBERG_NOJS_URL: http://localhost:3001
+          SCREENSHOT_GOTENBERG_USERNAME: screenshot
+          SCREENSHOT_GOTENBERG_PASSWORD: screenshot-test
         run: composer test-browser

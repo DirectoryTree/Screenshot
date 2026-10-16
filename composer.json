@@ -56,9 +56,8 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/pest --exclude-group=browser --exclude-group=gotenberg",
+        "test": "vendor/bin/pest --exclude-group=browser",
         "test-browser": "vendor/bin/pest --group=browser",
-        "test-gotenberg": "vendor/bin/pest --group=gotenberg",
         "format": "vendor/bin/pint",
         "lint": "vendor/bin/pint --test"
     },

@@ -3,6 +3,7 @@
 namespace DirectoryTree\Screenshot;
 
 use Closure;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 
 /**

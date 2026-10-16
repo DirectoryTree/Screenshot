@@ -1,7 +1,8 @@
 <?php
 
-use DirectoryTree\Screenshot\CaptureContext;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
+use DirectoryTree\Screenshot\Drivers\Gotenberg\Request;
 use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Screenshot;
 use GuzzleHttp\Client;
@@ -30,7 +31,7 @@ test('Gotenberg callbacks customize the prepared request in registration order',
 
     $source = (new Screenshot($driver))->html('<h1>Hello</h1>')->javascript()
         ->before(function (CaptureContext $context) use ($driver, &$calls) {
-            expect($context->driver)->toBe($driver);
+            expect($context->driver())->toBe($driver);
             expect($context->request()->options['multipart'][0]['contents'])->toBe('<h1>Hello</h1>');
             $context->request()->set('waitForExpression', 'window.ready')->set('skipNetworkIdleEvent', true);
             $calls[] = 'source';
@@ -64,12 +65,22 @@ test('callbacks on an output do not leak into its source or sibling outputs', fu
     expect($calls)->toBe(1);
 });
 
-test('context rejects resources unavailable to its driver', function () {
+test('each driver context implements the shared contract and exposes its resource', function () {
+    $driver = new ChromeDriver;
     $page = Mockery::mock(Page::class);
-    $context = new CaptureContext(new ChromeDriver, $page);
+    $context = new DirectoryTree\Screenshot\Drivers\Chrome\CaptureContext($driver, $page);
 
+    expect($context)->toBeInstanceOf(CaptureContext::class);
+    expect($context->driver())->toBe($driver);
     expect($context->page())->toBe($page);
-    expect(fn () => $context->request())->toThrow(LogicException::class);
+
+    $driver = new GotenbergDriver;
+    $request = new Request('http://localhost:3000', ['multipart' => []]);
+    $context = new DirectoryTree\Screenshot\Drivers\Gotenberg\CaptureContext($driver, $request);
+
+    expect($context)->toBeInstanceOf(CaptureContext::class);
+    expect($context->driver())->toBe($driver);
+    expect($context->request())->toBe($request);
 });
 
 test('Gotenberg callback failures propagate without sending the request', function () {
@@ -79,7 +90,6 @@ test('Gotenberg callback failures propagate without sending the request', functi
     expect(fn () => (new Screenshot(new GotenbergDriver(http: $http)))
         ->html('hello')->javascript()
         ->before(function (CaptureContext $context) {
-            expect(fn () => $context->page())->toThrow(LogicException::class);
             throw new RuntimeException('preparation failed');
         })->capture())->toThrow(RuntimeException::class, 'preparation failed');
 });

@@ -2,9 +2,9 @@
 
 namespace DirectoryTree\Screenshot\Drivers;
 
-use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\CaptureOptions;
 use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Drivers\Gotenberg\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\ImageOutput;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\Output;
 use DirectoryTree\Screenshot\Drivers\Gotenberg\PdfOutput;

@@ -177,10 +177,10 @@ Selection works with JavaScript disabled. Missing elements and invalid selectors
 
 ### Customizing a Capture
 
-Use `before()` on a source, image, or PDF builder to customize the prepared driver resource. Each callback receives a `CaptureContext` containing the actual driver instance:
+Use `before()` on a source, image, or PDF builder to customize the prepared driver resource. Each callback receives a `CaptureContext` implementing the `Contracts\CaptureContext` interface. Its `driver()` method returns the actual driver instance:
 
 ```php
-use DirectoryTree\Screenshot\CaptureContext;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Drivers\GotenbergDriver;
 use DirectoryTree\Screenshot\Facades\Screenshot;
@@ -189,10 +189,10 @@ Screenshot::url('https://example.com')
     ->javascript()
     ->before(function (CaptureContext $context) {
         match (true) {
-            $context->driver instanceof ChromeDriver => $context->page()
+            $context->driver() instanceof ChromeDriver => $context->page()
                 ->evaluate('document.querySelector("#banner")?.remove()')
                 ->getReturnValue(),
-            $context->driver instanceof GotenbergDriver => $context->request()
+            $context->driver() instanceof GotenbergDriver => $context->request()
                 ->set('waitForExpression', 'window.ready === true'),
             default => null,
         };
@@ -205,9 +205,9 @@ Chrome invokes callbacks after the source loads and before image bounds are meas
 
 Gotenberg invokes callbacks immediately before sending its HTTP request. `request()` returns a mutable `DirectoryTree\Screenshot\Drivers\Gotenberg\Request`. Use `set()` to add or replace a multipart field. Its public `url` and `options` properties expose the destination and Guzzle request options, including headers and multipart files. This does not provide access to Gotenberg's remote browser page.
 
-Calling `page()` or `request()` when that resource is unavailable throws a `LogicException`. Callbacks run in registration order, their return values are ignored, and exceptions propagate through the driver's existing cleanup. A callback added to a source is copied into subsequently created output builders; callbacks added to an output affect only that builder. Callbacks run for every actual capture, including captures triggered by `save()` and `store()`.
+Chrome and Gotenberg each provide their own context implementation. Only Chrome contexts expose `page()`, and only Gotenberg contexts expose `request()`. Callbacks run in registration order, their return values are ignored, and exceptions propagate through the driver's existing cleanup. A callback added to a source is copied into subsequently created output builders; callbacks added to an output affect only that builder. Callbacks run for every actual capture, including captures triggered by `save()` and `store()`.
 
-The screenshot fake records capture options without executing callbacks. Custom drivers can invoke registered callbacks through `$options->prepare($context)` when they provide a supported resource.
+The screenshot fake records capture options without executing callbacks. Custom drivers can implement `Contracts\CaptureContext` to expose their own resources and invoke registered callbacks through `$options->prepare($context)`.
 
 ### Saving and Reading Captures
 

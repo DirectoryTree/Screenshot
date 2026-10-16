@@ -2,9 +2,8 @@
 
 namespace DirectoryTree\Screenshot\Drivers\Chrome;
 
-use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\CaptureOptions;
-use DirectoryTree\Screenshot\Contracts\Driver;
+use DirectoryTree\Screenshot\Drivers\ChromeDriver;
 use DirectoryTree\Screenshot\Enums\OutputFormat;
 use DirectoryTree\Screenshot\Enums\SourceType;
 use DirectoryTree\Screenshot\ImageResult;
@@ -27,7 +26,7 @@ class PageCapture
         protected Browser $browser,
         protected CaptureOptions $options,
         protected bool $shared = false,
-        protected ?Driver $driver = null,
+        protected ?ChromeDriver $driver = null,
     ) {}
 
     /**

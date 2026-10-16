@@ -1,8 +1,8 @@
 <?php
 
 use DirectoryTree\Screenshot\BrowserOptions;
-use DirectoryTree\Screenshot\CaptureContext;
 use DirectoryTree\Screenshot\CaptureOptions;
+use DirectoryTree\Screenshot\Contracts\CaptureContext;
 use DirectoryTree\Screenshot\Drivers\Chrome\CapturesPage;
 use DirectoryTree\Screenshot\Drivers\Chrome\PageCapture;
 use DirectoryTree\Screenshot\Drivers\ChromeDriver;
@@ -611,7 +611,7 @@ test('before callbacks run after loading and failures still close the page', fun
     $options = new CaptureOptions(new BrowserOptions, new ImageOptions);
     $options->before(function (CaptureContext $context) use ($page, $driver, &$loaded) {
         expect($loaded)->toBeTrue();
-        expect($context->driver)->toBe($driver);
+        expect($context->driver())->toBe($driver);
         expect($context->page())->toBe($page);
         throw new RuntimeException('preparation failed');
     });

@@ -7,16 +7,6 @@ use Closure;
 class PendingSource
 {
     /**
-     * Customize the driver immediately before capturing.
-     */
-    public function before(Closure $callback): static
-    {
-        $this->callbacks[] = $callback;
-
-        return $this;
-    }
-
-    /**
      * The CSS selector to capture from the source.
      */
     protected ?string $element = null;
@@ -38,6 +28,16 @@ class PendingSource
         protected PdfOptions $pdf,
     ) {
         $this->browser = clone $browser;
+    }
+
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->callbacks[] = $callback;
+
+        return $this;
     }
 
     /**

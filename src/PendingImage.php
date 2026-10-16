@@ -8,16 +8,6 @@ use DirectoryTree\Screenshot\Enums\OutputFormat;
 class PendingImage
 {
     /**
-     * Customize the driver immediately before capturing.
-     */
-    public function before(Closure $callback): static
-    {
-        $this->options->before($callback);
-
-        return $this;
-    }
-
-    /**
      * Create an image builder with independent settings.
      *
      * @param  CaptureOptions<ImageOptions>  $options
@@ -27,6 +17,16 @@ class PendingImage
         protected CaptureOptions $options,
     ) {
         $this->options = clone $options;
+    }
+
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->options->before($callback);
+
+        return $this;
     }
 
     /**

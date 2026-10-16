@@ -8,16 +8,6 @@ use DirectoryTree\Screenshot\Enums\PaperSize;
 class PendingPdf
 {
     /**
-     * Customize the driver immediately before capturing.
-     */
-    public function before(Closure $callback): static
-    {
-        $this->options->before($callback);
-
-        return $this;
-    }
-
-    /**
      * Create a PDF builder with independent print settings.
      *
      * @param  CaptureOptions<PdfOptions>  $options
@@ -27,6 +17,16 @@ class PendingPdf
         protected CaptureOptions $options,
     ) {
         $this->options = clone $options;
+    }
+
+    /**
+     * Customize the driver immediately before capturing.
+     */
+    public function before(Closure $callback): static
+    {
+        $this->options->before($callback);
+
+        return $this;
     }
 
     /**
